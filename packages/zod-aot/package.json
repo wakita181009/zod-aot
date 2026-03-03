@@ -3,6 +3,9 @@
   "version": "0.0.1",
   "description": "Compile Zod schemas into zero-overhead validation functions at build time",
   "type": "module",
+  "imports": {
+    "#src/*": "./src/*"
+  },
   "exports": {
     ".": {
       "import": "./dist/index.js",
