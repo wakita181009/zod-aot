@@ -9,7 +9,7 @@ import type {
   StringIR,
   ZodErrorLike,
   ZodIssueLike,
-} from "#src/types.js";
+} from "#src/core/types.js";
 
 // ─── SchemaIR Type Discrimination ───────────────────────────────────────────
 

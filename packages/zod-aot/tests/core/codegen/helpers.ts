@@ -1,5 +1,5 @@
-import { generateValidator } from "#src/codegen/index.js";
-import type { SchemaIR } from "#src/types.js";
+import { generateValidator } from "#src/core/codegen/index.js";
+import type { SchemaIR } from "#src/core/types.js";
 
 /**
  * Helper: generate code from IR, compile it, and return the safeParse function.

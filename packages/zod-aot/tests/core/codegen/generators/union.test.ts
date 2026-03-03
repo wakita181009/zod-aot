@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { UnionIR } from "#src/types.js";
+import type { UnionIR } from "#src/core/types.js";
 import { compileIR } from "../helpers.js";
 
 describe("codegen — union", () => {

@@ -65,8 +65,8 @@ Output          emitter.ts                  rewriteSource()          new Functio
 ```
 
 Key files:
-- `compile.ts`: `compile()` is NOT the optimizer — it's a Zod fallback + `COMPILED_MARKER` symbol for discovery
-- `cli/discovery.ts`: `discoverSchemas()` loads file → scans exports with `isCompiledSchema()`
+- `core/compile.ts`: `compile()` is NOT the optimizer — it's a Zod fallback + `COMPILED_MARKER` symbol for discovery
+- `discovery.ts`: `discoverSchemas()` loads file → scans exports with `isCompiledSchema()`
 - `cli/commands/generate.ts`: discovery → extract → generate → `emitter.ts` writes `.compiled.ts`
 - `unplugin/transform.ts`: discovery → extract → generate → `rewriteSource()` replaces `compile()` with IIFE
 - `benchmarks/helpers/compile.ts`: `compileForBench()` directly calls extract → generate → `new Function()`
@@ -163,56 +163,71 @@ zod-aot/
 │   └── zod-aot/                  # Main npm package (published as "zod-aot")
 │       ├── src/
 │       │   ├── index.ts          # Public API exports
-│       │   ├── runtime.ts        # Dev-time fallback (createFallback)
-│       │   ├── types.ts          # SchemaIR, CompiledSchema, CheckIR
-│       │   ├── extractor/
-│       │   │   └── index.ts      # extractSchema() — _zod.def → SchemaIR
-│       │   ├── codegen/
-│       │   │   └── index.ts      # generateValidator() — SchemaIR → JS code
-│       │   └── unplugin/
-│       │       ├── index.ts      # createUnplugin() factory + transform pipeline
+│       │   ├── discovery.ts      # discoverSchemas() — shared by cli & unplugin
+│       │   ├── loader.ts         # loadSourceFile() — runtime-aware file loader
+│       │   ├── core/             # Pure logic (no cli/unplugin/discovery/loader deps)
+│       │   │   ├── types.ts      # SchemaIR, CompiledSchema, CheckIR
+│       │   │   ├── compile.ts    # compile() marker + isCompiledSchema()
+│       │   │   ├── runtime.ts    # Dev-time fallback (createFallback)
+│       │   │   ├── extractor/
+│       │   │   │   └── index.ts  # extractSchema() — _zod.def → SchemaIR
+│       │   │   └── codegen/
+│       │   │       ├── index.ts  # generateValidator() — SchemaIR → JS code
+│       │   │       ├── context.ts # CodeGenContext, CodeGenResult, utils
+│       │   │       └── generators/ # 18 type-specific code generators
+│       │   ├── cli/              # CLI-specific (no unplugin deps)
+│       │   │   ├── index.ts      # CLI entry point (command parser)
+│       │   │   ├── logger.ts     # Logging utility
+│       │   │   ├── emitter.ts    # .compiled.ts file generation
+│       │   │   └── commands/
+│       │   │       ├── generate.ts
+│       │   │       └── check.ts
+│       │   └── unplugin/         # Build plugin (no cli deps)
+│       │       ├── index.ts      # createUnplugin() factory
 │       │       ├── transform.ts  # shouldTransform, transformCode, rewriteSource
 │       │       ├── types.ts      # ZodAotPluginOptions
-│       │       ├── vite.ts       # Vite plugin entry
-│       │       ├── webpack.ts    # webpack plugin entry
-│       │       ├── esbuild.ts    # esbuild plugin entry
-│       │       └── rollup.ts     # Rollup plugin entry
-│       ├── tests/
-│       │   ├── integration.test.ts   # E2E: extract → generate → execute → compare with Zod
-│       │   ├── extractor/index.test.ts
-│       │   ├── codegen/index.test.ts
-│       │   ├── runtime.test.ts
-│       │   ├── types.test.ts
+│       │       └── vite.ts, webpack.ts, esbuild.ts, rollup.ts
+│       ├── tests/                # Mirrors src/ structure
+│       │   ├── integration.test.ts
+│       │   ├── discovery.test.ts
+│       │   ├── core/
+│       │   │   ├── types.test.ts, compile.test.ts, runtime.test.ts
+│       │   │   ├── extractor/index.test.ts
+│       │   │   └── codegen/
+│       │   │       ├── index.test.ts, helpers.ts
+│       │   │       └── generators/*.test.ts
+│       │   ├── cli/
+│       │   │   ├── check.test.ts, emitter.test.ts, generate.test.ts
+│       │   │   └── fixtures/
 │       │   └── unplugin/
-│       │       ├── transform.test.ts # unplugin transform tests (25 tests)
-│       │       └── fixtures/         # Test fixtures for transform
+│       │       ├── transform.test.ts
+│       │       └── fixtures/
 │       ├── package.json
 │       └── tsconfig.json
 ├── benchmarks/                   # Workspace package (@zod-aot/benchmarks)
-│   ├── schemas/                  # Shared benchmark schemas + fixtures
-│   │   ├── simple.ts             # Primitives (string, number, boolean, enum)
-│   │   ├── medium.ts             # User registration (7 props)
-│   │   ├── large.ts              # API response (nested objects + arrays)
-│   │   └── index.ts
-│   ├── helpers/
-│   │   └── compile.ts            # AOT compile helper (compileForBench)
-│   ├── standalone/
-│   │   ├── zod-only.ts           # Standalone Zod benchmark script
-│   │   └── zod-aot.ts            # Standalone zod-aot benchmark script
-│   ├── safeParse.bench.ts        # safeParse: zod vs zod-aot
-│   ├── is.bench.ts               # is() type guard: zod vs zod-aot
-│   └── package.json
 ├── apps/
 │   └── sample/                   # Vite + unplugin demo app
-├── .github/
-│   └── workflows/
-│       ├── ci.yml                # Lint + typecheck + test + build
-│       └── release.yml           # npm publish on tag push (v*)
+├── .github/workflows/
+│   ├── ci.yml                    # Lint + typecheck + test + build
+│   └── release.yml               # npm publish on tag push (v*)
 ├── pnpm-workspace.yaml
 ├── tsconfig.base.json
 ├── vitest.config.ts
 └── biome.json
 ```
+
+### Module Dependency Rules (enforced by Biome `noRestrictedImports`)
+
+```
+core/  ←── cli/  (cli depends on core, not vice versa)
+core/  ←── unplugin/
+core/  ←── discovery.ts, loader.ts
+cli/   ✗── unplugin/  (no cross-dependency)
+unplugin/ ✗── cli/
+```
+
+Cross-module imports use `#src/` path alias (e.g., `#src/core/codegen/index.js`).
+Within-module imports use relative paths.
 
 ## Implementation Phases
 
@@ -273,6 +288,7 @@ Key rules:
 - `noExplicitAny`: error
 - `useImportType`, `useExportType`: error
 - `noFloatingPromises`, `noMisusedPromises`: error (nursery)
+- `noRestrictedImports`: error (module boundary enforcement via overrides)
 - `noConsole`: warn
 - Formatter: 2-space indent, 100 line width, semicolons, trailing commas
 

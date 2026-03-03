@@ -1,8 +1,8 @@
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { discoverSchemas } from "#src/cli/discovery.js";
-import { extractSchema } from "#src/extractor/index.js";
-import type { SchemaIR } from "#src/types.js";
+import { extractSchema } from "#src/core/extractor/index.js";
+import type { SchemaIR } from "#src/core/types.js";
+import { discoverSchemas } from "#src/discovery.js";
 
 const fixturesDir = path.resolve(import.meta.dirname, "fixtures");
 

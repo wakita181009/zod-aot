@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 
+import { createRequire } from "node:module";
 import process from "node:process";
 import { logger } from "./logger.js";
 
-const VERSION = "0.0.3";
+const require = createRequire(import.meta.url);
+const VERSION: string = (require("../../package.json") as { version: string }).version;
 
 interface GenerateOptions {
   inputs: string[];

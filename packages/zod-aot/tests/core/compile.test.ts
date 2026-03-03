@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { compile, isCompiledSchema } from "#src/compile.js";
+import { compile, isCompiledSchema } from "#src/core/compile.js";
 
 describe("compile()", () => {
   it("returns a CompiledSchema with parse/safeParse/is/schema", () => {

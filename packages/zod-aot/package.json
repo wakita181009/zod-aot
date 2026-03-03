@@ -26,7 +26,11 @@
     "LICENSE"
   ],
   "imports": {
-    "#src/*": "./src/*"
+    "#src/*": {
+      "types": "./src/*",
+      "source": "./src/*",
+      "default": "./dist/*"
+    }
   },
   "exports": {
     ".": {

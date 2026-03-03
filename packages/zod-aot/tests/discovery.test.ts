@@ -1,8 +1,8 @@
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { discoverSchemas } from "#src/cli/discovery.js";
+import { discoverSchemas } from "#src/discovery.js";
 
-const fixturesDir = path.resolve(import.meta.dirname, "fixtures");
+const fixturesDir = path.resolve(import.meta.dirname, "cli/fixtures");
 
 describe("discoverSchemas()", () => {
   it("discovers compile() calls in a simple schema file", async () => {

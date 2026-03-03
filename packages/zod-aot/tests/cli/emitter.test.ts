@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { generateCompiledFileContent, resolveOutputPath } from "#src/cli/emitter.js";
-import type { CodeGenResult } from "#src/codegen/index.js";
+import type { CodeGenResult } from "#src/core/codegen/index.js";
 
 describe("generateCompiledFileContent()", () => {
   it("generates a valid compiled file with header", () => {

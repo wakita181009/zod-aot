@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { generateValidator } from "#src/codegen/index.js";
-import type { AnyIR, ObjectIR, ReadonlyIR, StringIR, UnknownIR } from "#src/types.js";
+import { generateValidator } from "#src/core/codegen/index.js";
+import type { AnyIR, ObjectIR, ReadonlyIR, StringIR, UnknownIR } from "#src/core/types.js";
 import { compileIR } from "./helpers.js";
 
 describe("codegen — code quality", () => {

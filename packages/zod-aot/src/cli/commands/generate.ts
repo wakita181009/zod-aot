@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
-import { generateValidator } from "../../codegen/index.js";
-import { extractSchema } from "../../extractor/index.js";
-import type { DiscoveredSchema } from "../discovery.js";
-import { discoverSchemas } from "../discovery.js";
+import { generateValidator } from "#src/core/codegen/index.js";
+import { extractSchema } from "#src/core/extractor/index.js";
+import type { DiscoveredSchema } from "#src/discovery.js";
+import { discoverSchemas } from "#src/discovery.js";
 import { generateCompiledFileContent, resolveOutputPath, writeCompiledFile } from "../emitter.js";
 import { logger } from "../logger.js";
 

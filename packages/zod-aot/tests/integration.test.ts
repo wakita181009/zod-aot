@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { generateValidator } from "#src/codegen/index.js";
-import { extractSchema } from "#src/extractor/index.js";
-import type { SchemaIR } from "#src/types.js";
+import { generateValidator } from "#src/core/codegen/index.js";
+import { extractSchema } from "#src/core/extractor/index.js";
+import type { SchemaIR } from "#src/core/types.js";
 
 /**
  * End-to-end helper: Zod schema → extract IR → generate code → compile → safeParse.

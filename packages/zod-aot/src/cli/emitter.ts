@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { CodeGenResult } from "../codegen/context.js";
-import { extractFunctionName } from "../codegen/context.js";
+import type { CodeGenResult } from "#src/core/codegen/context.js";
+import { extractFunctionName } from "#src/core/codegen/context.js";
 
 interface EmitSchema {
   exportName: string;

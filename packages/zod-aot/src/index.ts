@@ -1,8 +1,8 @@
-export type { CodeGenResult } from "./codegen/index.js";
-export { generateValidator } from "./codegen/index.js";
-export { compile, isCompiledSchema } from "./compile.js";
-export { extractSchema } from "./extractor/index.js";
-export { createFallback } from "./runtime.js";
+export type { CodeGenResult } from "#src/core/codegen/index.js";
+export { generateValidator } from "#src/core/codegen/index.js";
+export { compile, isCompiledSchema } from "#src/core/compile.js";
+export { extractSchema } from "#src/core/extractor/index.js";
+export { createFallback } from "#src/core/runtime.js";
 export type {
   CheckIR,
   CompiledSchema,
@@ -13,6 +13,6 @@ export type {
   SchemaIR,
   ZodErrorLike,
   ZodIssueLike,
-} from "./types.js";
-export { unplugin } from "./unplugin/index.js";
-export type { ZodAotPluginOptions } from "./unplugin/types.js";
+} from "#src/core/types.js";
+export { unplugin } from "#src/unplugin/index.js";
+export type { ZodAotPluginOptions } from "#src/unplugin/types.js";

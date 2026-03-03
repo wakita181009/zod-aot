@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { DateIR } from "#src/types.js";
+import type { DateIR } from "#src/core/types.js";
 import { compileIR } from "../helpers.js";
 
 describe("codegen — date", () => {

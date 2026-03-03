@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { generateValidator } from "#src/codegen/index.js";
-import type { EnumIR } from "#src/types.js";
+import { generateValidator } from "#src/core/codegen/index.js";
+import type { EnumIR } from "#src/core/types.js";
 import { compileIR } from "../helpers.js";
 
 describe("codegen — enum", () => {

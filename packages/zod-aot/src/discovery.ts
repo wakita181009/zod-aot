@@ -1,4 +1,4 @@
-import { isCompiledSchema } from "../compile.js";
+import { isCompiledSchema } from "#src/core/compile.js";
 import type { LoadOptions } from "./loader.js";
 import { loadSourceFile } from "./loader.js";
 

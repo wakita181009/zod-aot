@@ -76,7 +76,9 @@
     {
       "includes": [
         "packages/*/src/cli/**",
+        "packages/*/src/loader.ts",
         "packages/*/tests/cli/**",
+        "packages/*/tests/discovery.test.ts",
         "packages/*/src/unplugin/**",
         "packages/*/tests/unplugin/**"
       ],
@@ -84,6 +86,71 @@
         "rules": {
           "correctness": {
             "noNodejsModules": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/*/src/core/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "#src/cli/**",
+                      "#src/unplugin/**",
+                      "#src/discovery.*",
+                      "#src/loader.*"
+                    ],
+                    "message": "core/ must not depend on cli/, unplugin/, discovery, or loader"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/*/src/cli/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["#src/unplugin/**"],
+                    "message": "cli/ must not depend on unplugin/"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/*/src/unplugin/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["#src/cli/**"],
+                    "message": "unplugin/ must not depend on cli/"
+                  }
+                ]
+              }
+            }
           }
         }
       }

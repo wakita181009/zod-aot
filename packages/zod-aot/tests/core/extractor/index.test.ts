@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { extractSchema } from "#src/extractor/index.js";
+import { extractSchema } from "#src/core/extractor/index.js";
 import type {
   AnyIR,
   ArrayIR,
@@ -24,7 +24,7 @@ import type {
   UndefinedIR,
   UnionIR,
   UnknownIR,
-} from "#src/types.js";
+} from "#src/core/types.js";
 
 // ─── Primitive Types ────────────────────────────────────────────────────────
 

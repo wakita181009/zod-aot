@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { createFallback } from "#src/runtime.js";
+import { createFallback } from "#src/core/runtime.js";
 
 // ─── Fallback (Dev-time) Behavior ───────────────────────────────────────────
 
