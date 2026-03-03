@@ -42,3 +42,15 @@ export {
   validSimpleString,
   validStringWithChecks,
 } from "./primitives.js";
+export {
+  BigIntSchema,
+  MapSchema,
+  PipeSchema,
+  SetSchema,
+  validBigInt,
+  validMap5,
+  validMap20,
+  validPipe,
+  validSet5,
+  validSet20,
+} from "./tier3.js";

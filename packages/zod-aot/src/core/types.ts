@@ -76,6 +76,30 @@ export interface CheckDateLessThan {
 
 export type DateCheckIR = CheckDateGreaterThan | CheckDateLessThan;
 
+// ─── BigInt Check IR ───────────────────────────────────────────────────────
+
+export interface CheckBigIntGreaterThan {
+  kind: "bigint_greater_than";
+  /** String representation of the BigInt value (e.g. "10") */
+  value: string;
+  inclusive: boolean;
+}
+
+export interface CheckBigIntLessThan {
+  kind: "bigint_less_than";
+  /** String representation of the BigInt value (e.g. "100") */
+  value: string;
+  inclusive: boolean;
+}
+
+export interface CheckBigIntMultipleOf {
+  kind: "bigint_multiple_of";
+  /** String representation of the BigInt value (e.g. "3") */
+  value: string;
+}
+
+export type BigIntCheckIR = CheckBigIntGreaterThan | CheckBigIntLessThan | CheckBigIntMultipleOf;
+
 // ─── Schema IR ──────────────────────────────────────────────────────────────
 
 export interface StringIR {
@@ -138,9 +162,48 @@ export interface NullableIR {
 
 export interface FallbackIR {
   type: "fallback";
-  reason: "transform" | "refine" | "superRefine" | "custom" | "unsupported";
+  reason: "transform" | "refine" | "superRefine" | "custom" | "lazy" | "unsupported";
   /** Index into the __fb[] fallback schemas array. Present when partial fallback is used. */
   fallbackIndex?: number;
+}
+
+// ─── Tier 3 Schema IR ───────────────────────────────────────────────────────
+
+export interface BigIntIR {
+  type: "bigint";
+  checks: BigIntCheckIR[];
+}
+
+// ─── Set Check IR ──────────────────────────────────────────────────────────
+
+export interface CheckMinSize {
+  kind: "min_size";
+  minimum: number;
+}
+
+export interface CheckMaxSize {
+  kind: "max_size";
+  maximum: number;
+}
+
+export type SetCheckIR = CheckMinSize | CheckMaxSize;
+
+export interface SetIR {
+  type: "set";
+  valueType: SchemaIR;
+  checks?: SetCheckIR[];
+}
+
+export interface MapIR {
+  type: "map";
+  keyType: SchemaIR;
+  valueType: SchemaIR;
+}
+
+export interface PipeIR {
+  type: "pipe";
+  in: SchemaIR;
+  out: SchemaIR;
 }
 
 // ─── Tier 2 Schema IR ───────────────────────────────────────────────────────
@@ -216,7 +279,11 @@ export type SchemaIR =
   | RecordIR
   | DefaultIR
   | IntersectionIR
-  | DiscriminatedUnionIR;
+  | DiscriminatedUnionIR
+  | BigIntIR
+  | SetIR
+  | MapIR
+  | PipeIR;
 
 // ─── Compiled Schema Interface ──────────────────────────────────────────────
 

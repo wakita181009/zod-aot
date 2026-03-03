@@ -2,12 +2,16 @@ import { bench, describe } from "vitest";
 import { compileForBench } from "./helpers/compile.js";
 import {
   ApiResponseSchema,
+  BigIntSchema,
   DiscriminatedUnionSchema,
   EventLogSchema,
   FallbackArraySchema,
+  MapSchema,
   NumberWithChecks,
   PartialFallbackObjectSchema,
+  PipeSchema,
   RecordSchema,
+  SetSchema,
   SimpleEnum,
   SimpleString,
   StringWithChecks,
@@ -15,12 +19,16 @@ import {
   UserSchema,
   validApiResponse10,
   validApiResponse100,
+  validBigInt,
   validClickEvent,
   validEventLog,
   validFallbackArray10,
+  validMap5,
   validNumberWithChecks,
   validPartialFallbackObject,
+  validPipe,
   validRecord,
+  validSet5,
   validSimpleEnum,
   validSimpleString,
   validStringWithChecks,
@@ -41,6 +49,10 @@ const aotDiscUnion = compileForBench(DiscriminatedUnionSchema, "discUnion");
 const aotEventLog = compileForBench(EventLogSchema, "eventLog");
 const aotPartialFallback = compileForBench(PartialFallbackObjectSchema, "partialFallback");
 const aotFallbackArray = compileForBench(FallbackArraySchema, "fallbackArray");
+const aotBigInt = compileForBench(BigIntSchema, "bigint");
+const aotSet = compileForBench(SetSchema, "set");
+const aotMap = compileForBench(MapSchema, "map");
+const aotPipe = compileForBench(PipeSchema, "pipe");
 
 // ─── Simple Types ─────────────────────────────────────────────────────────────
 
@@ -146,6 +158,44 @@ describe("is(): event log (combined)", () => {
   });
   bench("zod-aot", () => {
     aotEventLog.is(validEventLog);
+  });
+});
+
+// ─── Tier 3 Types ───────────────────────────────────────────────────────────
+
+describe("is(): bigint with checks", () => {
+  bench("zod (safeParse().success)", () => {
+    BigIntSchema.safeParse(validBigInt).success;
+  });
+  bench("zod-aot", () => {
+    aotBigInt.is(validBigInt);
+  });
+});
+
+describe("is(): set<string> (5 items)", () => {
+  bench("zod (safeParse().success)", () => {
+    SetSchema.safeParse(validSet5).success;
+  });
+  bench("zod-aot", () => {
+    aotSet.is(validSet5);
+  });
+});
+
+describe("is(): map<string, number> (5 entries)", () => {
+  bench("zod (safeParse().success)", () => {
+    MapSchema.safeParse(validMap5).success;
+  });
+  bench("zod-aot", () => {
+    aotMap.is(validMap5);
+  });
+});
+
+describe("is(): pipe (string → string with max)", () => {
+  bench("zod (safeParse().success)", () => {
+    PipeSchema.safeParse(validPipe).success;
+  });
+  bench("zod-aot", () => {
+    aotPipe.is(validPipe);
   });
 });
 

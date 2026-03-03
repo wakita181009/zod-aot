@@ -6,6 +6,7 @@
 
 **Phase 1: Core Compiler — COMPLETE**
 **Phase 2: Tier 2 Type Support — COMPLETE**
+**Phase 3: Tier 3 Type Support — IN PROGRESS**
 
 Benchmark results (vitest bench, Node.js):
 - Simple types: 1.7-3.1x faster than Zod v4
@@ -19,7 +20,9 @@ Benchmark results (vitest bench, Node.js):
 
 Phase 1 success criteria (is() 10x+, safeParse() 5x+) met for large/complex schemas. Primitives and small objects show moderate gains due to Zod v4's already-optimized fast path.
 
-Phase 2 adds Tier 2 types: tuple, record, intersection, discriminatedUnion (with O(1) switch optimization), date, any, unknown, default, readonly. Partial fallback compiles optimizable parts of schemas containing transform/refine. 412 tests passing.
+Phase 2 adds Tier 2 types: tuple, record, intersection, discriminatedUnion (with O(1) switch optimization), date, any, unknown, default, readonly. Partial fallback compiles optimizable parts of schemas containing transform/refine.
+
+Phase 3 adds Tier 3 types: bigint, set, map, pipe (non-transform). Lazy schemas fall back to Zod (getter functions are not serializable). 517 tests passing.
 
 ## Runtime Compatibility
 
@@ -149,11 +152,12 @@ string, number, int, boolean, object, array, literal, enum, union, optional, nul
 ### Tier 2 (Phase 2 — COMPLETE)
 tuple, record, intersection, discriminatedUnion, date, any, unknown, default, readonly
 
-### Tier 3 (Phase 3)
-lazy, pipe (non-transform), template_literal, bigint, map, set
+### Tier 3 (Phase 3 — IN PROGRESS)
+bigint, set, map, pipe (non-transform) — DONE
+template_literal — pending (requires Zod v4 API verification)
 
 ### Fallback to Zod
-transform, refine, superRefine, custom, preprocess
+transform, refine, superRefine, custom, preprocess, lazy
 
 **Partial fallback strategy:** Even schemas containing transform etc. optimize compilable parts and delegate only incompilable parts to Zod.
 
@@ -175,7 +179,7 @@ zod-aot/
 │       │   │   └── codegen/
 │       │   │       ├── index.ts  # generateValidator() — SchemaIR → JS code
 │       │   │       ├── context.ts # CodeGenContext, CodeGenResult, utils
-│       │   │       └── generators/ # 21 type-specific code generators
+│       │   │       └── generators/ # 25 type-specific code generators
 │       │   ├── cli/              # CLI-specific (no unplugin deps)
 │       │   │   ├── index.ts      # CLI entry point (command parser)
 │       │   │   ├── logger.ts     # Logging utility
@@ -244,8 +248,10 @@ Within-module imports use relative paths.
 
 ### Phase 3: Ecosystem
 
-- Tier 3 type support
-- Documentation site
+- [x] Tier 3 type support: bigint, set, map, pipe (non-transform)
+- [x] Lazy schema fallback (explicit reason: "lazy")
+- [ ] template_literal type support (pending Zod v4 API verification)
+- [ ] Documentation site
 
 ## Key Reference Files (Zod v4 internals)
 
