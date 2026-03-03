@@ -9,6 +9,7 @@ export default defineConfig({
     conditions: ["source"],
     alias: {
       "zod-aot": path.resolve(__dirname, "packages/zod-aot/src/index.ts"),
+      "#src": path.resolve(__dirname, "packages/zod-aot/src"),
     },
   },
   test: {
