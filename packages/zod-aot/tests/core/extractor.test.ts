@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { extractSchema } from "#src/core/extractor/index.js";
+import { extractSchema } from "#src/core/extractor.js";
 import type {
   AnyIR,
   ArrayIR,
@@ -198,7 +198,7 @@ describe("extractSchema — object", () => {
     const ir = extractSchema(z.object({ name: z.string() })) as ObjectIR;
     expect(ir.type).toBe("object");
     expect(ir.properties).toHaveProperty("name");
-    expect(ir.properties.name?.type).toBe("string");
+    expect(ir.properties["name"]?.type).toBe("string");
   });
 
   it("extracts an object with multiple properties", () => {
@@ -211,14 +211,14 @@ describe("extractSchema — object", () => {
     ) as ObjectIR;
     expect(ir.type).toBe("object");
     expect(Object.keys(ir.properties)).toEqual(["name", "age", "active"]);
-    expect(ir.properties.name?.type).toBe("string");
-    expect(ir.properties.age?.type).toBe("number");
-    expect(ir.properties.active?.type).toBe("boolean");
+    expect(ir.properties["name"]?.type).toBe("string");
+    expect(ir.properties["age"]?.type).toBe("number");
+    expect(ir.properties["active"]?.type).toBe("boolean");
   });
 
   it("preserves checks on nested properties", () => {
     const ir = extractSchema(z.object({ name: z.string().min(3).max(50) })) as ObjectIR;
-    const nameIR = ir.properties.name as StringIR;
+    const nameIR = ir.properties["name"] as StringIR;
     expect(nameIR.checks).toContainEqual({ kind: "min_length", minimum: 3 });
     expect(nameIR.checks).toContainEqual({ kind: "max_length", maximum: 50 });
   });
@@ -232,10 +232,10 @@ describe("extractSchema — object", () => {
         }),
       }),
     ) as ObjectIR;
-    expect(ir.properties.user?.type).toBe("object");
-    const userIR = ir.properties.user as ObjectIR;
-    expect(userIR.properties.name?.type).toBe("string");
-    expect(userIR.properties.age?.type).toBe("number");
+    expect(ir.properties["user"]?.type).toBe("object");
+    const userIR = ir.properties["user"] as ObjectIR;
+    expect(userIR.properties["name"]?.type).toBe("string");
+    expect(userIR.properties["age"]?.type).toBe("number");
   });
 
   it("extracts empty object schema", () => {
@@ -251,9 +251,9 @@ describe("extractSchema — object", () => {
         optional: z.string().optional(),
       }),
     ) as ObjectIR;
-    expect(ir.properties.required?.type).toBe("string");
-    expect(ir.properties.optional?.type).toBe("optional");
-    const optIR = ir.properties.optional as OptionalIR;
+    expect(ir.properties["required"]?.type).toBe("string");
+    expect(ir.properties["optional"]?.type).toBe("optional");
+    const optIR = ir.properties["optional"] as OptionalIR;
     expect(optIR.inner.type).toBe("string");
   });
 });
@@ -287,8 +287,8 @@ describe("extractSchema — array", () => {
     const ir = extractSchema(z.array(z.object({ id: z.number(), name: z.string() }))) as ArrayIR;
     expect(ir.element.type).toBe("object");
     const elemIR = ir.element as ObjectIR;
-    expect(elemIR.properties.id?.type).toBe("number");
-    expect(elemIR.properties.name?.type).toBe("string");
+    expect(elemIR.properties["id"]?.type).toBe("number");
+    expect(elemIR.properties["name"]?.type).toBe("string");
   });
 
   it("extracts nested arrays", () => {
@@ -499,32 +499,32 @@ describe("extractSchema — complex real-world schemas", () => {
     ]);
 
     // Verify nested types
-    expect(ir.properties.id?.type).toBe("number");
-    expect(ir.properties.name?.type).toBe("string");
-    expect(ir.properties.email?.type).toBe("string");
-    expect(ir.properties.role?.type).toBe("enum");
-    expect(ir.properties.active?.type).toBe("boolean");
-    expect(ir.properties.tags?.type).toBe("array");
-    expect(ir.properties.metadata?.type).toBe("object");
+    expect(ir.properties["id"]?.type).toBe("number");
+    expect(ir.properties["name"]?.type).toBe("string");
+    expect(ir.properties["email"]?.type).toBe("string");
+    expect(ir.properties["role"]?.type).toBe("enum");
+    expect(ir.properties["active"]?.type).toBe("boolean");
+    expect(ir.properties["tags"]?.type).toBe("array");
+    expect(ir.properties["metadata"]?.type).toBe("object");
 
     // Verify nested checks
-    const idIR = ir.properties.id as NumberIR;
+    const idIR = ir.properties["id"] as NumberIR;
     expect(idIR.checks).toContainEqual({ kind: "number_format", format: "safeint" });
     expect(idIR.checks).toContainEqual({ kind: "greater_than", value: 0, inclusive: false });
 
-    const nameIR = ir.properties.name as StringIR;
+    const nameIR = ir.properties["name"] as StringIR;
     expect(nameIR.checks).toContainEqual({ kind: "min_length", minimum: 1 });
     expect(nameIR.checks).toContainEqual({ kind: "max_length", maximum: 100 });
 
-    const tagsIR = ir.properties.tags as ArrayIR;
+    const tagsIR = ir.properties["tags"] as ArrayIR;
     expect(tagsIR.element.type).toBe("string");
     expect(tagsIR.checks).toContainEqual({ kind: "min_length", minimum: 0 });
     expect(tagsIR.checks).toContainEqual({ kind: "max_length", maximum: 10 });
 
     // Verify nested object
-    const metaIR = ir.properties.metadata as ObjectIR;
-    expect(metaIR.properties.createdAt?.type).toBe("string");
-    expect(metaIR.properties.updatedAt?.type).toBe("optional");
+    const metaIR = ir.properties["metadata"] as ObjectIR;
+    expect(metaIR.properties["createdAt"]?.type).toBe("string");
+    expect(metaIR.properties["updatedAt"]?.type).toBe("optional");
   });
 
   it("extracts an API request schema", () => {
@@ -547,14 +547,14 @@ describe("extractSchema — complex real-world schemas", () => {
     const ir = extractSchema(RequestSchema) as ObjectIR;
     expect(ir.type).toBe("object");
 
-    const methodIR = ir.properties.method as EnumIR;
+    const methodIR = ir.properties["method"] as EnumIR;
     expect(methodIR.values).toEqual(["GET", "POST", "PUT", "DELETE"]);
 
-    const bodyIR = ir.properties.body as OptionalIR;
+    const bodyIR = ir.properties["body"] as OptionalIR;
     expect(bodyIR.type).toBe("optional");
     expect(bodyIR.inner.type).toBe("object");
 
-    const headersIR = ir.properties.headers as ArrayIR;
+    const headersIR = ir.properties["headers"] as ArrayIR;
     expect(headersIR.element.type).toBe("object");
   });
 });
@@ -576,11 +576,11 @@ describe("extractSchema — edge cases", () => {
     });
 
     const ir = extractSchema(schema) as ObjectIR;
-    const aIR = ir.properties.a as ObjectIR;
-    const bIR = aIR.properties.b as ObjectIR;
-    const cIR = bIR.properties.c as ObjectIR;
-    const dIR = cIR.properties.d as ObjectIR;
-    expect(dIR.properties.e?.type).toBe("string");
+    const aIR = ir.properties["a"] as ObjectIR;
+    const bIR = aIR.properties["b"] as ObjectIR;
+    const cIR = bIR.properties["c"] as ObjectIR;
+    const dIR = cIR.properties["d"] as ObjectIR;
+    expect(dIR.properties["e"]?.type).toBe("string");
   });
 
   it("handles array of arrays of objects", () => {
@@ -588,7 +588,7 @@ describe("extractSchema — edge cases", () => {
     const ir = extractSchema(schema) as ArrayIR;
     const innerArr = ir.element as ArrayIR;
     const objIR = innerArr.element as ObjectIR;
-    expect(objIR.properties.x?.type).toBe("number");
+    expect(objIR.properties["x"]?.type).toBe("number");
   });
 
   it("handles union with many options", () => {
@@ -614,18 +614,18 @@ describe("extractSchema — edge cases", () => {
     });
 
     const ir = extractSchema(schema) as ObjectIR;
-    expect(ir.properties.str?.type).toBe("string");
-    expect(ir.properties.num?.type).toBe("number");
-    expect(ir.properties.bool?.type).toBe("boolean");
-    expect(ir.properties.nul?.type).toBe("null");
-    expect(ir.properties.undef?.type).toBe("undefined");
-    expect(ir.properties.opt?.type).toBe("optional");
-    expect(ir.properties.nullable?.type).toBe("nullable");
-    expect(ir.properties.arr?.type).toBe("array");
-    expect(ir.properties.en?.type).toBe("enum");
-    expect(ir.properties.lit?.type).toBe("literal");
-    expect(ir.properties.union?.type).toBe("union");
-    expect(ir.properties.nested?.type).toBe("object");
+    expect(ir.properties["str"]?.type).toBe("string");
+    expect(ir.properties["num"]?.type).toBe("number");
+    expect(ir.properties["bool"]?.type).toBe("boolean");
+    expect(ir.properties["nul"]?.type).toBe("null");
+    expect(ir.properties["undef"]?.type).toBe("undefined");
+    expect(ir.properties["opt"]?.type).toBe("optional");
+    expect(ir.properties["nullable"]?.type).toBe("nullable");
+    expect(ir.properties["arr"]?.type).toBe("array");
+    expect(ir.properties["en"]?.type).toBe("enum");
+    expect(ir.properties["lit"]?.type).toBe("literal");
+    expect(ir.properties["union"]?.type).toBe("union");
+    expect(ir.properties["nested"]?.type).toBe("object");
   });
 });
 

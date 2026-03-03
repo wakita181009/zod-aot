@@ -1,4 +1,4 @@
-import type { CheckIR, DateCheckIR, SchemaIR } from "../types.js";
+import type { CheckIR, DateCheckIR, SchemaIR } from "./types.js";
 
 interface ZodCheckDef {
   check: string;

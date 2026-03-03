@@ -4,6 +4,7 @@ import type { CodeGenContext, CodeGenResult } from "./context.js";
 export type { CodeGenResult } from "./context.js";
 
 import {
+  generateAnyValidation,
   generateArrayValidation,
   generateBooleanValidation,
   generateDateValidation,
@@ -17,11 +18,13 @@ import {
   generateNumberValidation,
   generateObjectValidation,
   generateOptionalValidation,
+  generateReadonlyValidation,
   generateRecordValidation,
   generateStringValidation,
   generateTupleValidation,
   generateUndefinedValidation,
   generateUnionValidation,
+  generateUnknownValidation,
 } from "./generators/index.js";
 
 function generateValidation(
@@ -73,11 +76,18 @@ function generateValidation(
     case "fallback":
       return `${issuesVar}.push({code:"custom",path:${pathExpr},message:"Fallback schema: ${ir.reason}"});\n`;
     case "any":
-      return "";
+      return generateAnyValidation();
     case "unknown":
-      return "";
+      return generateUnknownValidation();
     case "readonly":
-      return generateValidation(ir.inner, inputExpr, pathExpr, issuesVar, ctx);
+      return generateReadonlyValidation(
+        ir,
+        inputExpr,
+        pathExpr,
+        issuesVar,
+        ctx,
+        generateValidation,
+      );
     case "date":
       return generateDateValidation(ir, inputExpr, pathExpr, issuesVar);
     case "tuple":

@@ -1,7 +1,7 @@
 import type { CodeGenResult } from "#src/core/codegen/context.js";
 import { extractFunctionName } from "#src/core/codegen/context.js";
 import { generateValidator } from "#src/core/codegen/index.js";
-import { extractSchema } from "#src/core/extractor/index.js";
+import { extractSchema } from "#src/core/extractor.js";
 import type { DiscoveredSchema } from "#src/discovery.js";
 import { discoverSchemas } from "#src/discovery.js";
 import type { ZodAotPluginOptions } from "./types.js";

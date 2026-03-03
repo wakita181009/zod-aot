@@ -1,6 +1,6 @@
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { extractSchema } from "#src/core/extractor/index.js";
+import { extractSchema } from "#src/core/extractor.js";
 import type { SchemaIR } from "#src/core/types.js";
 import { discoverSchemas } from "#src/discovery.js";
 
