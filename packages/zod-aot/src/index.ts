@@ -14,3 +14,5 @@ export type {
   ZodErrorLike,
   ZodIssueLike,
 } from "./types.js";
+export { unplugin } from "./unplugin/index.js";
+export type { ZodAotPluginOptions } from "./unplugin/types.js";

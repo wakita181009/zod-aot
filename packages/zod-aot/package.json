@@ -32,11 +32,34 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./vite": {
+      "types": "./dist/unplugin/vite.d.ts",
+      "import": "./dist/unplugin/vite.js",
+      "default": "./dist/unplugin/vite.js"
+    },
+    "./webpack": {
+      "types": "./dist/unplugin/webpack.d.ts",
+      "import": "./dist/unplugin/webpack.js",
+      "default": "./dist/unplugin/webpack.js"
+    },
+    "./esbuild": {
+      "types": "./dist/unplugin/esbuild.d.ts",
+      "import": "./dist/unplugin/esbuild.js",
+      "default": "./dist/unplugin/esbuild.js"
+    },
+    "./rollup": {
+      "types": "./dist/unplugin/rollup.d.ts",
+      "import": "./dist/unplugin/rollup.js",
+      "default": "./dist/unplugin/rollup.js"
     }
   },
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "unplugin": "^3.0.0"
   },
   "peerDependencies": {
     "tsx": "^4.0.0",

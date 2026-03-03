@@ -5,7 +5,9 @@
   "scripts": {
     "generate": "zod-aot generate src/schemas.ts -o src/schemas.compiled.ts",
     "check": "zod-aot check src/schemas.ts",
-    "start": "tsx src/main.ts"
+    "start": "tsx src/main.ts",
+    "build": "vite build",
+    "start:built": "node dist/main.mjs"
   },
   "dependencies": {
     "zod": "^4.0.0",
@@ -14,6 +16,7 @@
   "devDependencies": {
     "@types/node": "^25.0.0",
     "tsx": "^4.0.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1"
   }
 }

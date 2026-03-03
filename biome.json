@@ -74,7 +74,12 @@
       }
     },
     {
-      "includes": ["packages/*/src/cli/**", "packages/*/tests/cli/**"],
+      "includes": [
+        "packages/*/src/cli/**",
+        "packages/*/tests/cli/**",
+        "packages/*/src/unplugin/**",
+        "packages/*/tests/unplugin/**"
+      ],
       "linter": {
         "rules": {
           "correctness": {

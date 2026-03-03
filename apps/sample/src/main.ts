@@ -1,4 +1,10 @@
-import { validateUser, validateEvent, validateContact, validateNotification } from "./schemas.compiled.js";
+import {
+  validateAddress,
+  validateContact,
+  validateEvent,
+  validateNotification,
+  validateUser,
+} from "./schemas.js";
 
 // biome-ignore lint/suspicious/noConsole: sample app output
 const log = console.log;
@@ -55,6 +61,27 @@ test("User: is() type guard", () => {
   };
   log(`  is valid: ${validateUser.is(data)}`);
   log(`  is invalid: ${validateUser.is({ name: 123 })}`);
+});
+
+// --- Address (regex) ---
+
+test("Address: valid", () => {
+  const result = validateAddress.safeParse({
+    street: "1-2-3 Shibuya",
+    city: "Tokyo",
+    zip: "150-0002",
+  });
+  log(`  success: ${result.success}`);
+});
+
+test("Address: invalid zip", () => {
+  const result = validateAddress.safeParse({
+    street: "4-5-6 Umeda",
+    city: "Osaka",
+    zip: "ABC-DEFG",
+  });
+  log(`  success: ${result.success}`);
+  if (!result.success) log(`  issues: ${result.error?.issues.length}`);
 });
 
 // --- Contact (intersection) ---

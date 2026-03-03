@@ -24,6 +24,8 @@ const AddressSchema = z.object({
   zip: z.string().regex(/^\d{3}-?\d{4}$/),
 });
 
+export const validateAddress = compile<z.infer<typeof AddressSchema>>(AddressSchema);
+
 const ContactSchema = z.intersection(
   z.object({ name: z.string() }),
   z.object({ phone: z.string() }),

@@ -9,31 +9,43 @@ function detectRuntime(): Runtime {
   return "node";
 }
 
+export interface LoadOptions {
+  /** Append a cache-busting query parameter to bypass Node.js module cache (useful for HMR). */
+  cacheBust?: boolean;
+}
+
 /**
  * Dynamically import a source file (.ts or .js).
  * - Bun/Deno: native TypeScript support, direct import
  * - Node.js: uses tsx's register API for TypeScript files
  */
-export async function loadSourceFile(filePath: string): Promise<Record<string, unknown>> {
+export async function loadSourceFile(
+  filePath: string,
+  options?: LoadOptions,
+): Promise<Record<string, unknown>> {
   const absPath = path.resolve(filePath);
   const ext = path.extname(absPath);
   const runtime = detectRuntime();
+  const suffix = options?.cacheBust ? `?t=${Date.now()}` : "";
 
   // Bun and Deno can import TypeScript natively
   if (runtime === "bun" || runtime === "deno") {
-    return (await import(pathToFileURL(absPath).href)) as Record<string, unknown>;
+    return (await import(pathToFileURL(absPath).href + suffix)) as Record<string, unknown>;
   }
 
   // Node.js: TypeScript files need tsx
   if (ext === ".ts" || ext === ".tsx" || ext === ".mts") {
-    return loadTypeScriptFileWithTsx(absPath);
+    return loadTypeScriptFileWithTsx(absPath, suffix);
   }
 
   // Node.js: .js / .mjs — direct import
-  return (await import(pathToFileURL(absPath).href)) as Record<string, unknown>;
+  return (await import(pathToFileURL(absPath).href + suffix)) as Record<string, unknown>;
 }
 
-async function loadTypeScriptFileWithTsx(absPath: string): Promise<Record<string, unknown>> {
+async function loadTypeScriptFileWithTsx(
+  absPath: string,
+  suffix = "",
+): Promise<Record<string, unknown>> {
   let tsxModule: { register: () => () => void };
   try {
     // Dynamic import — tsx may or may not be installed
@@ -50,7 +62,7 @@ async function loadTypeScriptFileWithTsx(absPath: string): Promise<Record<string
 
   const unregister = tsxModule.register();
   try {
-    return (await import(pathToFileURL(absPath).href)) as Record<string, unknown>;
+    return (await import(pathToFileURL(absPath).href + suffix)) as Record<string, unknown>;
   } finally {
     unregister();
   }
