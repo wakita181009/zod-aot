@@ -169,12 +169,11 @@ zod-aot/
 │       │   │   ├── types.ts      # SchemaIR, CompiledSchema, CheckIR
 │       │   │   ├── compile.ts    # compile() marker + isCompiledSchema()
 │       │   │   ├── runtime.ts    # Dev-time fallback (createFallback)
-│       │   │   ├── extractor/
-│       │   │   │   └── index.ts  # extractSchema() — _zod.def → SchemaIR
+│       │   │   ├── extractor.ts  # extractSchema() — _zod.def → SchemaIR
 │       │   │   └── codegen/
 │       │   │       ├── index.ts  # generateValidator() — SchemaIR → JS code
 │       │   │       ├── context.ts # CodeGenContext, CodeGenResult, utils
-│       │   │       └── generators/ # 18 type-specific code generators
+│       │   │       └── generators/ # 21 type-specific code generators
 │       │   ├── cli/              # CLI-specific (no unplugin deps)
 │       │   │   ├── index.ts      # CLI entry point (command parser)
 │       │   │   ├── logger.ts     # Logging utility
@@ -192,7 +191,7 @@ zod-aot/
 │       │   ├── discovery.test.ts
 │       │   ├── core/
 │       │   │   ├── types.test.ts, compile.test.ts, runtime.test.ts
-│       │   │   ├── extractor/index.test.ts
+│       │   │   ├── extractor.test.ts
 │       │   │   └── codegen/
 │       │   │       ├── index.test.ts, helpers.ts
 │       │   │       └── generators/*.test.ts
