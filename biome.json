@@ -79,6 +79,7 @@
       "**",
       "!node_modules",
       "!dist",
+      "!**/dist",
       "!coverage",
       "!*.compiled.ts",
       "!*.compiled.js",

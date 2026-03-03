@@ -11,7 +11,7 @@
  */
 
 import { z } from "zod";
-import { extractSchema, generateValidator, createFallback } from "../dist/index.js";
+import { createFallback, extractSchema, generateValidator } from "../dist/index.js";
 
 let passed = 0;
 let failed = 0;
@@ -19,6 +19,7 @@ let failed = 0;
 function assert(condition, message) {
   if (!condition) {
     failed++;
+    // biome-ignore lint/suspicious/noConsole: test runner output
     console.error(`FAIL: ${message}`);
   } else {
     passed++;
@@ -28,6 +29,7 @@ function assert(condition, message) {
 function assertEqual(actual, expected, message) {
   if (actual !== expected) {
     failed++;
+    // biome-ignore lint/suspicious/noConsole: test runner output
     console.error(`FAIL: ${message} — expected ${expected}, got ${actual}`);
   } else {
     passed++;
@@ -98,6 +100,7 @@ assertEqual(fallback.is("ab"), false, "createFallback is() returns false for inv
 
 // ─── Report ─────────────────────────────────────────────────────────────────
 
+// biome-ignore lint/suspicious/noConsole: test runner output
 console.log(`\ncompat.mjs: ${passed} passed, ${failed} failed`);
 if (failed > 0) {
   process.exit(1);

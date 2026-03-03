@@ -5,7 +5,5 @@
     "rootDir": ".."
   },
   "include": ["**/*.ts"],
-  "references": [
-    { "path": "../packages/zod-aot" }
-  ]
+  "references": [{ "path": "../packages/zod-aot" }]
 }
