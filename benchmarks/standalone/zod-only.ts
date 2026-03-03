@@ -1,12 +1,16 @@
 import { benchmark } from "../helpers/benchmark.js";
 import {
   ApiResponseSchema,
+  BigIntSchema,
   DiscriminatedUnionSchema,
   EventLogSchema,
   FallbackArraySchema,
+  MapSchema,
   NumberWithChecks,
   PartialFallbackObjectSchema,
+  PipeSchema,
   RecordSchema,
+  SetSchema,
   SimpleEnum,
   SimpleString,
   StringWithChecks,
@@ -14,13 +18,17 @@ import {
   UserSchema,
   validApiResponse10,
   validApiResponse100,
+  validBigInt,
   validClickEvent,
   validEventLog,
   validFallbackArray10,
   validFallbackArray50,
+  validMap5,
   validNumberWithChecks,
   validPartialFallbackObject,
+  validPipe,
   validRecord,
+  validSet5,
   validSimpleEnum,
   validSimpleString,
   validStringWithChecks,
@@ -53,6 +61,10 @@ benchmark("partial fallback object", () =>
 );
 benchmark("partial fallback array (10)", () => FallbackArraySchema.safeParse(validFallbackArray10));
 benchmark("partial fallback array (50)", () => FallbackArraySchema.safeParse(validFallbackArray50));
+benchmark("bigint (min/max)", () => BigIntSchema.safeParse(validBigInt));
+benchmark("set<string> (5 items)", () => SetSchema.safeParse(validSet5));
+benchmark("map<string, number> (5)", () => MapSchema.safeParse(validMap5));
+benchmark("pipe (string→string)", () => PipeSchema.safeParse(validPipe));
 
 // biome-ignore lint/suspicious/noConsole: benchmark output
 console.log("\n--- is (type guard) ---");
@@ -82,3 +94,7 @@ benchmark(
   "partial fallback array (10)",
   () => FallbackArraySchema.safeParse(validFallbackArray10).success,
 );
+benchmark("bigint (min/max)", () => BigIntSchema.safeParse(validBigInt).success);
+benchmark("set<string> (5 items)", () => SetSchema.safeParse(validSet5).success);
+benchmark("map<string, number> (5)", () => MapSchema.safeParse(validMap5).success);
+benchmark("pipe (string→string)", () => PipeSchema.safeParse(validPipe).success);

@@ -2,9 +2,13 @@ import {
   validateAddress,
   validateContact,
   validateEvent,
+  validateHeaders,
   validateNotification,
   validateOrder,
+  validatePositiveInt,
+  validateTagSet,
   validateUser,
+  validateWallet,
 } from "./schemas.js";
 
 // biome-ignore lint/suspicious/noConsole: sample app output
@@ -182,6 +186,64 @@ test("Order: invalid amount", () => {
   });
   log(`  success: ${result.success}`);
   if (!result.success) log(`  issues: ${result.error?.issues.length}`);
+});
+
+// --- Wallet (bigint) ---
+
+test("Wallet: valid", () => {
+  const result = validateWallet.safeParse({ balance: 500n, limit: 10000n });
+  log(`  success: ${result.success}`);
+});
+
+test("Wallet: negative balance", () => {
+  const result = validateWallet.safeParse({ balance: -1n, limit: 100n });
+  log(`  success: ${result.success}`);
+  if (!result.success) log(`  issues: ${result.error?.issues.length}`);
+});
+
+// --- TagSet (set) ---
+
+test("TagSet: valid", () => {
+  const result = validateTagSet.safeParse(new Set(["typescript", "zod", "aot"]));
+  log(`  success: ${result.success}`);
+});
+
+test("TagSet: empty (below min)", () => {
+  const result = validateTagSet.safeParse(new Set());
+  log(`  success: ${result.success}`);
+});
+
+// --- Headers (map) ---
+
+test("Headers: valid", () => {
+  const headers = new Map([
+    ["content-type", "application/json"],
+    ["authorization", "Bearer token123"],
+  ]);
+  const result = validateHeaders.safeParse(headers);
+  log(`  success: ${result.success}`);
+});
+
+test("Headers: not a Map", () => {
+  const result = validateHeaders.safeParse({ "content-type": "text/html" });
+  log(`  success: ${result.success}`);
+});
+
+// --- PositiveInt (pipe) ---
+
+test("PositiveInt: valid", () => {
+  const result = validatePositiveInt.safeParse(42);
+  log(`  success: ${result.success}`);
+});
+
+test("PositiveInt: zero (not positive)", () => {
+  const result = validatePositiveInt.safeParse(0);
+  log(`  success: ${result.success}`);
+});
+
+test("PositiveInt: float (not int)", () => {
+  const result = validatePositiveInt.safeParse(3.14);
+  log(`  success: ${result.success}`);
 });
 
 log("\nAll tests completed.");

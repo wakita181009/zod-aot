@@ -63,3 +63,24 @@ const OrderSchema = z.object({
 });
 
 export const validateOrder = compile<z.infer<typeof OrderSchema>>(OrderSchema);
+
+// --- Tier 3 types ---
+
+const WalletSchema = z.object({
+  balance: z.bigint().nonnegative(),
+  limit: z.bigint().max(1000000n),
+});
+
+export const validateWallet = compile<z.infer<typeof WalletSchema>>(WalletSchema);
+
+const TagSetSchema = z.set(z.string().min(1)).min(1).max(20);
+
+export const validateTagSet = compile<z.infer<typeof TagSetSchema>>(TagSetSchema);
+
+const HeadersSchema = z.map(z.string().min(1), z.string());
+
+export const validateHeaders = compile<z.infer<typeof HeadersSchema>>(HeadersSchema);
+
+const PositiveIntSchema = z.number().int().pipe(z.number().positive());
+
+export const validatePositiveInt = compile<z.infer<typeof PositiveIntSchema>>(PositiveIntSchema);
