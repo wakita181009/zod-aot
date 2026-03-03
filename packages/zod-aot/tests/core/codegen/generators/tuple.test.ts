@@ -85,4 +85,49 @@ describe("codegen — tuple", () => {
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]).toMatchObject({ path: [1] });
   });
+
+  // H3: Tuple should reject arrays with fewer elements than required
+  it("rejects array with fewer elements than required (no rest)", () => {
+    const ir: TupleIR = {
+      type: "tuple",
+      items: [
+        { type: "string", checks: [] },
+        { type: "number", checks: [] },
+      ],
+      rest: null,
+    };
+    const safeParse = compileIR(ir);
+    // Missing second element — should fail
+    const result = safeParse(["hello"]);
+    expect(result.success).toBe(false);
+    // Should have a meaningful error, ideally "too_small" rather than just
+    // "Expected number, received undefined" for element [1]
+    expect(result.error?.issues.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("rejects empty array for non-empty tuple", () => {
+    const ir: TupleIR = {
+      type: "tuple",
+      items: [{ type: "string", checks: [] }],
+      rest: null,
+    };
+    const safeParse = compileIR(ir);
+    const result = safeParse([]);
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects array with fewer elements than required (with rest)", () => {
+    const ir: TupleIR = {
+      type: "tuple",
+      items: [
+        { type: "string", checks: [] },
+        { type: "number", checks: [] },
+      ],
+      rest: { type: "boolean" },
+    };
+    const safeParse = compileIR(ir);
+    // Even with rest, the required items must be present
+    const result = safeParse(["hello"]);
+    expect(result.success).toBe(false);
+  });
 });
