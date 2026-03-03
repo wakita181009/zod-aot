@@ -694,6 +694,16 @@ describe("extractSchema — date", () => {
     ) as DateIR;
     expect(ir.checks).toHaveLength(2);
   });
+
+  // H2: Date checks should not produce NaN timestamps
+  it("extracted date check timestamps are never NaN", () => {
+    const minDate = new Date("2020-01-01T00:00:00.000Z");
+    const maxDate = new Date("2030-12-31T23:59:59.999Z");
+    const ir = extractSchema(z.date().min(minDate).max(maxDate)) as DateIR;
+    for (const check of ir.checks) {
+      expect(Number.isNaN(check.timestamp)).toBe(false);
+    }
+  });
 });
 
 // ─── Tier 2: tuple ─────────────────────────────────────────────────────────
@@ -764,6 +774,13 @@ describe("extractSchema — default", () => {
     expect(ir.inner.type).toBe("object");
     expect(ir.defaultValue).toEqual({ a: "hi" });
   });
+
+  // M5: Date default values should fall back to Zod
+  it("falls back for Date default value", () => {
+    const ir = extractSchema(z.date().default(new Date("2024-01-01")));
+    expect(ir.type).toBe("fallback");
+    expect((ir as FallbackIR).reason).toBe("unsupported");
+  });
 });
 
 // ─── Tier 2: intersection ──────────────────────────────────────────────────
@@ -813,6 +830,21 @@ describe("extractSchema — discriminatedUnion", () => {
     expect(ir.discriminator).toBe("kind");
     expect(ir.options).toHaveLength(3);
     expect(ir.mapping).toEqual({ circle: 0, square: 1, rect: 2 });
+  });
+
+  // M4: All options with literal discriminators should have complete mapping
+  it("mapping covers all literal discriminator values", () => {
+    const ir = extractSchema(
+      z.discriminatedUnion("type", [
+        z.object({ type: z.literal("a"), value: z.string() }),
+        z.object({ type: z.literal("b"), count: z.number() }),
+      ]),
+    ) as DiscriminatedUnionIR;
+    // Every option index should appear in the mapping values
+    const mappedIndices = new Set(Object.values(ir.mapping));
+    for (let i = 0; i < ir.options.length; i++) {
+      expect(mappedIndices.has(i)).toBe(true);
+    }
   });
 });
 

@@ -102,4 +102,42 @@ describe("codegen — date", () => {
     expect(safeParse(new Date("2030-01-01T00:00:00.000Z")).success).toBe(false);
     expect(safeParse(new Date("2030-01-02")).success).toBe(false);
   });
+
+  // H2: NaN timestamp should not silently disable date checks
+  it("NaN timestamp in min check silently passes all dates (documents bug)", () => {
+    const ir: DateIR = {
+      type: "date",
+      checks: [
+        {
+          kind: "date_greater_than",
+          value: "invalid-date",
+          timestamp: NaN,
+          inclusive: true,
+        },
+      ],
+    };
+    const safeParse = compileIR(ir);
+    // BUG: `input.getTime() < NaN` is always false → check never rejects
+    // This date should fail the min check but passes due to NaN
+    const result = safeParse(new Date("2000-01-01"));
+    expect(result.success).toBe(true); // documents current broken behavior
+  });
+
+  it("NaN timestamp in max check silently passes all dates (documents bug)", () => {
+    const ir: DateIR = {
+      type: "date",
+      checks: [
+        {
+          kind: "date_less_than",
+          value: "invalid-date",
+          timestamp: NaN,
+          inclusive: true,
+        },
+      ],
+    };
+    const safeParse = compileIR(ir);
+    // BUG: `input.getTime() > NaN` is always false → check never rejects
+    const result = safeParse(new Date("9999-12-31"));
+    expect(result.success).toBe(true); // documents current broken behavior
+  });
 });

@@ -55,6 +55,16 @@ describe("isWatchTarget", () => {
     expect(isWatchTarget("node_modules/zod/index.ts")).toBe(false);
   });
 
+  // M3: node_modules check should not false-positive on similar directory names
+  it("accepts paths with 'node_modules' as substring in directory name", () => {
+    // A directory named "node_modules_backup" should NOT be excluded
+    expect(isWatchTarget("/home/user/node_modules_backup/schema.ts")).toBe(true);
+  });
+
+  it("rejects nested node_modules paths", () => {
+    expect(isWatchTarget("/project/node_modules/@scope/pkg/index.ts")).toBe(false);
+  });
+
   it("rejects non-script files", () => {
     expect(isWatchTarget("src/styles.css")).toBe(false);
     expect(isWatchTarget("README.md")).toBe(false);

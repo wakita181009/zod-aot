@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { generateValidator } from "#src/core/codegen/index.js";
 import type { StringIR } from "#src/core/types.js";
 import { compileIR } from "../helpers.js";
 
@@ -147,5 +148,41 @@ describe("codegen — string", () => {
     const safeParse = compileIR(ir);
     expect(safeParse("anything").success).toBe(true);
     expect(safeParse("").success).toBe(true);
+  });
+
+  // H1: URL validation should not produce unused preamble variables (dead code)
+  it("url format does not produce unused preamble variables", () => {
+    const ir: StringIR = {
+      type: "string",
+      checks: [{ kind: "string_format", format: "url" }],
+    };
+    const { code } = generateValidator(ir, "urlTest");
+    // The preamble should not contain a dead try-catch variable for URL
+    // Currently produces: var __re_url_0;try{__re_url_0=true;}catch(e){__re_url_0=false;}
+    // This is dead code since the try block never throws
+    const preambleLines = code
+      .split("\n")
+      .filter((l) => l.trim() !== "" && l.trim() !== "/* zod-aot */");
+    for (const line of preambleLines) {
+      expect(line).not.toMatch(/try\{.*=true;\}catch/);
+    }
+  });
+
+  // H1: URL format combined with other checks should still work correctly
+  it("url format combined with other checks works correctly", () => {
+    const ir: StringIR = {
+      type: "string",
+      checks: [
+        { kind: "min_length", minimum: 10 },
+        { kind: "string_format", format: "url" },
+      ],
+    };
+    const safeParse = compileIR(ir);
+    expect(safeParse("https://example.com").success).toBe(true);
+    expect(safeParse("https://x.co").success).toBe(true);
+    // Too short
+    expect(safeParse("http://x").success).toBe(false);
+    // Not a URL
+    expect(safeParse("not-a-url-but-long-enough").success).toBe(false);
   });
 });

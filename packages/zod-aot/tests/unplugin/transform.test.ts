@@ -91,6 +91,20 @@ describe("removeCompileImport()", () => {
     const code = `import { z } from "zod";`;
     expect(removeCompileImport(code)).toBe(code);
   });
+
+  // H4: Should handle multi-line import statements
+  it("removes compile from multi-line import", () => {
+    const code = ["import {", "  compile,", "  createFallback", '} from "zod-aot";'].join("\n");
+    const result = removeCompileImport(code);
+    expect(result).not.toContain("compile");
+    expect(result).toContain("createFallback");
+  });
+
+  it("removes sole compile from multi-line import", () => {
+    const code = ["import {", "  compile", '} from "zod-aot";'].join("\n");
+    const result = removeCompileImport(code);
+    expect(result).toBe("");
+  });
 });
 
 describe("rewriteSource()", () => {
@@ -196,6 +210,21 @@ describe("rewriteSource()", () => {
     expect(result).not.toContain("compile(z.object");
     // The schema arg should capture the full expression
     expect(result).toContain("schema:z.object({ name: z.string() }),");
+  });
+
+  // C1 (from review): findMatchingParen should handle parens inside string literals
+  it("handles parentheses inside string literal default values", () => {
+    const code = [
+      `import { compile } from "zod-aot";`,
+      `export const validateUser = compile(z.object({ msg: z.string().default("balance: (100)") }));`,
+    ].join("\n");
+
+    const schemas = [makeCompiledInfo("validateUser", simpleSchema)];
+    const result = rewriteSource(code, schemas);
+
+    expect(result).toContain("safeParse_validateUser");
+    // The compile(...) call should be fully replaced
+    expect(result).not.toContain("compile(z.object");
   });
 
   it("does not match export name as substring (word boundary)", () => {

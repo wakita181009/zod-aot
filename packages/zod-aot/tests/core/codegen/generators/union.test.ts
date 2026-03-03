@@ -71,4 +71,25 @@ describe("codegen — union", () => {
     expect(safeParse(true).success).toBe(true);
     expect(safeParse(null).success).toBe(false);
   });
+
+  // M1: unionErrors should contain per-branch error details
+  it("union error includes per-branch errors in unionErrors", () => {
+    const ir: UnionIR = {
+      type: "union",
+      options: [
+        { type: "string", checks: [] },
+        { type: "number", checks: [] },
+      ],
+    };
+    const safeParse = compileIR(ir);
+    const result = safeParse(true);
+    expect(result.success).toBe(false);
+    const issue = result.error?.issues[0] as Record<string, unknown>;
+    expect(issue.code).toBe("invalid_union");
+    // unionErrors should contain one entry per failed branch
+    const unionErrors = issue.unionErrors as { issues: unknown[] }[];
+    expect(unionErrors).toHaveLength(2);
+    expect(unionErrors[0]?.issues.length).toBeGreaterThanOrEqual(1);
+    expect(unionErrors[1]?.issues.length).toBeGreaterThanOrEqual(1);
+  });
 });

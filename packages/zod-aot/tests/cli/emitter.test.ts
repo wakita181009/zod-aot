@@ -106,6 +106,57 @@ describe("generateCompiledFileContent()", () => {
     expect(content).toContain("var __fb=__fb_validateUser;");
   });
 
+  // H5: __fb injection should detect if the regex replacement fails
+  it("__fb injection requires function signature on first line with newline", () => {
+    // If codegen output format changes (e.g., no newline after '{'),
+    // the regex won't match and __fb binding will be missing.
+    const result: CodeGenResult = {
+      code: "/* zod-aot */",
+      // Note: This has the expected format with `{\n` after the function signature
+      functionName:
+        "function safeParse_test(input){\nvar __issues=[];\nreturn{success:true,data:input};\n}",
+      fallbackCount: 1,
+    };
+
+    const content = generateCompiledFileContent(
+      [
+        {
+          exportName: "validateUser",
+          codegenResult: result,
+          fallbackEntries: [{ schema: {}, accessPath: '.shape["slug"]' }],
+        },
+      ],
+      "./schemas.ts",
+    );
+
+    // Verify __fb is actually injected
+    expect(content).toContain("var __fb=__fb_validateUser;");
+  });
+
+  it("throws when __fb injection fails due to unexpected function format", () => {
+    // Simulate a changed function format where the regex won't match
+    const result: CodeGenResult = {
+      code: "/* zod-aot */",
+      // No newline after `{` — the regex /^(function\s+\w+\(input\)\{)\n/ won't match
+      functionName:
+        "function safeParse_test(input){var __issues=[];return{success:true,data:input};}",
+      fallbackCount: 1,
+    };
+
+    expect(() =>
+      generateCompiledFileContent(
+        [
+          {
+            exportName: "validateUser",
+            codegenResult: result,
+            fallbackEntries: [{ schema: {}, accessPath: '.shape["slug"]' }],
+          },
+        ],
+        "./schemas.ts",
+      ),
+    ).toThrow("Failed to inject __fb binding");
+  });
+
   it("does not generate import when no schemas have fallbacks", () => {
     const result: CodeGenResult = {
       code: "/* zod-aot */",

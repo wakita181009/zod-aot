@@ -271,6 +271,7 @@ export function extractSchema(
           if (checkDef.check === "greater_than") {
             const v = checkDef.value as unknown as string;
             const ts = new Date(v).getTime();
+            if (Number.isNaN(ts)) continue;
             dateChecks.push({
               kind: "date_greater_than",
               value: String(v),
@@ -280,6 +281,7 @@ export function extractSchema(
           } else if (checkDef.check === "less_than") {
             const v = checkDef.value as unknown as string;
             const ts = new Date(v).getTime();
+            if (Number.isNaN(ts)) continue;
             dateChecks.push({
               kind: "date_less_than",
               value: String(v),
@@ -312,6 +314,11 @@ export function extractSchema(
     case "default": {
       const inner = extractSchema(def.innerType, fallbacks, `${p}._zod.def.innerType`);
       const defaultValue = def.defaultValue;
+      // Date objects serialize to strings via JSON.stringify, losing their type.
+      // Fall back to Zod for Date defaults to preserve correct runtime behavior.
+      if (defaultValue instanceof Date) {
+        return makeFallback("unsupported", zodSchema, fallbacks, p);
+      }
       try {
         JSON.stringify(defaultValue);
       } catch {
