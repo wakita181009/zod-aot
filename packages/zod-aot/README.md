@@ -6,7 +6,7 @@
 [![npm](https://img.shields.io/npm/v/zod-aot)](https://www.npmjs.com/package/zod-aot)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-No code changes required — keep your existing Zod schemas and get **3-47x faster** validation.
+No code changes required — keep your existing Zod schemas and get **2-60x faster** validation.
 
 ## Why
 
@@ -23,18 +23,24 @@ Zod v4 is already fast, but runtime schema traversal still costs ~10x compared t
 
 Measured with `vitest bench` on Node.js (Apple M-series):
 
+### safeParse
+
 | Scenario | Zod v4 | zod-aot | Speedup |
 |---|---|---|---|
-| simple string | 11.8M ops/s | 18.6M ops/s | **1.6x** |
-| string (min/max) | 7.4M ops/s | 17.9M ops/s | **2.4x** |
-| number (int+positive) | 6.7M ops/s | 18.0M ops/s | **2.7x** |
-| enum | 9.6M ops/s | 15.9M ops/s | **1.7x** |
-| medium object (7 props, valid) | 1.9M ops/s | 6.5M ops/s | **3.4x** |
-| medium object (7 props, invalid) | 65K ops/s | 1.5M ops/s | **23x** |
-| large object (10 nested items) | 147K ops/s | 4.8M ops/s | **32x** |
-| large object (100 nested items) | 15.6K ops/s | 714K ops/s | **46x** |
+| simple string | 10.0M ops/s | 16.6M ops/s | **1.7x** |
+| string (min/max) | 5.4M ops/s | 16.8M ops/s | **3.1x** |
+| number (int+positive) | 5.3M ops/s | 17.4M ops/s | **3.3x** |
+| enum | 8.6M ops/s | 15.5M ops/s | **1.8x** |
+| tuple [string, int, boolean] | 4.4M ops/s | 17.5M ops/s | **4.0x** |
+| record\<string, number\> (5 keys) | 2.0M ops/s | 8.5M ops/s | **4.2x** |
+| discriminatedUnion (3 variants) | 3.0M ops/s | 16.2M ops/s | **5.4x** |
+| medium object (7 props, valid) | 1.7M ops/s | 6.5M ops/s | **3.9x** |
+| medium object (7 props, invalid) | 64K ops/s | 1.5M ops/s | **23x** |
+| large object (10 nested items) | 104K ops/s | 4.7M ops/s | **45x** |
+| large object (100 nested items) | 11.7K ops/s | 706K ops/s | **60x** |
+| event log (combined) | 443K ops/s | 5.1M ops/s | **11x** |
 
-Performance gains scale with schema complexity. Larger, nested schemas with arrays see the biggest improvements.
+Performance gains scale with schema complexity. The `discriminatedUnion` optimization uses an O(1) `switch` dispatch instead of Zod's sequential trial approach.
 
 ## Runtime Support
 
@@ -295,11 +301,20 @@ The intermediate representation — a discriminated union of all supported schem
 | `UnionIR` | `z.union([...])` |
 | `OptionalIR` | `.optional()` |
 | `NullableIR` | `.nullable()` |
+| `AnyIR` | `z.any()` |
+| `UnknownIR` | `z.unknown()` |
+| `ReadonlyIR` | `.readonly()` |
+| `DateIR` | `z.date()` |
+| `TupleIR` | `z.tuple([...])` |
+| `RecordIR` | `z.record(...)` |
+| `DefaultIR` | `.default(...)` |
+| `IntersectionIR` | `z.intersection(...)` / `.and(...)` |
+| `DiscriminatedUnionIR` | `z.discriminatedUnion(...)` |
 | `FallbackIR` | `transform`, `refine`, etc. |
 
 ## Supported Types
 
-### Tier 1 (Implemented)
+### Tier 1 — Primitives & Core
 
 | Type | Supported Checks |
 |---|---|
@@ -312,9 +327,23 @@ The intermediate representation — a discriminated union of all supported schem
 | `enum` | string enum values |
 | `object` | nested objects, mixed property types |
 | `array` | `min`, `max`, `length`, element validation |
-| `union` | all Tier 1 types as options |
-| `optional` | wraps any Tier 1 type |
-| `nullable` | wraps any Tier 1 type |
+| `union` | sequential trial of all options |
+| `optional` | wraps any supported type |
+| `nullable` | wraps any supported type |
+
+### Tier 2 — Composites & Extended
+
+| Type | Supported Checks |
+|---|---|
+| `any` | — (always passes) |
+| `unknown` | — (always passes) |
+| `readonly` | validates inner type (TS-only concept) |
+| `date` | `min`, `max` (timestamp comparison) |
+| `tuple` | per-element types, optional rest element |
+| `record` | key and value type validation |
+| `default` | replaces `undefined` with default value, then validates inner |
+| `intersection` | validates both left and right schemas |
+| `discriminatedUnion` | O(1) `switch` dispatch on discriminator field |
 
 ### Automatic Fallback to Zod
 
@@ -325,11 +354,10 @@ These schema types contain JavaScript closures that cannot be compiled to static
 - `custom` — arbitrary validation logic
 - `preprocess` — input preprocessing
 
-### Planned (Tier 2 & 3)
+### Planned (Tier 3)
 
 | Tier | Types |
 |---|---|
-| Tier 2 | `tuple`, `record`, `intersection`, `discriminatedUnion`, `date`, `any`, `unknown`, `default`, `readonly` |
 | Tier 3 | `lazy`, `pipe` (non-transform), `template_literal`, `bigint`, `map`, `set` |
 
 ## Roadmap
@@ -346,9 +374,9 @@ These schema types contain JavaScript closures that cannot be compiled to static
 
 ### Phase 2: Type Expansion + CLI + Build Plugin
 
+- [x] Tier 2 type support (9 types: any, unknown, readonly, date, tuple, record, default, intersection, discriminatedUnion)
+- [x] `discriminatedUnion` → O(1) switch statement optimization
 - [ ] CLI (`npx zod-aot generate` / `npx zod-aot check`)
-- [ ] Tier 2 type support
-- [ ] `discriminatedUnion` → switch statement optimization
 - [ ] Partial fallback (objects with some transform properties)
 - [ ] unplugin integration (Vite / Webpack / esbuild)
 - [ ] Watch mode
