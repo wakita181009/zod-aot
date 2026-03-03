@@ -5,6 +5,7 @@ import type { z } from "zod";
 import {
   findSchemaFiles,
   generateFile,
+  isSchemaFile,
   resolveInputFiles,
   runGenerate,
 } from "#src/cli/commands/generate.js";
@@ -26,6 +27,29 @@ afterEach(async () => {
     await fs.promises.unlink(f).catch(() => undefined);
   }
   outputFiles.length = 0;
+});
+
+describe("isSchemaFile", () => {
+  it("accepts .ts, .mts, .js, .mjs files", () => {
+    expect(isSchemaFile("schemas.ts")).toBe(true);
+    expect(isSchemaFile("schemas.mts")).toBe(true);
+    expect(isSchemaFile("schemas.js")).toBe(true);
+    expect(isSchemaFile("schemas.mjs")).toBe(true);
+  });
+
+  it("rejects .compiled, .test, .d.ts files", () => {
+    expect(isSchemaFile("schemas.compiled.ts")).toBe(false);
+    expect(isSchemaFile("schemas.compiled.js")).toBe(false);
+    expect(isSchemaFile("schemas.test.ts")).toBe(false);
+    expect(isSchemaFile("schemas.test.js")).toBe(false);
+    expect(isSchemaFile("schemas.d.ts")).toBe(false);
+  });
+
+  it("rejects non-script files", () => {
+    expect(isSchemaFile("styles.css")).toBe(false);
+    expect(isSchemaFile("README.md")).toBe(false);
+    expect(isSchemaFile("package.json")).toBe(false);
+  });
 });
 
 describe("resolveInputFiles", () => {

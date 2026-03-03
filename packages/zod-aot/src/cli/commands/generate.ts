@@ -22,6 +22,21 @@ export interface GenerateFileResult {
 }
 
 /**
+ * Check if a filename is a schema file candidate.
+ * Shared filter logic used by both findSchemaFiles and isWatchTarget.
+ */
+export function isSchemaFile(fileName: string): boolean {
+  return (
+    /\.(?:ts|mts|js|mjs)$/.test(fileName) &&
+    !fileName.endsWith(".compiled.ts") &&
+    !fileName.endsWith(".compiled.js") &&
+    !fileName.endsWith(".test.ts") &&
+    !fileName.endsWith(".test.js") &&
+    !fileName.endsWith(".d.ts")
+  );
+}
+
+/**
  * Resolve input paths to a list of source files.
  * If a path is a directory, find all .ts files (excluding .compiled.ts, .test.ts, node_modules).
  */
@@ -61,15 +76,7 @@ export async function findSchemaFiles(dir: string): Promise<string[]> {
       }
       const nested = await findSchemaFiles(fullPath);
       results.push(...nested);
-    } else if (
-      entry.isFile() &&
-      /\.(?:ts|mts|js|mjs)$/.test(entry.name) &&
-      !entry.name.endsWith(".compiled.ts") &&
-      !entry.name.endsWith(".compiled.js") &&
-      !entry.name.endsWith(".test.ts") &&
-      !entry.name.endsWith(".test.js") &&
-      !entry.name.endsWith(".d.ts")
-    ) {
+    } else if (entry.isFile() && isSchemaFile(entry.name)) {
       results.push(fullPath);
     }
   }

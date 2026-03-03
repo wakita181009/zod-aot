@@ -2,7 +2,12 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { logger } from "../logger.js";
-import { type GenerateFileResult, generateFile, resolveInputFiles } from "./generate.js";
+import {
+  type GenerateFileResult,
+  generateFile,
+  isSchemaFile,
+  resolveInputFiles,
+} from "./generate.js";
 
 interface WatchOptions {
   inputs: string[];
@@ -14,10 +19,7 @@ interface WatchOptions {
  */
 export function isWatchTarget(filePath: string): boolean {
   if (filePath.includes("node_modules")) return false;
-  if (filePath.endsWith(".compiled.ts") || filePath.endsWith(".compiled.js")) return false;
-  if (filePath.endsWith(".test.ts") || filePath.endsWith(".test.js")) return false;
-  if (filePath.endsWith(".d.ts")) return false;
-  return /\.(?:ts|mts|js|mjs)$/.test(filePath);
+  return isSchemaFile(filePath);
 }
 
 /**
@@ -160,7 +162,15 @@ export async function runWatch(options: WatchOptions): Promise<void> {
 
   // Keep process alive until aborted
   await new Promise<void>((resolve) => {
-    ac.signal.addEventListener("abort", () => resolve(), { once: true });
+    ac.signal.addEventListener(
+      "abort",
+      () => {
+        process.removeListener("SIGINT", shutdown);
+        process.removeListener("SIGTERM", shutdown);
+        resolve();
+      },
+      { once: true },
+    );
   });
 }
 

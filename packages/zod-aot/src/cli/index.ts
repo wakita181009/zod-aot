@@ -2,16 +2,13 @@
 
 import { createRequire } from "node:module";
 import process from "node:process";
+import type { GenerateOptions as BaseGenerateOptions } from "./commands/generate.js";
 import { logger } from "./logger.js";
 
 const require = createRequire(import.meta.url);
 const VERSION: string = (require("../../package.json") as { version: string }).version;
 
-interface GenerateOptions {
-  inputs: string[];
-  output: string | undefined;
-  watch: boolean;
-}
+type GenerateOptions = BaseGenerateOptions & { watch: boolean };
 
 interface CheckOptions {
   inputs: string[];
