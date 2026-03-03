@@ -237,6 +237,42 @@ Source files to reference during implementation:
 4. **Phase 1 benchmarks first** — Pivot if 10x is not achieved. Data-driven decisions
 5. **Pre-compiled regex + Set for enums** — These optimizations create the performance gap
 
+## Development Tools
+
+### Scripts
+
+```bash
+# Root (monorepo)
+pnpm build          # tsc across all packages
+pnpm test           # vitest run
+pnpm bench          # vitest bench
+pnpm lint           # biome check .
+pnpm lint:fix       # biome check --fix .
+pnpm format         # biome format --write .
+
+# packages/zod-aot
+pnpm -r typecheck   # tsc --noEmit
+pnpm -r build       # tsc
+```
+
+### Biome (Linter & Formatter)
+
+Config: `biome.json` (v2.4.5)
+
+Key rules:
+- `noUnusedVariables`, `noUnusedImports`, `noUndeclaredVariables`: error
+- `noExplicitAny`: error
+- `useImportType`, `useExportType`: error
+- `noFloatingPromises`, `noMisusedPromises`: error (nursery)
+- `noConsole`: warn
+- Formatter: 2-space indent, 100 line width, semicolons, trailing commas
+
+### Claude Code Integration
+
+- **`.claude/agents/checker.md`**: Type checking + Biome lint agent (`model: haiku`, read-only)
+- **`.claude/settings.json`**: PostToolUse hook — auto-runs `pnpm -r typecheck` + `pnpm lint` after `.ts`/`.tsx` file edits
+- **Plugin**: `typescript-lsp@claude-plugins-official` enabled
+
 ## Verification
 
 1. `pnpm test` — Vitest for extractor/codegen/integration tests

@@ -1,5 +1,19 @@
 {
   "enabledPlugins": {
     "typescript-lsp@claude-plugins-official": true
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "file_path=$(echo \"$TOOL_INPUT\" | jq -r '.file_path // empty'); if [ -n \"$file_path\" ] && echo \"$file_path\" | grep -qE '\\.tsx?$'; then pnpm -r --no-bail typecheck 2>&1 | grep -v 'TS18003' | head -30; pnpm lint 2>&1 | head -30; fi",
+            "timeout": 30000
+          }
+        ]
+      }
+    ]
   }
 }
