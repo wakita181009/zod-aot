@@ -15,7 +15,7 @@ import {
   validSimpleString,
   validStringWithChecks,
   validUser,
-} from "./schemas";
+} from "./schemas/index.js";
 
 // Pre-compile all AOT validators (build-time cost, not measured)
 const aotSimpleString = compileForBench(SimpleString, "simpleString");
