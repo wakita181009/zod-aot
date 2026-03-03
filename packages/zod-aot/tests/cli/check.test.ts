@@ -4,7 +4,7 @@ import { extractSchema } from "#src/core/extractor.js";
 import type { SchemaIR } from "#src/core/types.js";
 import { discoverSchemas } from "#src/discovery.js";
 
-const fixturesDir = path.resolve(import.meta.dirname, "fixtures");
+const fixturesDir = path.resolve(import.meta.dirname, "../fixtures");
 
 function hasFallback(ir: SchemaIR): string | null {
   if (ir.type === "fallback") return ir.reason;

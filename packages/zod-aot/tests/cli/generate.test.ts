@@ -12,7 +12,7 @@ import { extractSchema } from "#src/core/extractor.js";
 import type { SafeParseResult } from "#src/core/types.js";
 import { discoverSchemas } from "#src/discovery.js";
 
-const fixturesDir = path.resolve(import.meta.dirname, "fixtures");
+const fixturesDir = path.resolve(import.meta.dirname, "../fixtures");
 const outputFiles: string[] = [];
 
 afterEach(async () => {
@@ -32,7 +32,7 @@ describe("generate E2E", () => {
     const codegenResults = schemas.map((s) => {
       const ir = extractSchema(s.schema);
       const result = generateValidator(ir, s.exportName);
-      return { exportName: s.exportName, codegenResult: result };
+      return { exportName: s.exportName, codegenResult: result, fallbackEntries: [] };
     });
 
     const outputPath = resolveOutputPath(filePath, undefined);
@@ -78,7 +78,7 @@ describe("generate E2E", () => {
     const codegenResults = schemas.map((s) => {
       const ir = extractSchema(s.schema);
       const result = generateValidator(ir, s.exportName);
-      return { exportName: s.exportName, codegenResult: result };
+      return { exportName: s.exportName, codegenResult: result, fallbackEntries: [] };
     });
 
     const outputPath = resolveOutputPath(filePath, undefined);
