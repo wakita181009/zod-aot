@@ -22,7 +22,7 @@ This skill ensures all code development follows TDD principles with comprehensiv
 ALWAYS write tests first, then implement code to make tests pass.
 
 ### 2. Coverage Requirements
-- Minimum 80% coverage (unit + integration + E2E)
+- Minimum 90% coverage (unit + integration + E2E)
 - All edge cases covered
 - Error scenarios tested
 - Boundary conditions verified

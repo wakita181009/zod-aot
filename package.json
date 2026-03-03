@@ -12,6 +12,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.5",
+    "@vitest/coverage-v8": "^4.0.18",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18",
     "zod": "^4.0.0"

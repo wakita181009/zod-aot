@@ -5,6 +5,7 @@ export { createFallback } from "./runtime.js";
 export type {
   CheckIR,
   CompiledSchema,
+  DateCheckIR,
   SafeParseError,
   SafeParseResult,
   SafeParseSuccess,

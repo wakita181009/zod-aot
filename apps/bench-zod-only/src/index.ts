@@ -1,17 +1,25 @@
 import { performance } from "node:perf_hooks";
 import {
   ApiResponseSchema,
+  DiscriminatedUnionSchema,
+  EventLogSchema,
   NumberWithChecks,
+  RecordSchema,
   SimpleEnum,
   SimpleString,
   StringWithChecks,
+  TupleSchema,
   UserSchema,
   validApiResponse10,
   validApiResponse100,
+  validClickEvent,
+  validEventLog,
   validNumberWithChecks,
+  validRecord,
   validSimpleEnum,
   validSimpleString,
   validStringWithChecks,
+  validTuple,
   validUser,
 } from "@zod-aot/benchmarks/schemas";
 
@@ -44,6 +52,10 @@ benchmark(
   () => ApiResponseSchema.safeParse(validApiResponse100),
   10_000,
 );
+benchmark("tuple [string, int, bool]", () => TupleSchema.safeParse(validTuple));
+benchmark("record<string, number>", () => RecordSchema.safeParse(validRecord));
+benchmark("discriminatedUnion (3)", () => DiscriminatedUnionSchema.safeParse(validClickEvent));
+benchmark("event log (combined)", () => EventLogSchema.safeParse(validEventLog));
 
 // biome-ignore lint/suspicious/noConsole: benchmark output
 console.log("\n--- is (type guard) ---");
@@ -58,3 +70,10 @@ benchmark(
   () => ApiResponseSchema.safeParse(validApiResponse100).success,
   10_000,
 );
+benchmark("tuple [string, int, bool]", () => TupleSchema.safeParse(validTuple).success);
+benchmark("record<string, number>", () => RecordSchema.safeParse(validRecord).success);
+benchmark(
+  "discriminatedUnion (3)",
+  () => DiscriminatedUnionSchema.safeParse(validClickEvent).success,
+);
+benchmark("event log (combined)", () => EventLogSchema.safeParse(validEventLog).success);

@@ -50,6 +50,24 @@ describe("SchemaIR — type discrimination", () => {
           return `nullable(${ir.inner.type})`;
         case "fallback":
           return `fallback(${ir.reason})`;
+        case "any":
+          return "any";
+        case "unknown":
+          return "unknown";
+        case "readonly":
+          return `readonly(${ir.inner.type})`;
+        case "date":
+          return `date(${ir.checks.length} checks)`;
+        case "tuple":
+          return `tuple(${ir.items.length})`;
+        case "record":
+          return `record(${ir.keyType.type},${ir.valueType.type})`;
+        case "default":
+          return `default(${ir.inner.type})`;
+        case "intersection":
+          return `intersection(${ir.left.type},${ir.right.type})`;
+        case "discriminatedUnion":
+          return `discriminatedUnion(${ir.discriminator},${ir.options.length})`;
       }
     }
 
@@ -86,6 +104,51 @@ describe("SchemaIR — type discrimination", () => {
       "nullable(string)",
     );
     expect(processIR({ type: "fallback", reason: "transform" })).toBe("fallback(transform)");
+    // Tier 2
+    expect(processIR({ type: "any" })).toBe("any");
+    expect(processIR({ type: "unknown" })).toBe("unknown");
+    expect(processIR({ type: "readonly", inner: { type: "string", checks: [] } })).toBe(
+      "readonly(string)",
+    );
+    expect(processIR({ type: "date", checks: [] })).toBe("date(0 checks)");
+    expect(
+      processIR({
+        type: "tuple",
+        items: [
+          { type: "string", checks: [] },
+          { type: "number", checks: [] },
+        ],
+        rest: null,
+      }),
+    ).toBe("tuple(2)");
+    expect(
+      processIR({
+        type: "record",
+        keyType: { type: "string", checks: [] },
+        valueType: { type: "number", checks: [] },
+      }),
+    ).toBe("record(string,number)");
+    expect(
+      processIR({ type: "default", inner: { type: "string", checks: [] }, defaultValue: "hi" }),
+    ).toBe("default(string)");
+    expect(
+      processIR({
+        type: "intersection",
+        left: { type: "object", properties: {} },
+        right: { type: "object", properties: {} },
+      }),
+    ).toBe("intersection(object,object)");
+    expect(
+      processIR({
+        type: "discriminatedUnion",
+        discriminator: "type",
+        options: [
+          { type: "object", properties: {} },
+          { type: "object", properties: {} },
+        ],
+        mapping: { a: 0, b: 1 },
+      }),
+    ).toBe("discriminatedUnion(type,2)");
   });
 });
 
@@ -244,6 +307,47 @@ describe("SchemaIR — JSON serialization", () => {
       { type: "optional", inner: { type: "string", checks: [] } },
       { type: "nullable", inner: { type: "number", checks: [] } },
       { type: "fallback", reason: "transform" },
+      // Tier 2
+      { type: "any" },
+      { type: "unknown" },
+      { type: "readonly", inner: { type: "string", checks: [] } },
+      { type: "date", checks: [] },
+      {
+        type: "date",
+        checks: [
+          {
+            kind: "date_greater_than",
+            value: "2020-01-01T00:00:00.000Z",
+            timestamp: 1577836800000,
+            inclusive: true,
+          },
+        ],
+      },
+      {
+        type: "tuple",
+        items: [
+          { type: "string", checks: [] },
+          { type: "number", checks: [] },
+        ],
+        rest: null,
+      },
+      {
+        type: "record",
+        keyType: { type: "string", checks: [] },
+        valueType: { type: "number", checks: [] },
+      },
+      { type: "default", inner: { type: "string", checks: [] }, defaultValue: "hello" },
+      {
+        type: "intersection",
+        left: { type: "object", properties: {} },
+        right: { type: "object", properties: {} },
+      },
+      {
+        type: "discriminatedUnion",
+        discriminator: "type",
+        options: [{ type: "object", properties: {} }],
+        mapping: { a: 0 },
+      },
     ];
 
     for (const ir of irs) {

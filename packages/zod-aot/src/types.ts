@@ -58,6 +58,24 @@ export type CheckIR =
   | CheckNumberFormat
   | CheckStringFormat;
 
+// ─── Date Check IR ──────────────────────────────────────────────────────────
+
+export interface CheckDateGreaterThan {
+  kind: "date_greater_than";
+  value: string;
+  timestamp: number;
+  inclusive: boolean;
+}
+
+export interface CheckDateLessThan {
+  kind: "date_less_than";
+  value: string;
+  timestamp: number;
+  inclusive: boolean;
+}
+
+export type DateCheckIR = CheckDateGreaterThan | CheckDateLessThan;
+
 // ─── Schema IR ──────────────────────────────────────────────────────────────
 
 export interface StringIR {
@@ -123,6 +141,57 @@ export interface FallbackIR {
   reason: "transform" | "refine" | "superRefine" | "custom" | "unsupported";
 }
 
+// ─── Tier 2 Schema IR ───────────────────────────────────────────────────────
+
+export interface AnyIR {
+  type: "any";
+}
+
+export interface UnknownIR {
+  type: "unknown";
+}
+
+export interface ReadonlyIR {
+  type: "readonly";
+  inner: SchemaIR;
+}
+
+export interface DateIR {
+  type: "date";
+  checks: DateCheckIR[];
+}
+
+export interface TupleIR {
+  type: "tuple";
+  items: SchemaIR[];
+  rest: SchemaIR | null;
+}
+
+export interface RecordIR {
+  type: "record";
+  keyType: SchemaIR;
+  valueType: SchemaIR;
+}
+
+export interface DefaultIR {
+  type: "default";
+  inner: SchemaIR;
+  defaultValue: unknown;
+}
+
+export interface IntersectionIR {
+  type: "intersection";
+  left: SchemaIR;
+  right: SchemaIR;
+}
+
+export interface DiscriminatedUnionIR {
+  type: "discriminatedUnion";
+  discriminator: string;
+  options: SchemaIR[];
+  mapping: Record<string, number>;
+}
+
 export type SchemaIR =
   | StringIR
   | NumberIR
@@ -136,7 +205,16 @@ export type SchemaIR =
   | UnionIR
   | OptionalIR
   | NullableIR
-  | FallbackIR;
+  | FallbackIR
+  | AnyIR
+  | UnknownIR
+  | ReadonlyIR
+  | DateIR
+  | TupleIR
+  | RecordIR
+  | DefaultIR
+  | IntersectionIR
+  | DiscriminatedUnionIR;
 
 // ─── Compiled Schema Interface ──────────────────────────────────────────────
 

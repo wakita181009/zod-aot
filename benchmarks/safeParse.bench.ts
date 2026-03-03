@@ -2,18 +2,26 @@ import { bench, describe } from "vitest";
 import { compileForBench } from "./helpers/compile.js";
 import {
   ApiResponseSchema,
+  DiscriminatedUnionSchema,
+  EventLogSchema,
   invalidUser,
   NumberWithChecks,
+  RecordSchema,
   SimpleEnum,
   SimpleString,
   StringWithChecks,
+  TupleSchema,
   UserSchema,
   validApiResponse10,
   validApiResponse100,
+  validClickEvent,
+  validEventLog,
   validNumberWithChecks,
+  validRecord,
   validSimpleEnum,
   validSimpleString,
   validStringWithChecks,
+  validTuple,
   validUser,
 } from "./schemas/index.js";
 
@@ -24,6 +32,10 @@ const aotNumberChecks = compileForBench(NumberWithChecks, "numberChecks");
 const aotEnum = compileForBench(SimpleEnum, "simpleEnum");
 const aotUser = compileForBench(UserSchema, "user");
 const aotApiResponse = compileForBench(ApiResponseSchema, "apiResponse");
+const aotTuple = compileForBench(TupleSchema, "tuple");
+const aotRecord = compileForBench(RecordSchema, "record");
+const aotDiscUnion = compileForBench(DiscriminatedUnionSchema, "discUnion");
+const aotEventLog = compileForBench(EventLogSchema, "eventLog");
 
 // ─── Simple Types ─────────────────────────────────────────────────────────────
 
@@ -100,5 +112,43 @@ describe("safeParse: large object — 100 items", () => {
   });
   bench("zod-aot", () => {
     aotApiResponse.safeParse(validApiResponse100);
+  });
+});
+
+// ─── Composite Types ─────────────────────────────────────────────────────────
+
+describe("safeParse: tuple [string, int, boolean]", () => {
+  bench("zod", () => {
+    TupleSchema.safeParse(validTuple);
+  });
+  bench("zod-aot", () => {
+    aotTuple.safeParse(validTuple);
+  });
+});
+
+describe("safeParse: record<string, number>", () => {
+  bench("zod", () => {
+    RecordSchema.safeParse(validRecord);
+  });
+  bench("zod-aot", () => {
+    aotRecord.safeParse(validRecord);
+  });
+});
+
+describe("safeParse: discriminatedUnion (3 options)", () => {
+  bench("zod", () => {
+    DiscriminatedUnionSchema.safeParse(validClickEvent);
+  });
+  bench("zod-aot", () => {
+    aotDiscUnion.safeParse(validClickEvent);
+  });
+});
+
+describe("safeParse: event log (combined)", () => {
+  bench("zod", () => {
+    EventLogSchema.safeParse(validEventLog);
+  });
+  bench("zod-aot", () => {
+    aotEventLog.safeParse(validEventLog);
   });
 });

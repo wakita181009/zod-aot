@@ -5,6 +5,7 @@
 ## Status
 
 **Phase 1: Core Compiler — COMPLETE**
+**Phase 2: Tier 2 Type Support — COMPLETE**
 
 Benchmark results (vitest bench, Node.js):
 - Simple types: 1.5-2.8x faster than Zod v4
@@ -14,6 +15,8 @@ Benchmark results (vitest bench, Node.js):
 - Performance gains scale with schema complexity
 
 Phase 1 success criteria (is() 10x+, safeParse() 5x+) met for large/complex schemas. Primitives and small objects show moderate gains due to Zod v4's already-optimized fast path.
+
+Phase 2 adds Tier 2 types: tuple, record, intersection, discriminatedUnion (with O(1) switch optimization), date, any, unknown, default, readonly. 300 tests passing.
 
 ## Context
 
@@ -131,10 +134,10 @@ function safeParse_schema(input: unknown): SafeParseReturnType<Schema> {
 
 ## Schema Coverage
 
-### Tier 1 (Phase 1)
+### Tier 1 (Phase 1 — COMPLETE)
 string, number, int, boolean, object, array, literal, enum, union, optional, nullable, null, undefined
 
-### Tier 2 (Phase 2)
+### Tier 2 (Phase 2 — COMPLETE)
 tuple, record, intersection, discriminatedUnion, date, any, unknown, default, readonly
 
 ### Tier 3 (Phase 3)
@@ -206,12 +209,12 @@ zod-aot/
 
 ### Phase 2: Type Expansion + CLI + unplugin
 
-- CLI (`generate` + `check` commands)
-- Tier 2 type support
-- discriminatedUnion switch statement optimization
-- Partial fallback (e.g., object with some transform properties)
-- unplugin integration for Vite/Webpack/esbuild
-- Watch mode
+- [x] Tier 2 type support (tuple, record, intersection, discriminatedUnion, date, any, unknown, default, readonly)
+- [x] discriminatedUnion switch statement optimization (O(1) vs O(n))
+- [ ] CLI (`generate` + `check` commands)
+- [ ] Partial fallback (e.g., object with some transform properties)
+- [ ] unplugin integration for Vite/Webpack/esbuild
+- [ ] Watch mode
 
 ### Phase 3: Ecosystem
 

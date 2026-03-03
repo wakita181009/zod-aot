@@ -1,17 +1,25 @@
 import { performance } from "node:perf_hooks";
 import {
   ApiResponseSchema,
+  DiscriminatedUnionSchema,
+  EventLogSchema,
   NumberWithChecks,
+  RecordSchema,
   SimpleEnum,
   SimpleString,
   StringWithChecks,
+  TupleSchema,
   UserSchema,
   validApiResponse10,
   validApiResponse100,
+  validClickEvent,
+  validEventLog,
   validNumberWithChecks,
+  validRecord,
   validSimpleEnum,
   validSimpleString,
   validStringWithChecks,
+  validTuple,
   validUser,
 } from "@zod-aot/benchmarks/schemas";
 import type { SafeParseResult } from "zod-aot";
@@ -49,6 +57,10 @@ const aotNumberChecks = compileAot(NumberWithChecks, "numberChecks");
 const aotEnum = compileAot(SimpleEnum, "simpleEnum");
 const aotUser = compileAot(UserSchema, "user");
 const aotApiResponse = compileAot(ApiResponseSchema, "apiResponse");
+const aotTuple = compileAot(TupleSchema, "tuple");
+const aotRecord = compileAot(RecordSchema, "record");
+const aotDiscUnion = compileAot(DiscriminatedUnionSchema, "discUnion");
+const aotEventLog = compileAot(EventLogSchema, "eventLog");
 
 // biome-ignore lint/suspicious/noConsole: benchmark output
 console.log("=== zod-aot Benchmark ===\n");
@@ -62,6 +74,10 @@ benchmark("enum", () => aotEnum.safeParse(validSimpleEnum));
 benchmark("medium object (user)", () => aotUser.safeParse(validUser));
 benchmark("large object (10 items)", () => aotApiResponse.safeParse(validApiResponse10));
 benchmark("large object (100 items)", () => aotApiResponse.safeParse(validApiResponse100), 10_000);
+benchmark("tuple [string, int, bool]", () => aotTuple.safeParse(validTuple));
+benchmark("record<string, number>", () => aotRecord.safeParse(validRecord));
+benchmark("discriminatedUnion (3)", () => aotDiscUnion.safeParse(validClickEvent));
+benchmark("event log (combined)", () => aotEventLog.safeParse(validEventLog));
 
 // biome-ignore lint/suspicious/noConsole: benchmark output
 console.log("\n--- is (type guard) ---");
@@ -72,3 +88,7 @@ benchmark("enum", () => aotEnum.is(validSimpleEnum));
 benchmark("medium object (user)", () => aotUser.is(validUser));
 benchmark("large object (10 items)", () => aotApiResponse.is(validApiResponse10));
 benchmark("large object (100 items)", () => aotApiResponse.is(validApiResponse100), 10_000);
+benchmark("tuple [string, int, bool]", () => aotTuple.is(validTuple));
+benchmark("record<string, number>", () => aotRecord.is(validRecord));
+benchmark("discriminatedUnion (3)", () => aotDiscUnion.is(validClickEvent));
+benchmark("event log (combined)", () => aotEventLog.is(validEventLog));

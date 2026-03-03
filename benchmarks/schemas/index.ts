@@ -1,15 +1,25 @@
-export type { ApiResponse } from "./large.js";
+export type { EventLog } from "./combined.js";
+export { EventLogSchema, validEventLog } from "./combined.js";
+export type { UIEvent } from "./composites.js";
+export {
+  DiscriminatedUnionSchema,
+  RecordSchema,
+  TupleSchema,
+  validClickEvent,
+  validKeypressEvent,
+  validRecord,
+  validScrollEvent,
+  validTuple,
+} from "./composites.js";
+export type { ApiResponse, User } from "./objects.js";
 export {
   ApiResponseSchema,
-  validApiResponse10,
-  validApiResponse100,
-} from "./large.js";
-export type { User } from "./medium.js";
-export {
   invalidUser,
   UserSchema,
+  validApiResponse10,
+  validApiResponse100,
   validUser,
-} from "./medium.js";
+} from "./objects.js";
 export {
   NumberWithChecks,
   SimpleBoolean,
@@ -23,4 +33,4 @@ export {
   validSimpleNumber,
   validSimpleString,
   validStringWithChecks,
-} from "./simple.js";
+} from "./primitives.js";

@@ -2,19 +2,28 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { extractSchema } from "#src/extractor/index.js";
 import type {
+  AnyIR,
   ArrayIR,
   BooleanIR,
+  DateIR,
+  DefaultIR,
+  DiscriminatedUnionIR,
   EnumIR,
   FallbackIR,
+  IntersectionIR,
   LiteralIR,
   NullableIR,
   NullIR,
   NumberIR,
   ObjectIR,
   OptionalIR,
+  ReadonlyIR,
+  RecordIR,
   StringIR,
+  TupleIR,
   UndefinedIR,
   UnionIR,
+  UnknownIR,
 } from "#src/types.js";
 
 // ─── Primitive Types ────────────────────────────────────────────────────────
@@ -617,5 +626,191 @@ describe("extractSchema — edge cases", () => {
     expect(ir.properties.lit?.type).toBe("literal");
     expect(ir.properties.union?.type).toBe("union");
     expect(ir.properties.nested?.type).toBe("object");
+  });
+});
+
+// ─── Tier 2: any / unknown ─────────────────────────────────────────────────
+
+describe("extractSchema — any", () => {
+  it("extracts z.any()", () => {
+    const ir = extractSchema(z.any());
+    expect(ir).toEqual<AnyIR>({ type: "any" });
+  });
+});
+
+describe("extractSchema — unknown", () => {
+  it("extracts z.unknown()", () => {
+    const ir = extractSchema(z.unknown());
+    expect(ir).toEqual<UnknownIR>({ type: "unknown" });
+  });
+});
+
+// ─── Tier 2: readonly ──────────────────────────────────────────────────────
+
+describe("extractSchema — readonly", () => {
+  it("extracts readonly string", () => {
+    const ir = extractSchema(z.string().readonly()) as ReadonlyIR;
+    expect(ir.type).toBe("readonly");
+    expect(ir.inner.type).toBe("string");
+  });
+
+  it("extracts readonly object", () => {
+    const ir = extractSchema(z.object({ name: z.string() }).readonly()) as ReadonlyIR;
+    expect(ir.type).toBe("readonly");
+    expect(ir.inner.type).toBe("object");
+  });
+});
+
+// ─── Tier 2: date ──────────────────────────────────────────────────────────
+
+describe("extractSchema — date", () => {
+  it("extracts plain date", () => {
+    const ir = extractSchema(z.date());
+    expect(ir).toEqual<DateIR>({ type: "date", checks: [] });
+  });
+
+  it("extracts date with min check", () => {
+    const minDate = new Date("2020-01-01T00:00:00.000Z");
+    const ir = extractSchema(z.date().min(minDate)) as DateIR;
+    expect(ir.type).toBe("date");
+    expect(ir.checks).toHaveLength(1);
+    expect(ir.checks[0]?.kind).toBe("date_greater_than");
+    expect(ir.checks[0]).toMatchObject({ inclusive: true });
+  });
+
+  it("extracts date with max check", () => {
+    const maxDate = new Date("2030-01-01T00:00:00.000Z");
+    const ir = extractSchema(z.date().max(maxDate)) as DateIR;
+    expect(ir.type).toBe("date");
+    expect(ir.checks).toHaveLength(1);
+    expect(ir.checks[0]?.kind).toBe("date_less_than");
+    expect(ir.checks[0]).toMatchObject({ inclusive: true });
+  });
+
+  it("extracts date with both min and max", () => {
+    const ir = extractSchema(
+      z.date().min(new Date("2020-01-01")).max(new Date("2030-01-01")),
+    ) as DateIR;
+    expect(ir.checks).toHaveLength(2);
+  });
+});
+
+// ─── Tier 2: tuple ─────────────────────────────────────────────────────────
+
+describe("extractSchema — tuple", () => {
+  it("extracts basic tuple", () => {
+    const ir = extractSchema(z.tuple([z.string(), z.number()])) as TupleIR;
+    expect(ir.type).toBe("tuple");
+    expect(ir.items).toHaveLength(2);
+    expect(ir.items[0]?.type).toBe("string");
+    expect(ir.items[1]?.type).toBe("number");
+    expect(ir.rest).toBeNull();
+  });
+
+  it("extracts tuple with rest", () => {
+    const ir = extractSchema(z.tuple([z.string()]).rest(z.number())) as TupleIR;
+    expect(ir.items).toHaveLength(1);
+    expect(ir.items[0]?.type).toBe("string");
+    expect(ir.rest).not.toBeNull();
+    expect(ir.rest?.type).toBe("number");
+  });
+
+  it("extracts empty tuple", () => {
+    const ir = extractSchema(z.tuple([])) as TupleIR;
+    expect(ir.items).toHaveLength(0);
+    expect(ir.rest).toBeNull();
+  });
+});
+
+// ─── Tier 2: record ────────────────────────────────────────────────────────
+
+describe("extractSchema — record", () => {
+  it("extracts string key record", () => {
+    const ir = extractSchema(z.record(z.string(), z.number())) as RecordIR;
+    expect(ir.type).toBe("record");
+    expect(ir.keyType.type).toBe("string");
+    expect(ir.valueType.type).toBe("number");
+  });
+
+  it("extracts enum key record", () => {
+    const ir = extractSchema(z.record(z.enum(["a", "b"]), z.string())) as RecordIR;
+    expect(ir.type).toBe("record");
+    expect(ir.keyType.type).toBe("enum");
+    expect(ir.valueType.type).toBe("string");
+  });
+});
+
+// ─── Tier 2: default ───────────────────────────────────────────────────────
+
+describe("extractSchema — default", () => {
+  it("extracts string with static default", () => {
+    const ir = extractSchema(z.string().default("hello")) as DefaultIR;
+    expect(ir.type).toBe("default");
+    expect(ir.inner.type).toBe("string");
+    expect(ir.defaultValue).toBe("hello");
+  });
+
+  it("extracts number with static default", () => {
+    const ir = extractSchema(z.number().default(42)) as DefaultIR;
+    expect(ir.type).toBe("default");
+    expect(ir.inner.type).toBe("number");
+    expect(ir.defaultValue).toBe(42);
+  });
+
+  it("extracts object with static default", () => {
+    const ir = extractSchema(z.object({ a: z.string() }).default({ a: "hi" })) as DefaultIR;
+    expect(ir.type).toBe("default");
+    expect(ir.inner.type).toBe("object");
+    expect(ir.defaultValue).toEqual({ a: "hi" });
+  });
+});
+
+// ─── Tier 2: intersection ──────────────────────────────────────────────────
+
+describe("extractSchema — intersection", () => {
+  it("extracts object intersection", () => {
+    const ir = extractSchema(
+      z.intersection(z.object({ a: z.string() }), z.object({ b: z.number() })),
+    ) as IntersectionIR;
+    expect(ir.type).toBe("intersection");
+    expect(ir.left.type).toBe("object");
+    expect(ir.right.type).toBe("object");
+  });
+
+  it("extracts .and() syntax", () => {
+    const ir = extractSchema(
+      z.object({ a: z.string() }).and(z.object({ b: z.number() })),
+    ) as IntersectionIR;
+    expect(ir.type).toBe("intersection");
+  });
+});
+
+// ─── Tier 2: discriminatedUnion ────────────────────────────────────────────
+
+describe("extractSchema — discriminatedUnion", () => {
+  it("extracts discriminatedUnion with mapping", () => {
+    const ir = extractSchema(
+      z.discriminatedUnion("type", [
+        z.object({ type: z.literal("a"), value: z.string() }),
+        z.object({ type: z.literal("b"), count: z.number() }),
+      ]),
+    ) as DiscriminatedUnionIR;
+    expect(ir.type).toBe("discriminatedUnion");
+    expect(ir.discriminator).toBe("type");
+    expect(ir.options).toHaveLength(2);
+    expect(ir.mapping).toEqual({ a: 0, b: 1 });
+  });
+
+  it("extracts discriminatedUnion with 3 options", () => {
+    const ir = extractSchema(
+      z.discriminatedUnion("kind", [
+        z.object({ kind: z.literal("circle"), radius: z.number() }),
+        z.object({ kind: z.literal("square"), size: z.number() }),
+        z.object({ kind: z.literal("rect"), w: z.number(), h: z.number() }),
+      ]),
+    ) as DiscriminatedUnionIR;
+    expect(ir.discriminator).toBe("kind");
+    expect(ir.options).toHaveLength(3);
+    expect(ir.mapping).toEqual({ circle: 0, square: 1, rect: 2 });
   });
 });

@@ -485,6 +485,175 @@ describe("integration — fallback for non-compilable schemas", () => {
   });
 });
 
+// ─── Tier 2: any / unknown Compatibility ────────────────────────────────────
+
+describe("integration — any/unknown match Zod", () => {
+  it("any accepts everything", () => {
+    const schema = z.any();
+    for (const input of ["hello", 42, null, undefined, {}, [], true]) {
+      assertSameResult(schema, input, "anySchema");
+    }
+  });
+
+  it("unknown accepts everything", () => {
+    const schema = z.unknown();
+    for (const input of ["hello", 42, null, undefined, {}, [], true]) {
+      assertSameResult(schema, input, "unknownSchema");
+    }
+  });
+});
+
+// ─── Tier 2: readonly Compatibility ─────────────────────────────────────────
+
+describe("integration — readonly match Zod", () => {
+  it("readonly string", () => {
+    const schema = z.string().readonly();
+    for (const input of ["hello", "", 42, null, undefined]) {
+      assertSameResult(schema, input, "roStr");
+    }
+  });
+
+  it("readonly object", () => {
+    const schema = z.object({ name: z.string() }).readonly();
+    for (const input of [{ name: "Alice" }, {}, null, "not object"]) {
+      assertSameResult(schema, input, "roObj");
+    }
+  });
+});
+
+// ─── Tier 2: date Compatibility ─────────────────────────────────────────────
+
+describe("integration — date match Zod", () => {
+  it("plain date", () => {
+    const schema = z.date();
+    for (const input of [new Date(), new Date("2024-01-01"), "2024-01-01", 123, null]) {
+      assertSameResult(schema, input, "dateSchema");
+    }
+  });
+
+  it("date with min/max", () => {
+    const schema = z.date().min(new Date("2020-01-01")).max(new Date("2030-01-01"));
+    for (const input of [
+      new Date("2025-01-01"),
+      new Date("2020-01-01"),
+      new Date("2030-01-01"),
+      new Date("2019-12-31"),
+      new Date("2030-01-02"),
+    ]) {
+      assertSameResult(schema, input, "dateMinMax");
+    }
+  });
+
+  it("rejects invalid date", () => {
+    const schema = z.date();
+    assertSameResult(schema, new Date("invalid"), "dateInvalid");
+  });
+});
+
+// ─── Tier 2: tuple Compatibility ────────────────────────────────────────────
+
+describe("integration — tuple match Zod", () => {
+  it("basic tuple", () => {
+    const schema = z.tuple([z.string(), z.number()]);
+    for (const input of [["hello", 42], ["a", 1], [42, "hello"], ["a"], "not array", null]) {
+      assertSameResult(schema, input, "tupleBasic");
+    }
+  });
+
+  it("tuple with rest", () => {
+    const schema = z.tuple([z.string()]).rest(z.number());
+    for (const input of [["a"], ["a", 1], ["a", 1, 2, 3], ["a", "b"]]) {
+      assertSameResult(schema, input, "tupleRest");
+    }
+  });
+});
+
+// ─── Tier 2: record Compatibility ───────────────────────────────────────────
+
+describe("integration — record match Zod", () => {
+  it("string key record", () => {
+    const schema = z.record(z.string(), z.number());
+    for (const input of [{}, { a: 1 }, { a: 1, b: 2 }, { a: "not number" }, null, "not object"]) {
+      assertSameResult(schema, input, "recordStr");
+    }
+  });
+});
+
+// ─── Tier 2: default Compatibility ──────────────────────────────────────────
+
+describe("integration — default match Zod", () => {
+  it("standalone default", () => {
+    const schema = z.string().default("fallback");
+    for (const input of [undefined, "hello", ""]) {
+      assertSameResult(schema, input, "defaultStr");
+    }
+  });
+
+  it("default in object property", () => {
+    const schema = z.object({
+      name: z.string(),
+      role: z.string().default("user"),
+    });
+    for (const input of [
+      { name: "Alice", role: "admin" },
+      { name: "Bob" },
+      { name: "Carol", role: undefined },
+    ]) {
+      assertSameResult(schema, input, "defaultObj");
+    }
+  });
+});
+
+// ─── Tier 2: intersection Compatibility ─────────────────────────────────────
+
+describe("integration — intersection match Zod", () => {
+  it("object intersection", () => {
+    const schema = z.intersection(z.object({ a: z.string() }), z.object({ b: z.number() }));
+    for (const input of [{ a: "hello", b: 42 }, { a: "hello" }, { b: 42 }, {}, null]) {
+      assertSameResult(schema, input, "intersect");
+    }
+  });
+});
+
+// ─── Tier 2: discriminatedUnion Compatibility ───────────────────────────────
+
+describe("integration — discriminatedUnion match Zod", () => {
+  it("basic discriminated union", () => {
+    const schema = z.discriminatedUnion("type", [
+      z.object({ type: z.literal("a"), value: z.string() }),
+      z.object({ type: z.literal("b"), count: z.number() }),
+    ]);
+    for (const input of [
+      { type: "a", value: "hello" },
+      { type: "b", count: 42 },
+      { type: "a", value: 42 },
+      { type: "c" },
+      { value: "no type" },
+      null,
+      "not object",
+    ]) {
+      assertSameResult(schema, input, "discUnion");
+    }
+  });
+
+  it("discriminated union with 3 options", () => {
+    const schema = z.discriminatedUnion("kind", [
+      z.object({ kind: z.literal("circle"), radius: z.number() }),
+      z.object({ kind: z.literal("square"), size: z.number() }),
+      z.object({ kind: z.literal("rect"), w: z.number(), h: z.number() }),
+    ]);
+    for (const input of [
+      { kind: "circle", radius: 5 },
+      { kind: "square", size: 10 },
+      { kind: "rect", w: 3, h: 4 },
+      { kind: "triangle" },
+      { kind: "circle", radius: "not number" },
+    ]) {
+      assertSameResult(schema, input, "discUnion3");
+    }
+  });
+});
+
 // ─── SchemaIR Roundtrip ─────────────────────────────────────────────────────
 
 describe("integration — SchemaIR is JSON-serializable", () => {

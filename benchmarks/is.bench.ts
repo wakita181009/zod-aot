@@ -2,19 +2,27 @@ import { bench, describe } from "vitest";
 import { compileForBench } from "./helpers/compile.js";
 import {
   ApiResponseSchema,
+  DiscriminatedUnionSchema,
+  EventLogSchema,
   NumberWithChecks,
+  RecordSchema,
   SimpleEnum,
   SimpleString,
   StringWithChecks,
+  TupleSchema,
   UserSchema,
   validApiResponse10,
   validApiResponse100,
+  validClickEvent,
+  validEventLog,
   validNumberWithChecks,
+  validRecord,
   validSimpleEnum,
   validSimpleString,
   validStringWithChecks,
+  validTuple,
   validUser,
-} from "./schemas";
+} from "./schemas/index.js";
 
 // Pre-compile all AOT validators
 const aotSimpleString = compileForBench(SimpleString, "simpleString");
@@ -23,6 +31,10 @@ const aotNumberChecks = compileForBench(NumberWithChecks, "numberChecks");
 const aotEnum = compileForBench(SimpleEnum, "simpleEnum");
 const aotUser = compileForBench(UserSchema, "user");
 const aotApiResponse = compileForBench(ApiResponseSchema, "apiResponse");
+const aotTuple = compileForBench(TupleSchema, "tuple");
+const aotRecord = compileForBench(RecordSchema, "record");
+const aotDiscUnion = compileForBench(DiscriminatedUnionSchema, "discUnion");
+const aotEventLog = compileForBench(EventLogSchema, "eventLog");
 
 // ─── Simple Types ─────────────────────────────────────────────────────────────
 
@@ -90,5 +102,43 @@ describe("is(): large object — 100 items", () => {
   });
   bench("zod-aot", () => {
     aotApiResponse.is(validApiResponse100);
+  });
+});
+
+// ─── Composite Types ─────────────────────────────────────────────────────────
+
+describe("is(): tuple [string, int, boolean]", () => {
+  bench("zod (safeParse().success)", () => {
+    TupleSchema.safeParse(validTuple).success;
+  });
+  bench("zod-aot", () => {
+    aotTuple.is(validTuple);
+  });
+});
+
+describe("is(): record<string, number>", () => {
+  bench("zod (safeParse().success)", () => {
+    RecordSchema.safeParse(validRecord).success;
+  });
+  bench("zod-aot", () => {
+    aotRecord.is(validRecord);
+  });
+});
+
+describe("is(): discriminatedUnion (3 options)", () => {
+  bench("zod (safeParse().success)", () => {
+    DiscriminatedUnionSchema.safeParse(validClickEvent).success;
+  });
+  bench("zod-aot", () => {
+    aotDiscUnion.is(validClickEvent);
+  });
+});
+
+describe("is(): event log (combined)", () => {
+  bench("zod (safeParse().success)", () => {
+    EventLogSchema.safeParse(validEventLog).success;
+  });
+  bench("zod-aot", () => {
+    aotEventLog.is(validEventLog);
   });
 });

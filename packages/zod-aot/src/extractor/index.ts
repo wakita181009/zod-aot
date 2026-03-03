@@ -1,4 +1,4 @@
-import type { CheckIR, SchemaIR } from "../types.js";
+import type { CheckIR, DateCheckIR, SchemaIR } from "../types.js";
 
 interface ZodCheckDef {
   check: string;
@@ -33,6 +33,14 @@ interface ZodDef {
   entries: Record<string, string>;
   in: ZodSchema;
   out: ZodSchema;
+  items: ZodSchema[];
+  rest: ZodSchema | null;
+  keyType: ZodSchema;
+  valueType: ZodSchema;
+  left: ZodSchema;
+  right: ZodSchema;
+  discriminator: string;
+  defaultValue: unknown;
 }
 
 interface ZodSchema {
@@ -170,17 +178,108 @@ export function extractSchema(zodSchema: unknown): SchemaIR {
       return { type: "array", element, checks: checkIRs };
     }
 
-    case "union":
+    case "union": {
+      if (def.discriminator) {
+        const options = def.options.map((opt) => extractSchema(opt));
+        const mapping: Record<string, number> = {};
+        for (let i = 0; i < def.options.length; i++) {
+          const opt = def.options[i] as ZodSchema;
+          const optDef = opt._zod.def;
+          if (optDef.type === "object" && optDef.shape) {
+            const discrimField = optDef.shape[def.discriminator];
+            if (discrimField?._zod?.def?.type === "literal") {
+              const vals = discrimField._zod.def.values as (string | number | boolean)[];
+              for (const v of vals) {
+                mapping[String(v)] = i;
+              }
+            }
+          }
+        }
+        return { type: "discriminatedUnion", discriminator: def.discriminator, options, mapping };
+      }
       return {
         type: "union",
         options: def.options.map((opt) => extractSchema(opt)),
       };
+    }
 
     case "optional":
       return { type: "optional", inner: extractSchema(def.innerType) };
 
     case "nullable":
       return { type: "nullable", inner: extractSchema(def.innerType) };
+
+    case "any":
+      return { type: "any" };
+
+    case "unknown":
+      return { type: "unknown" };
+
+    case "readonly":
+      return { type: "readonly", inner: extractSchema(def.innerType) };
+
+    case "date": {
+      const dateChecks: DateCheckIR[] = [];
+      if (def.checks) {
+        for (const check of def.checks) {
+          const checkDef = check._zod?.def;
+          if (!checkDef) continue;
+          if (checkDef.check === "greater_than") {
+            const v = checkDef.value as unknown as string;
+            const ts = new Date(v).getTime();
+            dateChecks.push({
+              kind: "date_greater_than",
+              value: String(v),
+              timestamp: ts,
+              inclusive: checkDef.inclusive,
+            });
+          } else if (checkDef.check === "less_than") {
+            const v = checkDef.value as unknown as string;
+            const ts = new Date(v).getTime();
+            dateChecks.push({
+              kind: "date_less_than",
+              value: String(v),
+              timestamp: ts,
+              inclusive: checkDef.inclusive,
+            });
+          }
+        }
+      }
+      return { type: "date", checks: dateChecks };
+    }
+
+    case "tuple": {
+      const items = def.items.map((item) => extractSchema(item));
+      const rest = def.rest ? extractSchema(def.rest) : null;
+      return { type: "tuple", items, rest };
+    }
+
+    case "record": {
+      if (!def.valueType) {
+        return { type: "fallback", reason: "unsupported" };
+      }
+      const keyType = extractSchema(def.keyType);
+      const valueType = extractSchema(def.valueType);
+      return { type: "record", keyType, valueType };
+    }
+
+    case "default": {
+      const inner = extractSchema(def.innerType);
+      const defaultValue = def.defaultValue;
+      try {
+        JSON.stringify(defaultValue);
+      } catch {
+        return { type: "fallback", reason: "unsupported" };
+      }
+      return { type: "default", inner, defaultValue };
+    }
+
+    case "intersection":
+      return {
+        type: "intersection",
+        left: extractSchema(def.left),
+        right: extractSchema(def.right),
+      };
 
     default:
       return { type: "fallback", reason: "unsupported" };

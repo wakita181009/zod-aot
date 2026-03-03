@@ -4,9 +4,10 @@
   "type": "module",
   "exports": {
     "./schemas": "./schemas/index.ts",
-    "./schemas/simple": "./schemas/simple.ts",
-    "./schemas/medium": "./schemas/medium.ts",
-    "./schemas/large": "./schemas/large.ts"
+    "./schemas/primitives": "./schemas/primitives.ts",
+    "./schemas/objects": "./schemas/objects.ts",
+    "./schemas/composites": "./schemas/composites.ts",
+    "./schemas/combined": "./schemas/combined.ts"
   },
   "dependencies": {
     "zod": "^4.0.0",
