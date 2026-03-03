@@ -1,0 +1,18 @@
+{
+  "private": true,
+  "name": "zod-aot-monorepo",
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "vitest run",
+    "bench": "vitest bench",
+    "lint": "biome check .",
+    "lint:fix": "biome check --fix .",
+    "format": "biome format --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.5",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  },
+  "packageManager": "pnpm@10.28.2"
+}
