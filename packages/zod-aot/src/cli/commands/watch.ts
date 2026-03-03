@@ -18,7 +18,7 @@ interface WatchOptions {
  * Check if a file path should trigger regeneration.
  */
 export function isWatchTarget(filePath: string): boolean {
-  if (filePath.includes("node_modules")) return false;
+  if (filePath.split(path.sep).includes("node_modules")) return false;
   return isSchemaFile(filePath);
 }
 

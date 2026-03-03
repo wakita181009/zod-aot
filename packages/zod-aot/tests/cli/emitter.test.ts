@@ -133,7 +133,7 @@ describe("generateCompiledFileContent()", () => {
     expect(content).toContain("var __fb=__fb_validateUser;");
   });
 
-  it("__fb injection fails silently when function format is unexpected", () => {
+  it("throws when __fb injection fails due to unexpected function format", () => {
     // Simulate a changed function format where the regex won't match
     const result: CodeGenResult = {
       code: "/* zod-aot */",
@@ -143,20 +143,18 @@ describe("generateCompiledFileContent()", () => {
       fallbackCount: 1,
     };
 
-    const content = generateCompiledFileContent(
-      [
-        {
-          exportName: "validateUser",
-          codegenResult: result,
-          fallbackEntries: [{ schema: {}, accessPath: '.shape["slug"]' }],
-        },
-      ],
-      "./schemas.ts",
-    );
-
-    // BUG: When the regex doesn't match, __fb is never injected
-    // The function body won't contain `var __fb=...` causing runtime ReferenceError
-    expect(content).not.toContain("var __fb=__fb_validateUser;");
+    expect(() =>
+      generateCompiledFileContent(
+        [
+          {
+            exportName: "validateUser",
+            codegenResult: result,
+            fallbackEntries: [{ schema: {}, accessPath: '.shape["slug"]' }],
+          },
+        ],
+        "./schemas.ts",
+      ),
+    ).toThrow("Failed to inject __fb binding");
   });
 
   it("does not generate import when no schemas have fallbacks", () => {

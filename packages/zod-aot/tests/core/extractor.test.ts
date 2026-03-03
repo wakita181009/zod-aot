@@ -774,6 +774,13 @@ describe("extractSchema — default", () => {
     expect(ir.inner.type).toBe("object");
     expect(ir.defaultValue).toEqual({ a: "hi" });
   });
+
+  // M5: Date default values should fall back to Zod
+  it("falls back for Date default value", () => {
+    const ir = extractSchema(z.date().default(new Date("2024-01-01")));
+    expect(ir.type).toBe("fallback");
+    expect((ir as FallbackIR).reason).toBe("unsupported");
+  });
 });
 
 // ─── Tier 2: intersection ──────────────────────────────────────────────────

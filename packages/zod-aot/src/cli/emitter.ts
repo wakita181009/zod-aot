@@ -68,6 +68,12 @@ export function generateCompiledFileContent(schemas: EmitSchema[], sourceRelPath
         /^(function\s+\w+\(input\)\{)\n/,
         `$1\nvar __fb=__fb_${schema.exportName};\n`,
       );
+      if (injected === fnDef) {
+        throw new Error(
+          `[zod-aot] Failed to inject __fb binding into ${schema.exportName}. ` +
+            "Generated function format may have changed.",
+        );
+      }
       lines.push(injected);
     } else {
       lines.push(schema.codegenResult.functionName);

@@ -33,8 +33,6 @@ export function generateStringValidation(
             regexVar = `__re_${ctx.counter++}`;
             ctx.preamble.push(`var ${regexVar}=new RegExp(${escapeString(check.pattern)});`);
           } else if (check.format === "url") {
-            regexVar = `__re_url_${ctx.counter++}`;
-            ctx.preamble.push(`var ${regexVar};try{${regexVar}=true;}catch(e){${regexVar}=false;}`);
             code += `if(!(function(s){try{new URL(s);return true;}catch(e){return false;}})(${inputExpr})){${issuesVar}.push({code:"invalid_string",validation:"url",path:${pathExpr},message:"Invalid url"});}`;
             continue;
           } else if (check.format === "uuid") {

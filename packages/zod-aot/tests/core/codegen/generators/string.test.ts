@@ -151,8 +151,7 @@ describe("codegen — string", () => {
   });
 
   // H1: URL validation should not produce unused preamble variables (dead code)
-  // TDD Red: this test will pass once the dead try-catch preamble is removed
-  it.fails("url format does not produce unused preamble variables", () => {
+  it("url format does not produce unused preamble variables", () => {
     const ir: StringIR = {
       type: "string",
       checks: [{ kind: "string_format", format: "url" }],

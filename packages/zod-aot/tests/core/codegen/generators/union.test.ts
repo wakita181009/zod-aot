@@ -72,8 +72,8 @@ describe("codegen — union", () => {
     expect(safeParse(null).success).toBe(false);
   });
 
-  // M1: unionErrors should contain per-branch error details, not empty array
-  it("union error includes invalid_union code on failure", () => {
+  // M1: unionErrors should contain per-branch error details
+  it("union error includes per-branch errors in unionErrors", () => {
     const ir: UnionIR = {
       type: "union",
       options: [
@@ -86,7 +86,10 @@ describe("codegen — union", () => {
     expect(result.success).toBe(false);
     const issue = result.error?.issues[0] as Record<string, unknown>;
     expect(issue.code).toBe("invalid_union");
-    // BUG: unionErrors is always empty — should contain per-branch errors
-    expect(issue.unionErrors).toEqual([]);
+    // unionErrors should contain one entry per failed branch
+    const unionErrors = issue.unionErrors as { issues: unknown[] }[];
+    expect(unionErrors).toHaveLength(2);
+    expect(unionErrors[0]?.issues.length).toBeGreaterThanOrEqual(1);
+    expect(unionErrors[1]?.issues.length).toBeGreaterThanOrEqual(1);
   });
 });

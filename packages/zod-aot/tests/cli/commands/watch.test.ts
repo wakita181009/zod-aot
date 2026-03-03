@@ -58,9 +58,7 @@ describe("isWatchTarget", () => {
   // M3: node_modules check should not false-positive on similar directory names
   it("accepts paths with 'node_modules' as substring in directory name", () => {
     // A directory named "node_modules_backup" should NOT be excluded
-    expect(isWatchTarget("/home/user/node_modules_backup/schema.ts")).toBe(false);
-    // BUG: This should be true — the directory is not actually node_modules
-    // The current implementation uses .includes("node_modules") which is too broad
+    expect(isWatchTarget("/home/user/node_modules_backup/schema.ts")).toBe(true);
   });
 
   it("rejects nested node_modules paths", () => {

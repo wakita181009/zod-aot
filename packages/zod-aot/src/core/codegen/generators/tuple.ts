@@ -13,6 +13,10 @@ export function generateTupleValidation(
 
   let code = `if(!Array.isArray(${inputExpr})){${issuesVar}.push({code:"invalid_type",expected:"tuple",received:${inputExpr}===null?"null":typeof ${inputExpr},path:${pathExpr},message:"Expected tuple"});}else{`;
 
+  if (len > 0) {
+    code += `if(${inputExpr}.length<${len}){${issuesVar}.push({code:"too_small",minimum:${len},inclusive:true,origin:"tuple",path:${pathExpr},message:"Expected array with at least ${len} element(s)"});}`;
+  }
+
   if (ir.rest === null) {
     code += `if(${inputExpr}.length>${len}){${issuesVar}.push({code:"too_big",maximum:${len},inclusive:true,origin:"tuple",path:${pathExpr},message:"Expected array with at most ${len} element(s)"});}`;
   }
