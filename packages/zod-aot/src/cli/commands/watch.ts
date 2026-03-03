@@ -1,0 +1,171 @@
+import fs from "node:fs";
+import path from "node:path";
+import process from "node:process";
+import { logger } from "../logger.js";
+import { type GenerateFileResult, generateFile, resolveInputFiles } from "./generate.js";
+
+interface WatchOptions {
+  inputs: string[];
+  output: string | undefined;
+}
+
+/**
+ * Check if a file path should trigger regeneration.
+ */
+export function isWatchTarget(filePath: string): boolean {
+  if (filePath.includes("node_modules")) return false;
+  if (filePath.endsWith(".compiled.ts") || filePath.endsWith(".compiled.js")) return false;
+  if (filePath.endsWith(".test.ts") || filePath.endsWith(".test.js")) return false;
+  if (filePath.endsWith(".d.ts")) return false;
+  return /\.(?:ts|mts|js|mjs)$/.test(filePath);
+}
+
+/**
+ * Resolve which directories to watch from input paths.
+ * Files are mapped to their parent directory; subdirectories are deduplicated.
+ */
+export function resolveWatchDirs(inputs: string[]): string[] {
+  const dirs: string[] = [];
+
+  for (const input of inputs) {
+    const abs = path.resolve(input);
+    try {
+      const stat = fs.statSync(abs);
+      dirs.push(stat.isDirectory() ? abs : path.dirname(abs));
+    } catch {
+      dirs.push(path.dirname(abs));
+    }
+  }
+
+  // Deduplicate: remove dirs that are subdirectories of another watched dir
+  const sorted = [...new Set(dirs)].sort();
+  const result: string[] = [];
+  for (const dir of sorted) {
+    const isSubdir = result.some((parent) => dir.startsWith(parent + path.sep));
+    if (!isSubdir) {
+      result.push(dir);
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Create a debounced version of a function.
+ */
+export function debounce<T extends (...args: never[]) => void>(fn: T, delayMs: number): T {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  return ((...args: Parameters<T>) => {
+    if (timer !== undefined) clearTimeout(timer);
+    timer = setTimeout(() => {
+      timer = undefined;
+      fn(...args);
+    }, delayMs);
+  }) as T;
+}
+
+/**
+ * Run the watch mode: initial generate + fs.watch for changes.
+ */
+export async function runWatch(options: WatchOptions): Promise<void> {
+  const files = await resolveInputFiles(options.inputs);
+
+  if (files.length === 0) {
+    logger.warn("No source files found.");
+    return;
+  }
+
+  // Initial generation
+  let totalSchemas = 0;
+  let totalFiles = 0;
+
+  for (const filePath of files) {
+    try {
+      const result = await generateFile(filePath, options.output);
+      if (result) {
+        logResult(result);
+        totalSchemas += result.schemaCount;
+        totalFiles++;
+      }
+    } catch (err) {
+      logger.error(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  if (totalFiles > 0) {
+    logger.info(
+      `Generated ${totalSchemas} schema${totalSchemas > 1 ? "s" : ""} from ${totalFiles} file${totalFiles > 1 ? "s" : ""}.`,
+    );
+  } else {
+    logger.warn("No compile() calls found in any source file.");
+  }
+
+  // Set up file watching
+  const watchDirs = resolveWatchDirs(options.inputs);
+  const ac = new AbortController();
+
+  const pendingFiles = new Set<string>();
+
+  const flush = debounce(async () => {
+    const batch = [...pendingFiles];
+    pendingFiles.clear();
+
+    for (const filePath of batch) {
+      try {
+        const result = await generateFile(filePath, options.output, { cacheBust: true });
+        if (result) {
+          logResult(result);
+        }
+      } catch (err) {
+        logger.error(err instanceof Error ? err.message : String(err));
+      }
+    }
+  }, 150);
+
+  const watchers: fs.FSWatcher[] = [];
+
+  for (const dir of watchDirs) {
+    try {
+      const watcher = fs.watch(dir, { recursive: true, signal: ac.signal }, (_event, filename) => {
+        if (!filename) return;
+        const fullPath = path.resolve(dir, filename);
+        if (isWatchTarget(fullPath)) {
+          pendingFiles.add(fullPath);
+          void flush();
+        }
+      });
+      watchers.push(watcher);
+    } catch (err) {
+      logger.error(`Failed to watch ${dir}: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  if (watchers.length === 0) {
+    logger.error("No directories could be watched.");
+    return;
+  }
+
+  logger.info(
+    `Watching ${watchDirs.length} director${watchDirs.length > 1 ? "ies" : "y"} for changes... (Ctrl+C to stop)`,
+  );
+
+  // Graceful shutdown
+  const shutdown = () => {
+    logger.dim("\nStopping watch mode...");
+    ac.abort();
+  };
+
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
+
+  // Keep process alive until aborted
+  await new Promise<void>((resolve) => {
+    ac.signal.addEventListener("abort", () => resolve(), { once: true });
+  });
+}
+
+function logResult(result: GenerateFileResult): void {
+  const relPath = path.relative(process.cwd(), result.filePath);
+  const outputRelPath = path.relative(process.cwd(), result.outputPath);
+  logger.success(`${relPath} -> ${outputRelPath} (${result.schemaNames.join(", ")})`);
+}

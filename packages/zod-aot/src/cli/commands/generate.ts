@@ -9,16 +9,23 @@ import { discoverSchemas } from "#src/discovery.js";
 import { generateCompiledFileContent, resolveOutputPath, writeCompiledFile } from "../emitter.js";
 import { logger } from "../logger.js";
 
-interface GenerateOptions {
+export interface GenerateOptions {
   inputs: string[];
   output: string | undefined;
+}
+
+export interface GenerateFileResult {
+  filePath: string;
+  outputPath: string;
+  schemaCount: number;
+  schemaNames: string[];
 }
 
 /**
  * Resolve input paths to a list of source files.
  * If a path is a directory, find all .ts files (excluding .compiled.ts, .test.ts, node_modules).
  */
-async function resolveInputFiles(inputs: string[]): Promise<string[]> {
+export async function resolveInputFiles(inputs: string[]): Promise<string[]> {
   const files: string[] = [];
 
   for (const input of inputs) {
@@ -41,7 +48,7 @@ async function resolveInputFiles(inputs: string[]): Promise<string[]> {
   return files;
 }
 
-async function findSchemaFiles(dir: string): Promise<string[]> {
+export async function findSchemaFiles(dir: string): Promise<string[]> {
   const results: string[] = [];
   const entries = await fs.promises.readdir(dir, { withFileTypes: true });
 
@@ -70,6 +77,53 @@ async function findSchemaFiles(dir: string): Promise<string[]> {
   return results;
 }
 
+/**
+ * Generate compiled output for a single source file.
+ * Returns null if no compile() calls are found.
+ */
+export async function generateFile(
+  filePath: string,
+  outputFlag: string | undefined,
+  options?: { cacheBust?: boolean },
+): Promise<GenerateFileResult | null> {
+  const relPath = path.relative(process.cwd(), filePath);
+
+  let schemas: DiscoveredSchema[];
+  try {
+    schemas = await discoverSchemas(filePath, options?.cacheBust ? { cacheBust: true } : undefined);
+  } catch (err) {
+    throw new Error(
+      `Failed to load ${relPath}: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+
+  if (schemas.length === 0) {
+    return null;
+  }
+
+  const codegenResults = schemas.map((s) => {
+    const fallbackEntries: FallbackEntry[] = [];
+    const ir = extractSchema(s.schema, fallbackEntries);
+    const result = generateValidator(ir, s.exportName, {
+      fallbackCount: fallbackEntries.length,
+    });
+    return { exportName: s.exportName, codegenResult: result, fallbackEntries };
+  });
+
+  const outputPath = resolveOutputPath(filePath, outputFlag);
+  const sourceRelPath = path.relative(path.dirname(outputPath), filePath);
+  const content = generateCompiledFileContent(codegenResults, sourceRelPath);
+
+  await writeCompiledFile(outputPath, content);
+
+  return {
+    filePath,
+    outputPath,
+    schemaCount: schemas.length,
+    schemaNames: schemas.map((s) => s.exportName),
+  };
+}
+
 export async function runGenerate(options: GenerateOptions): Promise<void> {
   const files = await resolveInputFiles(options.inputs);
 
@@ -82,42 +136,21 @@ export async function runGenerate(options: GenerateOptions): Promise<void> {
   let totalFiles = 0;
 
   for (const filePath of files) {
-    const relPath = path.relative(process.cwd(), filePath);
-
-    let schemas: DiscoveredSchema[];
+    let result: GenerateFileResult | null;
     try {
-      schemas = await discoverSchemas(filePath);
+      result = await generateFile(filePath, options.output);
     } catch (err) {
-      logger.error(
-        `Failed to load ${relPath}: ${err instanceof Error ? err.message : String(err)}`,
-      );
+      logger.error(err instanceof Error ? err.message : String(err));
       process.exit(1);
     }
 
-    if (schemas.length === 0) {
-      continue;
-    }
+    if (!result) continue;
 
-    const codegenResults = schemas.map((s) => {
-      const fallbackEntries: FallbackEntry[] = [];
-      const ir = extractSchema(s.schema, fallbackEntries);
-      const result = generateValidator(ir, s.exportName, {
-        fallbackCount: fallbackEntries.length,
-      });
-      return { exportName: s.exportName, codegenResult: result, fallbackEntries };
-    });
+    const relPath = path.relative(process.cwd(), result.filePath);
+    const outputRelPath = path.relative(process.cwd(), result.outputPath);
+    logger.success(`${relPath} -> ${outputRelPath} (${result.schemaNames.join(", ")})`);
 
-    const outputPath = resolveOutputPath(filePath, options.output);
-    const outputRelPath = path.relative(process.cwd(), outputPath);
-    const sourceRelPath = path.relative(path.dirname(outputPath), filePath);
-    const content = generateCompiledFileContent(codegenResults, sourceRelPath);
-
-    await writeCompiledFile(outputPath, content);
-
-    const schemaNames = schemas.map((s) => s.exportName).join(", ");
-    logger.success(`${relPath} -> ${outputRelPath} (${schemaNames})`);
-
-    totalSchemas += schemas.length;
+    totalSchemas += result.schemaCount;
     totalFiles++;
   }
 

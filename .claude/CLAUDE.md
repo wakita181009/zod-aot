@@ -108,8 +108,9 @@ const isUser = validateUser.is(data);           // type guard (boolean)
 
 ```bash
 npx zod-aot generate src/schemas.ts -o src/schemas.compiled.ts
-npx zod-aot generate src/ -o src/compiled/ --watch
-npx zod-aot check src/schemas.ts   # check if compilable
+npx zod-aot generate src/ -o src/compiled/
+npx zod-aot generate src/ --watch   # watch for changes and regenerate
+npx zod-aot check src/schemas.ts    # check if compilable
 ```
 
 ### unplugin (Vite / webpack / esbuild / Rollup)
@@ -181,6 +182,7 @@ zod-aot/
 │       │   │   ├── emitter.ts    # .compiled.ts file generation
 │       │   │   └── commands/
 │       │   │       ├── generate.ts
+│       │   │       ├── watch.ts
 │       │   │       └── check.ts
 │       │   └── unplugin/         # Build plugin (no cli deps)
 │       │       ├── index.ts      # createUnplugin() factory
@@ -238,7 +240,7 @@ Within-module imports use relative paths.
 - [x] CLI (`generate` + `check` commands)
 - [x] Partial fallback (e.g., object with some transform properties)
 - [x] unplugin integration for Vite/webpack/esbuild/Rollup
-- [ ] Watch mode
+- [x] Watch mode
 
 ### Phase 3: Ecosystem
 

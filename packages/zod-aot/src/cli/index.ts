@@ -10,6 +10,7 @@ const VERSION: string = (require("../../package.json") as { version: string }).v
 interface GenerateOptions {
   inputs: string[];
   output: string | undefined;
+  watch: boolean;
 }
 
 interface CheckOptions {
@@ -29,7 +30,7 @@ function printUsage(): void {
 zod-aot v${VERSION} — Compile Zod schemas into zero-overhead validation functions
 
 Usage:
-  zod-aot generate <files...> [-o <output>]
+  zod-aot generate <files...> [-o <output>] [-w]
   zod-aot check <files...>
 
 Commands:
@@ -38,13 +39,14 @@ Commands:
 
 Options:
   -o, --output <path>   Output file or directory
+  -w, --watch           Watch for changes and regenerate
   -h, --help            Show this help message
   -v, --version         Show version number
 
 Examples:
   zod-aot generate src/schemas.ts
   zod-aot generate src/schemas.ts -o src/schemas.compiled.ts
-  zod-aot generate src/
+  zod-aot generate src/ --watch
   zod-aot check src/schemas.ts
 `.trim(),
   );
@@ -67,6 +69,7 @@ function parseArgs(argv: string[]): Command {
   if (command === "generate") {
     const inputs: string[] = [];
     let output: string | undefined;
+    let watch = false;
 
     for (let i = 0; i < rest.length; i++) {
       const arg = rest[i] as string;
@@ -78,6 +81,8 @@ function parseArgs(argv: string[]): Command {
           process.exit(1);
         }
         output = val;
+      } else if (arg === "-w" || arg === "--watch") {
+        watch = true;
       } else if (arg.startsWith("-")) {
         logger.error(`Unknown option: ${arg}`);
         process.exit(1);
@@ -91,7 +96,7 @@ function parseArgs(argv: string[]): Command {
       process.exit(1);
     }
 
-    return { kind: "generate", options: { inputs, output } };
+    return { kind: "generate", options: { inputs, output, watch } };
   }
 
   if (command === "check") {
@@ -127,8 +132,13 @@ async function main(): Promise<void> {
       console.log(VERSION);
       break;
     case "generate": {
-      const { runGenerate } = await import("./commands/generate.js");
-      await runGenerate(command.options);
+      if (command.options.watch) {
+        const { runWatch } = await import("./commands/watch.js");
+        await runWatch(command.options);
+      } else {
+        const { runGenerate } = await import("./commands/generate.js");
+        await runGenerate(command.options);
+      }
       break;
     }
     case "check": {
