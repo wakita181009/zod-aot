@@ -10,14 +10,45 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "all": true,
-      "nursery": { "all": true },
+      "recommended": true,
+
       "correctness": {
+        "noUnusedVariables": "error",
+        "noUnusedImports": "error",
+        "noUndeclaredVariables": "error",
         "noNodejsModules": "off"
       },
+
+      "suspicious": {
+        "noExplicitAny": "error",
+        "noEmptyBlockStatements": "error",
+        "noConsole": "warn",
+        "noVar": "error",
+        "noImportCycles": "warn"
+      },
+
       "style": {
+        "useConst": "error",
+        "useImportType": "error",
+        "useExportType": "error",
+        "noParameterAssign": "error",
+        "noNonNullAssertion": "warn",
+        "noNamespace": "error",
+        "noUselessElse": "warn",
+        "useAsConstAssertion": "error",
+        "useSingleVarDeclarator": "warn",
         "noDefaultExport": "off",
         "useNamingConvention": "off"
+      },
+
+      "complexity": {
+        "noStaticOnlyClass": "warn",
+        "noUselessEmptyExport": "error"
+      },
+
+      "nursery": {
+        "noFloatingPromises": "error",
+        "noMisusedPromises": "error"
       }
     }
   },
@@ -25,7 +56,16 @@
     "enabled": true,
     "indentStyle": "space",
     "indentWidth": 2,
-    "lineWidth": 100
+    "lineWidth": 100,
+    "lineEnding": "lf"
+  },
+  "javascript": {
+    "formatter": {
+      "semicolons": "always",
+      "trailingCommas": "all",
+      "arrowParentheses": "always",
+      "bracketSpacing": true
+    }
   },
   "files": {
     "includes": ["**", "!node_modules", "!dist", "!coverage", "!*.compiled.ts", "!*.compiled.js"]
