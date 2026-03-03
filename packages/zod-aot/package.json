@@ -1,6 +1,6 @@
 {
   "name": "zod-aot",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Compile Zod schemas into zero-overhead validation functions at build time",
   "type": "module",
   "keywords": [
@@ -22,7 +22,8 @@
     "zod-aot": "./dist/cli/index.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "LICENSE"
   ],
   "imports": {
     "#src/*": "./src/*"

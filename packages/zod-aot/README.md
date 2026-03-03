@@ -60,11 +60,13 @@ npm install zod@^4
 
 ## Quick Start
 
-```typescript
-import { z } from "zod";
-import { extractSchema, generateValidator } from "zod-aot";
+### 1. Define schemas with `compile()`
 
-// 1. Define your Zod schema as usual
+```typescript
+// src/schemas.ts
+import { z } from "zod";
+import { compile } from "zod-aot";
+
 const UserSchema = z.object({
   name: z.string().min(3),
   age: z.number().int().positive(),
@@ -72,69 +74,114 @@ const UserSchema = z.object({
   role: z.enum(["admin", "user"]),
 });
 
-// 2. Extract the schema into an intermediate representation (IR)
-const ir = extractSchema(UserSchema);
-
-// 3. Generate an optimized validator function
-const { code, functionName } = generateValidator(ir, "validateUser");
-
-// 4. The generated code is a self-contained JS function
-//    In production, write this to a file at build time
-console.log(code);         // preamble: Set/RegExp declarations
-console.log(functionName); // function safeParse_validateUser(input) { ... }
+// compile() falls back to Zod in dev, uses generated functions after build
+export const validateUser = compile(UserSchema);
 ```
 
-### Using the Generated Code
-
-The generated code can be evaluated at build time and written to a file:
+### 2. Use the compiled validator
 
 ```typescript
-// Build script example
-import { writeFileSync } from "node:fs";
-import { extractSchema, generateValidator } from "zod-aot";
-
-const ir = extractSchema(UserSchema);
-const { code, functionName } = generateValidator(ir, "validateUser");
-
-// Write to a .js file
-writeFileSync(
-  "src/validators/user.generated.js",
-  `${code}\nexport const validateUser = ${functionName}`,
-);
+// Same interface as Zod — works in both dev and production
+const user = validateUser.parse(data);          // throws on failure
+const result = validateUser.safeParse(data);    // { success, data/error }
+const isUser = validateUser.is(data);           // type guard (boolean)
 ```
 
-Then import and use in your application:
+### 3. Generate optimized code
+
+Choose one of these approaches:
+
+**Option A: Build plugin (Vite / webpack / esbuild / Rollup)**
 
 ```typescript
-import { validateUser } from "./validators/user.generated.js";
+// vite.config.ts
+import zodAot from "zod-aot/vite";
 
-const result = validateUser(data);
-// { success: true, data: { name: "Alice", ... } }
-// or { success: false, error: { issues: [...] } }
+export default defineConfig({
+  plugins: [zodAot()],
+});
 ```
 
-### Runtime Fallback (Development)
+Also available: `zod-aot/webpack`, `zod-aot/esbuild`, `zod-aot/rollup`
 
-During development — before running the build step — use `createFallback` to wrap Zod schemas with the same interface:
+**Option B: CLI**
+
+```bash
+# Generate optimized validators
+npx zod-aot generate src/schemas.ts -o src/schemas.compiled.ts
+
+# Generate from a directory
+npx zod-aot generate src/ -o src/compiled/
+
+# Check if schemas are compilable (without generating)
+npx zod-aot check src/schemas.ts
+```
+
+## Build Plugin (unplugin)
+
+The build plugin automatically replaces `compile()` calls with optimized inline validators during the build step. No code changes needed — your source files stay the same.
+
+```typescript
+// vite.config.ts
+import zodAot from "zod-aot/vite";
+export default defineConfig({ plugins: [zodAot()] });
+
+// webpack.config.js
+const zodAot = require("zod-aot/webpack");
+module.exports = { plugins: [zodAot()] };
+```
+
+### Options
+
+```typescript
+zodAot({
+  include: ["src/schemas"],   // only process files matching these substrings
+  exclude: ["test", "mock"],  // skip files matching these substrings
+})
+```
+
+The plugin:
+- Runs at build time (`enforce: "pre"`)
+- Replaces `compile(Schema)` with optimized IIFE inline validators
+- Adds `/* @__PURE__ */` annotations for tree-shaking
+- Supports HMR in development
+
+## Low-Level API
+
+For custom build scripts or advanced use cases, you can use the extractor and code generator directly:
 
 ```typescript
 import { z } from "zod";
-import { createFallback } from "zod-aot";
+import { extractSchema, generateValidator } from "zod-aot";
 
 const UserSchema = z.object({
   name: z.string().min(3),
   age: z.number().int().positive(),
 });
 
-// Delegates to Zod at runtime — same interface as compiled validators
-const validator = createFallback(UserSchema);
+// Extract schema into intermediate representation (IR)
+const ir = extractSchema(UserSchema);
 
-validator.parse(data);      // throws ZodError on failure
+// Generate optimized JavaScript validation code
+const { code, functionName } = generateValidator(ir, "validateUser");
+
+// Execute the generated code
+const safeParse = new Function(`${code}\nreturn ${functionName};`)();
+const result = safeParse({ name: "Alice", age: 30 });
+```
+
+### `createFallback(zodSchema)`
+
+Wraps a Zod schema to provide the `CompiledSchema` interface, delegating to Zod at runtime. Useful for development or unsupported schema types:
+
+```typescript
+import { createFallback } from "zod-aot";
+
+const validator = createFallback(UserSchema);
+validator.parse(data);      // throws on failure
 validator.safeParse(data);  // { success, data/error }
 validator.is(data);         // type guard (boolean)
 ```
-
-This lets you write code against the `CompiledSchema` interface and swap in the generated code at build time without changing any call sites.
 
 ## How It Works
 

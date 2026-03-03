@@ -121,7 +121,7 @@ import zodAot from "zod-aot/unplugin/vite";
 export default { plugins: [zodAot()] };
 ```
 
-Plugin entries: `zod-aot/unplugin/vite`, `/webpack`, `/esbuild`, `/rollup`
+Plugin entries: `zod-aot/vite`, `zod-aot/webpack`, `zod-aot/esbuild`, `zod-aot/rollup`
 
 **Transform flow:**
 1. `shouldTransform(id)` — file extension check, skip `node_modules`/`.d.ts`/`.compiled.ts`
