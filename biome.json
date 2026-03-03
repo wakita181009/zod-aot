@@ -39,7 +39,8 @@
       },
       "complexity": {
         "noStaticOnlyClass": "warn",
-        "noUselessEmptyExport": "error"
+        "noUselessEmptyExport": "error",
+        "useLiteralKeys": "off"
       },
       "nursery": {
         "noFloatingPromises": "error",

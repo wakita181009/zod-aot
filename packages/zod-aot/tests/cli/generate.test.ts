@@ -47,7 +47,9 @@ describe("generate E2E", () => {
     expect(written).toContain("export const validateUser");
 
     // Execute the generated safeParse function and verify results
-    const schema = schemas[0]!;
+    const schema = schemas[0];
+    expect(schema).toBeDefined();
+    if (!schema) return;
     const ir = extractSchema(schema.schema);
     const result = generateValidator(ir, schema.exportName);
     const safeParseFn = new Function(`${result.code}\nreturn ${result.functionName};`)() as (
@@ -93,7 +95,9 @@ describe("generate E2E", () => {
   it("generated validators match Zod behavior for valid data", async () => {
     const filePath = path.join(fixturesDir, "simple-schema.ts");
     const schemas = await discoverSchemas(filePath);
-    const schema = schemas[0]!;
+    const schema = schemas[0];
+    expect(schema).toBeDefined();
+    if (!schema) return;
 
     const zodSchema = schema.schema as z.ZodType;
     const ir = extractSchema(schema.schema);
@@ -112,7 +116,9 @@ describe("generate E2E", () => {
   it("generated validators match Zod behavior for invalid data", async () => {
     const filePath = path.join(fixturesDir, "simple-schema.ts");
     const schemas = await discoverSchemas(filePath);
-    const schema = schemas[0]!;
+    const schema = schemas[0];
+    expect(schema).toBeDefined();
+    if (!schema) return;
 
     const zodSchema = schema.schema as z.ZodType;
     const ir = extractSchema(schema.schema);

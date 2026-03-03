@@ -59,10 +59,12 @@ describe("check (schema compilability)", () => {
     const schemas = await discoverSchemas(path.join(fixturesDir, "with-fallback.ts"));
     expect(schemas.length).toBe(1);
 
-    const ir = extractSchema(schemas[0]!.schema);
-    const reason = hasFallback(ir);
-    expect(reason).not.toBeNull();
-    expect(reason).toContain("transform");
+    for (const s of schemas) {
+      const ir = extractSchema(s.schema);
+      const reason = hasFallback(ir);
+      expect(reason).not.toBeNull();
+      expect(reason).toContain("transform");
+    }
   });
 
   it("no-compile file has no schemas", async () => {
