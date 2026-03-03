@@ -1,6 +1,7 @@
 import type { CodeGenResult } from "#src/core/codegen/context.js";
 import { extractFunctionName } from "#src/core/codegen/context.js";
 import { generateValidator } from "#src/core/codegen/index.js";
+import type { FallbackEntry } from "#src/core/extractor.js";
 import { extractSchema } from "#src/core/extractor.js";
 import type { DiscoveredSchema } from "#src/discovery.js";
 import { discoverSchemas } from "#src/discovery.js";
@@ -9,6 +10,7 @@ import type { ZodAotPluginOptions } from "./types.js";
 interface CompiledSchemaInfo {
   exportName: string;
   codegenResult: CodeGenResult;
+  fallbackEntries: FallbackEntry[];
 }
 
 /**
@@ -47,9 +49,12 @@ export async function transformCode(code: string, id: string): Promise<string | 
   // For each schema, run the compilation pipeline
   const compiled: CompiledSchemaInfo[] = [];
   for (const s of schemas) {
-    const ir = extractSchema(s.schema);
-    const result = generateValidator(ir, s.exportName);
-    compiled.push({ exportName: s.exportName, codegenResult: result });
+    const fallbackEntries: FallbackEntry[] = [];
+    const ir = extractSchema(s.schema, fallbackEntries);
+    const result = generateValidator(ir, s.exportName, {
+      fallbackCount: fallbackEntries.length,
+    });
+    compiled.push({ exportName: s.exportName, codegenResult: result, fallbackEntries });
   }
 
   return rewriteSource(code, compiled);
@@ -58,7 +63,11 @@ export async function transformCode(code: string, id: string): Promise<string | 
 /**
  * Generate an IIFE that replaces a compile() call with inline optimized code.
  */
-function generateInlineReplacement(schemaArgName: string, codegenResult: CodeGenResult): string {
+function generateInlineReplacement(
+  schemaArgName: string,
+  codegenResult: CodeGenResult,
+  fallbackEntries: FallbackEntry[],
+): string {
   const fnName = extractFunctionName(codegenResult.functionName);
 
   // Collect preamble lines (skip empty and marker)
@@ -67,9 +76,16 @@ function generateInlineReplacement(schemaArgName: string, codegenResult: CodeGen
     .filter((l) => l.trim() !== "" && l.trim() !== "/* zod-aot */");
   const preambleStr = preambleLines.length > 0 ? `${preambleLines.join("\n")}\n` : "";
 
+  // Build __fb declaration for partial fallback
+  let fbDecl = "";
+  if (fallbackEntries.length > 0) {
+    const exprs = fallbackEntries.map((fb) => `${schemaArgName}${fb.accessPath}`);
+    fbDecl = `var __fb=[${exprs.join(",")}];\n`;
+  }
+
   return [
     "/* @__PURE__ */ (() => {",
-    preambleStr + codegenResult.functionName,
+    fbDecl + preambleStr + codegenResult.functionName,
     "return {",
     `parse(input){const r=${fnName}(input);if(r.success)return r.data;throw Object.assign(new Error("Validation failed"),r.error);},`,
     `safeParse:${fnName},`,
@@ -119,7 +135,9 @@ export function rewriteSource(code: string, schemas: CompiledSchemaInfo[]): stri
     const schemaArgName = result.slice(openParenIndex + 1, closeParenIndex).trim();
     const prefix = match[1] ?? "";
     const fullMatch = result.slice(match.index, closeParenIndex + 1);
-    const replacement = prefix + generateInlineReplacement(schemaArgName, schema.codegenResult);
+    const replacement =
+      prefix +
+      generateInlineReplacement(schemaArgName, schema.codegenResult, schema.fallbackEntries);
     result = result.replace(fullMatch, replacement);
   }
 

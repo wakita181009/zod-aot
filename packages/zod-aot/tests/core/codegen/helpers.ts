@@ -7,10 +7,18 @@ import type { SchemaIR } from "#src/core/types.js";
 export function compileIR(
   ir: SchemaIR,
   name = "test",
+  fallbackSchemas?: unknown[],
 ): (input: unknown) => { success: boolean; data?: unknown; error?: { issues: unknown[] } } {
-  const result = generateValidator(ir, name);
-  const fn = new Function(`${result.code}\nreturn ${result.functionName};`);
-  return fn() as (input: unknown) => {
+  const result = generateValidator(ir, name, {
+    fallbackCount: fallbackSchemas?.length ?? 0,
+  });
+  const fn =
+    fallbackSchemas && fallbackSchemas.length > 0
+      ? new Function("__fb", `${result.code}\nreturn ${result.functionName};`)
+      : new Function(`${result.code}\nreturn ${result.functionName};`);
+  return (fallbackSchemas && fallbackSchemas.length > 0 ? fn(fallbackSchemas) : fn()) as (
+    input: unknown,
+  ) => {
     success: boolean;
     data?: unknown;
     error?: { issues: unknown[] };

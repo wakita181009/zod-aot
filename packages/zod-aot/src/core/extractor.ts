@@ -1,4 +1,4 @@
-import type { CheckIR, DateCheckIR, SchemaIR } from "./types.js";
+import type { CheckIR, DateCheckIR, FallbackIR, SchemaIR } from "./types.js";
 
 interface ZodCheckDef {
   check: string;
@@ -48,6 +48,14 @@ interface ZodSchema {
     def: ZodDef;
     bag?: Record<string, unknown>;
   };
+}
+
+/** Entry collected during extraction for each fallback sub-schema. */
+export interface FallbackEntry {
+  /** Runtime reference to the Zod sub-schema. */
+  schema: unknown;
+  /** Navigation path from root schema, e.g. '.shape["slug"]' */
+  accessPath: string;
 }
 
 function extractChecks(checks: ZodCheckSchema[]): { checkIRs: CheckIR[]; hasFallback: boolean } {
@@ -101,20 +109,42 @@ function extractChecks(checks: ZodCheckSchema[]): { checkIRs: CheckIR[]; hasFall
   return { checkIRs, hasFallback };
 }
 
+function makeFallback(
+  reason: FallbackIR["reason"],
+  zodSchema: unknown,
+  fallbacks?: FallbackEntry[],
+  accessPath?: string,
+): FallbackIR {
+  if (fallbacks && accessPath !== undefined) {
+    const index = fallbacks.length;
+    fallbacks.push({ schema: zodSchema, accessPath });
+    return { type: "fallback", reason, fallbackIndex: index };
+  }
+  return { type: "fallback", reason };
+}
+
 /**
  * Extract SchemaIR from a Zod schema by traversing its `_zod.def` and `_zod.bag`.
+ *
+ * When `fallbacks` is provided, non-compilable sub-schemas are collected with their
+ * access paths for partial fallback (Zod delegation at runtime).
  */
-export function extractSchema(zodSchema: unknown): SchemaIR {
+export function extractSchema(
+  zodSchema: unknown,
+  fallbacks?: FallbackEntry[],
+  currentPath?: string,
+): SchemaIR {
   const schema = zodSchema as ZodSchema;
   const def = schema._zod.def;
+  const p = currentPath ?? "";
 
   // Transform: pipe with transform output
   if (def.type === "pipe") {
     const outDef = def.out?._zod?.def;
     if (outDef && outDef.type === "transform") {
-      return { type: "fallback", reason: "transform" };
+      return makeFallback("transform", zodSchema, fallbacks, p);
     }
-    return { type: "fallback", reason: "unsupported" };
+    return makeFallback("unsupported", zodSchema, fallbacks, p);
   }
 
   // String format schemas (z.email(), z.url(), z.uuid())
@@ -136,7 +166,7 @@ export function extractSchema(zodSchema: unknown): SchemaIR {
         return { type: "string", checks: [] };
       }
       const { checkIRs, hasFallback } = extractChecks(def.checks);
-      if (hasFallback) return { type: "fallback", reason: "refine" };
+      if (hasFallback) return makeFallback("refine", zodSchema, fallbacks, p);
       return { type: "string", checks: checkIRs };
     }
 
@@ -145,7 +175,7 @@ export function extractSchema(zodSchema: unknown): SchemaIR {
         return { type: "number", checks: [] };
       }
       const { checkIRs, hasFallback } = extractChecks(def.checks);
-      if (hasFallback) return { type: "fallback", reason: "refine" };
+      if (hasFallback) return makeFallback("refine", zodSchema, fallbacks, p);
       return { type: "number", checks: checkIRs };
     }
 
@@ -167,20 +197,23 @@ export function extractSchema(zodSchema: unknown): SchemaIR {
     case "object": {
       const properties: Record<string, SchemaIR> = {};
       for (const [key, value] of Object.entries(def.shape)) {
-        properties[key] = extractSchema(value);
+        const propPath = `${p}.shape[${JSON.stringify(key)}]`;
+        properties[key] = extractSchema(value, fallbacks, propPath);
       }
       return { type: "object", properties };
     }
 
     case "array": {
-      const element = extractSchema(def.element);
+      const element = extractSchema(def.element, fallbacks, `${p}._zod.def.element`);
       const { checkIRs } = def.checks ? extractChecks(def.checks) : { checkIRs: [] };
       return { type: "array", element, checks: checkIRs };
     }
 
     case "union": {
       if (def.discriminator) {
-        const options = def.options.map((opt) => extractSchema(opt));
+        const options = def.options.map((opt, i) =>
+          extractSchema(opt, fallbacks, `${p}._zod.def.options[${i}]`),
+        );
         const mapping: Record<string, number> = {};
         for (let i = 0; i < def.options.length; i++) {
           const opt = def.options[i] as ZodSchema;
@@ -199,15 +232,23 @@ export function extractSchema(zodSchema: unknown): SchemaIR {
       }
       return {
         type: "union",
-        options: def.options.map((opt) => extractSchema(opt)),
+        options: def.options.map((opt, i) =>
+          extractSchema(opt, fallbacks, `${p}._zod.def.options[${i}]`),
+        ),
       };
     }
 
     case "optional":
-      return { type: "optional", inner: extractSchema(def.innerType) };
+      return {
+        type: "optional",
+        inner: extractSchema(def.innerType, fallbacks, `${p}._zod.def.innerType`),
+      };
 
     case "nullable":
-      return { type: "nullable", inner: extractSchema(def.innerType) };
+      return {
+        type: "nullable",
+        inner: extractSchema(def.innerType, fallbacks, `${p}._zod.def.innerType`),
+      };
 
     case "any":
       return { type: "any" };
@@ -216,7 +257,10 @@ export function extractSchema(zodSchema: unknown): SchemaIR {
       return { type: "unknown" };
 
     case "readonly":
-      return { type: "readonly", inner: extractSchema(def.innerType) };
+      return {
+        type: "readonly",
+        inner: extractSchema(def.innerType, fallbacks, `${p}._zod.def.innerType`),
+      };
 
     case "date": {
       const dateChecks: DateCheckIR[] = [];
@@ -249,27 +293,29 @@ export function extractSchema(zodSchema: unknown): SchemaIR {
     }
 
     case "tuple": {
-      const items = def.items.map((item) => extractSchema(item));
-      const rest = def.rest ? extractSchema(def.rest) : null;
+      const items = def.items.map((item, i) =>
+        extractSchema(item, fallbacks, `${p}._zod.def.items[${i}]`),
+      );
+      const rest = def.rest ? extractSchema(def.rest, fallbacks, `${p}._zod.def.rest`) : null;
       return { type: "tuple", items, rest };
     }
 
     case "record": {
       if (!def.valueType) {
-        return { type: "fallback", reason: "unsupported" };
+        return makeFallback("unsupported", zodSchema, fallbacks, p);
       }
-      const keyType = extractSchema(def.keyType);
-      const valueType = extractSchema(def.valueType);
+      const keyType = extractSchema(def.keyType, fallbacks, `${p}._zod.def.keyType`);
+      const valueType = extractSchema(def.valueType, fallbacks, `${p}._zod.def.valueType`);
       return { type: "record", keyType, valueType };
     }
 
     case "default": {
-      const inner = extractSchema(def.innerType);
+      const inner = extractSchema(def.innerType, fallbacks, `${p}._zod.def.innerType`);
       const defaultValue = def.defaultValue;
       try {
         JSON.stringify(defaultValue);
       } catch {
-        return { type: "fallback", reason: "unsupported" };
+        return makeFallback("unsupported", zodSchema, fallbacks, p);
       }
       return { type: "default", inner, defaultValue };
     }
@@ -277,11 +323,11 @@ export function extractSchema(zodSchema: unknown): SchemaIR {
     case "intersection":
       return {
         type: "intersection",
-        left: extractSchema(def.left),
-        right: extractSchema(def.right),
+        left: extractSchema(def.left, fallbacks, `${p}._zod.def.left`),
+        right: extractSchema(def.right, fallbacks, `${p}._zod.def.right`),
       };
 
     default:
-      return { type: "fallback", reason: "unsupported" };
+      return makeFallback("unsupported", zodSchema, fallbacks, p);
   }
 }

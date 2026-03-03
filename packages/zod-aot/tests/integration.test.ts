@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { generateValidator } from "#src/core/codegen/index.js";
+import type { FallbackEntry } from "#src/core/extractor.js";
 import { extractSchema } from "#src/core/extractor.js";
-import type { SchemaIR } from "#src/core/types.js";
+import type { SafeParseResult, SchemaIR } from "#src/core/types.js";
 
 /**
  * End-to-end helper: Zod schema → extract IR → generate code → compile → safeParse.
@@ -676,5 +677,132 @@ describe("integration — SchemaIR is JSON-serializable", () => {
     const result1 = generateValidator(ir, "original");
     const result2 = generateValidator(deserialized, "roundtrip");
     expect(result1.code).toBe(result2.code);
+  });
+});
+
+// ─── Partial Fallback E2E ──────────────────────────────────────────────────
+
+function compileWithFallbacks(schema: z.ZodType, name = "test") {
+  const fallbackEntries: FallbackEntry[] = [];
+  const ir = extractSchema(schema, fallbackEntries);
+  const result = generateValidator(ir, name, { fallbackCount: fallbackEntries.length });
+  const fallbackSchemas = fallbackEntries.map((e) => e.schema);
+  const safeParseFn =
+    fallbackSchemas.length > 0
+      ? (new Function("__fb", `${result.code}\nreturn ${result.functionName};`)(
+          fallbackSchemas,
+        ) as (input: unknown) => SafeParseResult<unknown>)
+      : (new Function(`${result.code}\nreturn ${result.functionName};`)() as (
+          input: unknown,
+        ) => SafeParseResult<unknown>);
+  return safeParseFn;
+}
+
+describe("integration — partial fallback (mixed compilable + non-compilable)", () => {
+  it("object with transform property matches Zod success/failure", () => {
+    const schema = z.object({
+      name: z.string().min(3),
+      slug: z.string().transform((v) => v.toLowerCase()),
+      age: z.number().int().positive(),
+    });
+
+    const safeParse = compileWithFallbacks(schema, "partial");
+    const inputs = [
+      { name: "Alice", slug: "Hello-World", age: 25 },
+      { name: "Al", slug: "hello", age: 25 },
+      { name: "Alice", slug: 42, age: 25 },
+      { name: "Alice", slug: "hello", age: -1 },
+      null,
+      "not an object",
+    ];
+
+    for (const input of inputs) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+    }
+  });
+
+  it("transform data is written back on success", () => {
+    const schema = z.object({
+      name: z.string(),
+      slug: z.string().transform((v) => v.toLowerCase()),
+    });
+
+    const safeParse = compileWithFallbacks(schema, "transform");
+    const result = safeParse({ name: "Alice", slug: "HELLO" });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toEqual({ name: "Alice", slug: "hello" });
+    }
+  });
+
+  it("object with refine property matches Zod behavior", () => {
+    const schema = z.object({
+      email: z.email(),
+      password: z
+        .string()
+        .min(8)
+        .refine((v) => /[A-Z]/.test(v), {
+          message: "Must contain uppercase",
+        }),
+    });
+
+    const safeParse = compileWithFallbacks(schema, "refine");
+    const inputs = [
+      { email: "a@b.com", password: "SecurePass1" },
+      { email: "a@b.com", password: "nouppercase" },
+      { email: "invalid", password: "SecurePass1" },
+    ];
+
+    for (const input of inputs) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+    }
+  });
+
+  it("array of objects with partial fallback", () => {
+    const itemSchema = z.object({
+      id: z.number(),
+      label: z.string().transform((v) => v.trim()),
+    });
+    const schema = z.array(itemSchema);
+
+    const safeParse = compileWithFallbacks(schema, "arrPartial");
+    const inputs = [
+      [{ id: 1, label: " hello " }],
+      [{ id: "not a number", label: "ok" }],
+      [{ id: 1, label: 42 }],
+      "not an array",
+      [],
+    ];
+
+    for (const input of inputs) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+    }
+  });
+
+  it("schemas without fallbacks still work normally", () => {
+    const schema = z.object({
+      name: z.string().min(1),
+      age: z.number().int().positive(),
+    });
+
+    const safeParse = compileWithFallbacks(schema, "noFallback");
+    const inputs = [
+      { name: "Alice", age: 30 },
+      { name: "", age: 30 },
+      { name: "Bob", age: -1 },
+      null,
+    ];
+
+    for (const input of inputs) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+    }
   });
 });

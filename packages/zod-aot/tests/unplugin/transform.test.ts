@@ -2,6 +2,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { generateValidator } from "#src/core/codegen/index.js";
+import type { FallbackEntry } from "#src/core/extractor.js";
 import { extractSchema } from "#src/core/extractor.js";
 import {
   removeCompileImport,
@@ -10,7 +11,7 @@ import {
   transformCode,
 } from "#src/unplugin/transform.js";
 
-const fixturesDir = path.resolve(import.meta.dirname, "fixtures");
+const fixturesDir = path.resolve(import.meta.dirname, "../fixtures");
 
 describe("shouldTransform()", () => {
   it("includes .ts files", () => {
@@ -101,7 +102,7 @@ describe("rewriteSource()", () => {
   function makeCompiledInfo(exportName: string, schema: z.ZodType) {
     const ir = extractSchema(schema);
     const codegenResult = generateValidator(ir, exportName);
-    return { exportName, codegenResult };
+    return { exportName, codegenResult, fallbackEntries: [] };
   }
 
   it("replaces a single compile() call with IIFE", () => {
@@ -229,7 +230,7 @@ describe("transformCode() E2E", () => {
   }
 
   it("transforms a simple compile() file and produces working validation", async () => {
-    const fixturePath = path.join(fixturesDir, "basic-compile.ts");
+    const fixturePath = path.join(fixturesDir, "simple-schema.ts");
     const code = readFixtureAsUserCode(fixturePath);
 
     const result = await transformCode(code, fixturePath);
@@ -241,7 +242,7 @@ describe("transformCode() E2E", () => {
   });
 
   it("transforms multiple compile() calls in one file", async () => {
-    const fixturePath = path.join(fixturesDir, "multi-compile.ts");
+    const fixturePath = path.join(fixturesDir, "multi-schema.ts");
     const code = readFixtureAsUserCode(fixturePath);
 
     const result = await transformCode(code, fixturePath);
@@ -277,7 +278,7 @@ describe("generated IIFE runtime execution", () => {
   function makeCompiledInfo(exportName: string, schema: z.ZodType) {
     const ir = extractSchema(schema);
     const codegenResult = generateValidator(ir, exportName);
-    return { exportName, codegenResult };
+    return { exportName, codegenResult, fallbackEntries: [] };
   }
 
   function executeGeneratedValidator(schemas: Parameters<typeof rewriteSource>[1]) {
@@ -357,5 +358,49 @@ describe("generated IIFE runtime execution", () => {
       const aotResult = validator.safeParse(input);
       expect(aotResult.success).toBe(zodResult.success);
     }
+  });
+});
+
+describe("rewriteSource() — partial fallback", () => {
+  it("IIFE includes __fb declaration when schema has fallbacks", () => {
+    const schema = z.object({
+      name: z.string(),
+      slug: z.string().transform((v) => v.toLowerCase()),
+    });
+    const fallbackEntries: FallbackEntry[] = [];
+    const ir = extractSchema(schema, fallbackEntries);
+    const codegenResult = generateValidator(ir, "validateUser", {
+      fallbackCount: fallbackEntries.length,
+    });
+
+    const code = [
+      `import { compile } from "zod-aot";`,
+      `export const validateUser = compile(UserSchema);`,
+    ].join("\n");
+
+    const result = rewriteSource(code, [
+      { exportName: "validateUser", codegenResult, fallbackEntries },
+    ]);
+
+    expect(result).toContain("var __fb=");
+    expect(result).toContain('UserSchema.shape["slug"]');
+    expect(result).toContain("__fb[0].safeParse");
+  });
+
+  it("IIFE has no __fb when schema has no fallbacks", () => {
+    const schema = z.object({ name: z.string() });
+    const ir = extractSchema(schema);
+    const codegenResult = generateValidator(ir, "validateUser");
+
+    const code = [
+      `import { compile } from "zod-aot";`,
+      `export const validateUser = compile(UserSchema);`,
+    ].join("\n");
+
+    const result = rewriteSource(code, [
+      { exportName: "validateUser", codegenResult, fallbackEntries: [] },
+    ]);
+
+    expect(result).not.toContain("__fb");
   });
 });

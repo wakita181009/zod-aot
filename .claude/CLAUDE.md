@@ -235,7 +235,7 @@ Within-module imports use relative paths.
 - [x] Tier 2 type support (tuple, record, intersection, discriminatedUnion, date, any, unknown, default, readonly)
 - [x] discriminatedUnion switch statement optimization (O(1) vs O(n))
 - [x] CLI (`generate` + `check` commands)
-- [ ] Partial fallback (e.g., object with some transform properties)
+- [x] Partial fallback (e.g., object with some transform properties)
 - [x] unplugin integration for Vite/webpack/esbuild/Rollup
 - [ ] Watch mode
 

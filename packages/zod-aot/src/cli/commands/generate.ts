@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { generateValidator } from "#src/core/codegen/index.js";
+import type { FallbackEntry } from "#src/core/extractor.js";
 import { extractSchema } from "#src/core/extractor.js";
 import type { DiscoveredSchema } from "#src/discovery.js";
 import { discoverSchemas } from "#src/discovery.js";
@@ -98,9 +99,12 @@ export async function runGenerate(options: GenerateOptions): Promise<void> {
     }
 
     const codegenResults = schemas.map((s) => {
-      const ir = extractSchema(s.schema);
-      const result = generateValidator(ir, s.exportName);
-      return { exportName: s.exportName, codegenResult: result };
+      const fallbackEntries: FallbackEntry[] = [];
+      const ir = extractSchema(s.schema, fallbackEntries);
+      const result = generateValidator(ir, s.exportName, {
+        fallbackCount: fallbackEntries.length,
+      });
+      return { exportName: s.exportName, codegenResult: result, fallbackEntries };
     });
 
     const outputPath = resolveOutputPath(filePath, options.output);

@@ -139,6 +139,8 @@ export interface NullableIR {
 export interface FallbackIR {
   type: "fallback";
   reason: "transform" | "refine" | "superRefine" | "custom" | "unsupported";
+  /** Index into the __fb[] fallback schemas array. Present when partial fallback is used. */
+  fallbackIndex?: number;
 }
 
 // ─── Tier 2 Schema IR ───────────────────────────────────────────────────────

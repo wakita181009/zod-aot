@@ -3,6 +3,8 @@ import type { SchemaIR } from "../types.js";
 export interface CodeGenResult {
   code: string;
   functionName: string;
+  /** Number of fallback schemas referenced by __fb[N] in the generated code. 0 = no fallbacks. */
+  fallbackCount: number;
 }
 
 export interface CodeGenContext {

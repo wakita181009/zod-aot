@@ -74,6 +74,21 @@ function generateValidation(
         generateValidation,
       );
     case "fallback":
+      if (ir.fallbackIndex !== undefined) {
+        const idx = ir.fallbackIndex;
+        const rVar = `__fb_r${idx}`;
+        const iVar = `__fb_i${idx}`;
+        const jVar = `__fb_j${idx}`;
+        let fbCode = `var ${rVar}=__fb[${idx}].safeParse(${inputExpr});\n`;
+        fbCode += `if(!${rVar}.success){`;
+        fbCode += `var ${iVar}=${rVar}.error.issues;`;
+        fbCode += `for(var ${jVar}=0;${jVar}<${iVar}.length;${jVar}++){`;
+        fbCode += `${issuesVar}.push(Object.assign({},${iVar}[${jVar}],`;
+        fbCode += `{path:${pathExpr}.concat(${iVar}[${jVar}].path)}));`;
+        fbCode += `}}`;
+        fbCode += `else{${inputExpr}=${rVar}.data;}\n`;
+        return fbCode;
+      }
       return `${issuesVar}.push({code:"custom",path:${pathExpr},message:"Fallback schema: ${ir.reason}"});\n`;
     case "any":
       return generateAnyValidation();
@@ -125,7 +140,11 @@ function generateValidation(
  *
  * Usage: `new Function(code + "\nreturn " + functionName + ";")()`
  */
-export function generateValidator(ir: SchemaIR, name: string): CodeGenResult {
+export function generateValidator(
+  ir: SchemaIR,
+  name: string,
+  options?: { fallbackCount?: number },
+): CodeGenResult {
   const ctx: CodeGenContext = { preamble: [], counter: 0 };
   const bodyCode = generateValidation(ir, "input", "[]", "__issues", ctx);
 
@@ -141,5 +160,5 @@ export function generateValidator(ir: SchemaIR, name: string): CodeGenResult {
     `}`,
   ].join("\n");
 
-  return { code, functionName };
+  return { code, functionName, fallbackCount: options?.fallbackCount ?? 0 };
 }

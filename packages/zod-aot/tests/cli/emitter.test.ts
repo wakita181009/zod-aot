@@ -8,10 +8,11 @@ describe("generateCompiledFileContent()", () => {
       code: "/* zod-aot */",
       functionName:
         'function safeParse_test(input){\nvar __issues=[];\nif(typeof input!=="string"){__issues.push({code:"invalid_type",expected:"string",received:typeof input,path:[],message:"Expected string"});}\nif(__issues.length>0)return{success:false,error:{issues:__issues}};\nreturn{success:true,data:input};\n}',
+      fallbackCount: 0,
     };
 
     const content = generateCompiledFileContent(
-      [{ exportName: "validateTest", codegenResult: result }],
+      [{ exportName: "validateTest", codegenResult: result, fallbackEntries: [] }],
       "./test.ts",
     );
 
@@ -26,10 +27,11 @@ describe("generateCompiledFileContent()", () => {
     const result: CodeGenResult = {
       code: '/* zod-aot */\nconst __set_role_0 = new Set(["admin","user"]);',
       functionName: "function safeParse_role(input){\nreturn{success:true,data:input};\n}",
+      fallbackCount: 0,
     };
 
     const content = generateCompiledFileContent(
-      [{ exportName: "validateRole", codegenResult: result }],
+      [{ exportName: "validateRole", codegenResult: result, fallbackEntries: [] }],
       "./role.ts",
     );
 
@@ -41,16 +43,18 @@ describe("generateCompiledFileContent()", () => {
     const result1: CodeGenResult = {
       code: "/* zod-aot */",
       functionName: "function safeParse_a(input){\nreturn{success:true,data:input};\n}",
+      fallbackCount: 0,
     };
     const result2: CodeGenResult = {
       code: "/* zod-aot */",
       functionName: "function safeParse_b(input){\nreturn{success:true,data:input};\n}",
+      fallbackCount: 0,
     };
 
     const content = generateCompiledFileContent(
       [
-        { exportName: "validateA", codegenResult: result1 },
-        { exportName: "validateB", codegenResult: result2 },
+        { exportName: "validateA", codegenResult: result1, fallbackEntries: [] },
+        { exportName: "validateB", codegenResult: result2, fallbackEntries: [] },
       ],
       "./multi.ts",
     );
@@ -66,14 +70,56 @@ describe("generateCompiledFileContent()", () => {
       code: "/* zod-aot */",
       functionName:
         'function safeParse_num(input){\nvar __issues=[];\nif(typeof input!=="number"||input!==input){__issues.push({code:"invalid_type",expected:"number",received:typeof input,path:[],message:"Expected number"});}\nif(__issues.length>0)return{success:false,error:{issues:__issues}};\nreturn{success:true,data:input};\n}',
+      fallbackCount: 0,
     };
 
     const content = generateCompiledFileContent(
-      [{ exportName: "validateNum", codegenResult: result }],
+      [{ exportName: "validateNum", codegenResult: result, fallbackEntries: [] }],
       "./num.ts",
     );
 
     expect(content).toContain("throw Object.assign");
+  });
+
+  it("generates import and __fb when schema has fallbacks", () => {
+    const result: CodeGenResult = {
+      code: "/* zod-aot */",
+      functionName:
+        'function safeParse_test(input){\nvar __issues=[];\n__issues.push({code:"custom",path:[],message:"test"});\nif(__issues.length>0)return{success:false,error:{issues:__issues}};\nreturn{success:true,data:input};\n}',
+      fallbackCount: 1,
+    };
+
+    const content = generateCompiledFileContent(
+      [
+        {
+          exportName: "validateUser",
+          codegenResult: result,
+          fallbackEntries: [{ schema: {}, accessPath: '.shape["slug"]' }],
+        },
+      ],
+      "./schemas.ts",
+    );
+
+    expect(content).toContain('import { validateUser as __src_validateUser } from "./schemas"');
+    expect(content).toContain("const __fb_validateUser =");
+    expect(content).toContain('.schema.shape["slug"]');
+    expect(content).toContain("var __fb=__fb_validateUser;");
+  });
+
+  it("does not generate import when no schemas have fallbacks", () => {
+    const result: CodeGenResult = {
+      code: "/* zod-aot */",
+      functionName: "function safeParse_test(input){\nreturn{success:true,data:input};\n}",
+      fallbackCount: 0,
+    };
+
+    const content = generateCompiledFileContent(
+      [{ exportName: "validateTest", codegenResult: result, fallbackEntries: [] }],
+      "./test.ts",
+    );
+
+    expect(content).not.toContain("import {");
+    expect(content).not.toContain("__fb");
   });
 });
 

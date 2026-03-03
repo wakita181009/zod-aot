@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { generateValidator } from "#src/core/codegen/index.js";
-import type { AnyIR, ObjectIR, ReadonlyIR, StringIR, UnknownIR } from "#src/core/types.js";
+import type {
+  AnyIR,
+  FallbackIR,
+  ObjectIR,
+  ReadonlyIR,
+  StringIR,
+  UnknownIR,
+} from "#src/core/types.js";
 import { compileIR } from "./helpers.js";
 
 describe("codegen — code quality", () => {
@@ -190,5 +197,70 @@ describe("codegen — readonly", () => {
     const safeParse = compileIR(ir);
     expect(safeParse({ x: 1 }).success).toBe(true);
     expect(safeParse({ x: "a" }).success).toBe(false);
+  });
+});
+
+// ─── Partial Fallback CodeGen ────────────────────────────────────────────────
+
+describe("codegen — partial fallback", () => {
+  it("generates __fb[N].safeParse for fallback with index", () => {
+    const ir: ObjectIR = {
+      type: "object",
+      properties: {
+        name: { type: "string", checks: [] },
+        slug: { type: "fallback", reason: "transform", fallbackIndex: 0 } satisfies FallbackIR,
+      },
+    };
+    const result = generateValidator(ir, "test", { fallbackCount: 1 });
+    expect(result.functionName).toContain("__fb[0].safeParse");
+    expect(result.fallbackCount).toBe(1);
+  });
+
+  it("generates old-style error push for fallback without index", () => {
+    const ir: ObjectIR = {
+      type: "object",
+      properties: {
+        name: { type: "string", checks: [] },
+        slug: { type: "fallback", reason: "transform" } satisfies FallbackIR,
+      },
+    };
+    const result = generateValidator(ir, "test");
+    expect(result.functionName).toContain("Fallback schema: transform");
+    expect(result.functionName).not.toContain("__fb");
+  });
+
+  it("delegates to Zod and validates correctly at runtime", () => {
+    const { z } = require("zod");
+    const slugSchema = z.string().min(1);
+    const ir: ObjectIR = {
+      type: "object",
+      properties: {
+        name: { type: "string", checks: [] },
+        slug: { type: "fallback", reason: "refine", fallbackIndex: 0 } satisfies FallbackIR,
+      },
+    };
+    const safeParse = compileIR(ir, "test", [slugSchema]);
+
+    expect(safeParse({ name: "Alice", slug: "hello" }).success).toBe(true);
+    expect(safeParse({ name: 42, slug: "hello" }).success).toBe(false);
+    expect(safeParse({ name: "Alice", slug: "" }).success).toBe(false);
+    expect(safeParse({ name: "Alice", slug: 42 }).success).toBe(false);
+  });
+
+  it("writes back transformed data on success", () => {
+    const { z } = require("zod");
+    const transformSchema = z.string().transform((v: string) => v.toUpperCase());
+    const ir: ObjectIR = {
+      type: "object",
+      properties: {
+        name: { type: "string", checks: [] },
+        slug: { type: "fallback", reason: "transform", fallbackIndex: 0 } satisfies FallbackIR,
+      },
+    };
+    const safeParse = compileIR(ir, "test", [transformSchema]);
+
+    const result = safeParse({ name: "Alice", slug: "hello" });
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual({ name: "Alice", slug: "HELLO" });
   });
 });
