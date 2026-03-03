@@ -1,0 +1,14 @@
+{
+  "name": "@zod-aot/benchmarks",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./schemas": "./schemas/index.ts",
+    "./schemas/simple": "./schemas/simple.ts",
+    "./schemas/medium": "./schemas/medium.ts",
+    "./schemas/large": "./schemas/large.ts"
+  },
+  "dependencies": {
+    "zod": "^4.0.0"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "bench-zod-only",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "bench": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@zod-aot/benchmarks": "workspace:*",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.0.0",
+    "typescript": "^5.9.3"
+  }
+}
