@@ -4,7 +4,9 @@ import {
   ApiResponseSchema,
   DiscriminatedUnionSchema,
   EventLogSchema,
+  FallbackArraySchema,
   NumberWithChecks,
+  PartialFallbackObjectSchema,
   RecordSchema,
   SimpleEnum,
   SimpleString,
@@ -15,7 +17,10 @@ import {
   validApiResponse100,
   validClickEvent,
   validEventLog,
+  validFallbackArray10,
+  validFallbackArray50,
   validNumberWithChecks,
+  validPartialFallbackObject,
   validRecord,
   validSimpleEnum,
   validSimpleString,
@@ -35,6 +40,8 @@ const aotTuple = compileForBench(TupleSchema, "tuple");
 const aotRecord = compileForBench(RecordSchema, "record");
 const aotDiscUnion = compileForBench(DiscriminatedUnionSchema, "discUnion");
 const aotEventLog = compileForBench(EventLogSchema, "eventLog");
+const aotPartialFallback = compileForBench(PartialFallbackObjectSchema, "partialFallback");
+const aotFallbackArray = compileForBench(FallbackArraySchema, "fallbackArray");
 
 // biome-ignore lint/suspicious/noConsole: benchmark output
 console.log("=== zod-aot Benchmark ===\n");
@@ -52,6 +59,11 @@ benchmark("tuple [string, int, bool]", () => aotTuple.safeParse(validTuple));
 benchmark("record<string, number>", () => aotRecord.safeParse(validRecord));
 benchmark("discriminatedUnion (3)", () => aotDiscUnion.safeParse(validClickEvent));
 benchmark("event log (combined)", () => aotEventLog.safeParse(validEventLog));
+benchmark("partial fallback object", () =>
+  aotPartialFallback.safeParse(validPartialFallbackObject),
+);
+benchmark("partial fallback array (10)", () => aotFallbackArray.safeParse(validFallbackArray10));
+benchmark("partial fallback array (50)", () => aotFallbackArray.safeParse(validFallbackArray50));
 
 // biome-ignore lint/suspicious/noConsole: benchmark output
 console.log("\n--- is (type guard) ---");
@@ -66,3 +78,5 @@ benchmark("tuple [string, int, bool]", () => aotTuple.is(validTuple));
 benchmark("record<string, number>", () => aotRecord.is(validRecord));
 benchmark("discriminatedUnion (3)", () => aotDiscUnion.is(validClickEvent));
 benchmark("event log (combined)", () => aotEventLog.is(validEventLog));
+benchmark("partial fallback object", () => aotPartialFallback.is(validPartialFallbackObject));
+benchmark("partial fallback array (10)", () => aotFallbackArray.is(validFallbackArray10));

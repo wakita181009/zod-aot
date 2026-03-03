@@ -884,6 +884,161 @@ describe("extractSchema — partial fallback (FallbackEntry collection)", () => 
     expect((ir.properties["slug"] as FallbackIR).fallbackIndex).toBeUndefined();
   });
 
+  it("collects fallback for nullable inner", () => {
+    const schema = z.nullable(z.string().transform((v) => v.toUpperCase()));
+    const fallbacks: FallbackEntry[] = [];
+    const ir = extractSchema(schema, fallbacks) as NullableIR;
+
+    expect(ir.type).toBe("nullable");
+    expect(ir.inner.type).toBe("fallback");
+    expect((ir.inner as FallbackIR).fallbackIndex).toBe(0);
+    expect(fallbacks).toHaveLength(1);
+    expect(fallbacks[0]?.accessPath).toBe("._zod.def.innerType");
+  });
+
+  it("collects fallback for tuple item", () => {
+    const schema = z.tuple([z.string(), z.number().transform((v) => String(v))]);
+    const fallbacks: FallbackEntry[] = [];
+    const ir = extractSchema(schema, fallbacks) as TupleIR;
+
+    expect(ir.type).toBe("tuple");
+    expect(ir.items).toHaveLength(2);
+    expect(ir.items[0]?.type).toBe("string");
+    expect(ir.items[1]?.type).toBe("fallback");
+    expect((ir.items[1] as FallbackIR).fallbackIndex).toBe(0);
+    expect(fallbacks[0]?.accessPath).toBe("._zod.def.items[1]");
+  });
+
+  it("collects fallback for tuple rest", () => {
+    const schema = z.tuple([z.string()]).rest(z.number().transform((v) => String(v)));
+    const fallbacks: FallbackEntry[] = [];
+    const ir = extractSchema(schema, fallbacks) as TupleIR;
+
+    expect(ir.type).toBe("tuple");
+    expect(ir.items[0]?.type).toBe("string");
+    expect(ir.rest).not.toBeNull();
+    expect(ir.rest?.type).toBe("fallback");
+    expect((ir.rest as FallbackIR).fallbackIndex).toBe(0);
+    expect(fallbacks[0]?.accessPath).toBe("._zod.def.rest");
+  });
+
+  it("collects fallback for record value", () => {
+    const schema = z.record(
+      z.string(),
+      z.string().transform((v) => v.trim()),
+    );
+    const fallbacks: FallbackEntry[] = [];
+    const ir = extractSchema(schema, fallbacks) as RecordIR;
+
+    expect(ir.type).toBe("record");
+    expect(ir.keyType.type).toBe("string");
+    expect(ir.valueType.type).toBe("fallback");
+    expect((ir.valueType as FallbackIR).fallbackIndex).toBe(0);
+    expect(fallbacks[0]?.accessPath).toBe("._zod.def.valueType");
+  });
+
+  it("collects fallback for union option", () => {
+    const schema = z.union([z.string(), z.number().transform((v) => String(v))]);
+    const fallbacks: FallbackEntry[] = [];
+    const ir = extractSchema(schema, fallbacks) as UnionIR;
+
+    expect(ir.type).toBe("union");
+    expect(ir.options).toHaveLength(2);
+    expect(ir.options[0]?.type).toBe("string");
+    expect(ir.options[1]?.type).toBe("fallback");
+    expect((ir.options[1] as FallbackIR).fallbackIndex).toBe(0);
+    expect(fallbacks[0]?.accessPath).toBe("._zod.def.options[1]");
+  });
+
+  it("collects fallback for discriminatedUnion option property", () => {
+    const schema = z.discriminatedUnion("type", [
+      z.object({ type: z.literal("a"), value: z.string() }),
+      z.object({ type: z.literal("b"), value: z.string().transform((v) => v.trim()) }),
+    ]);
+    const fallbacks: FallbackEntry[] = [];
+    const ir = extractSchema(schema, fallbacks) as DiscriminatedUnionIR;
+
+    expect(ir.type).toBe("discriminatedUnion");
+    expect(ir.options).toHaveLength(2);
+    const opt0 = ir.options[0] as ObjectIR;
+    expect(opt0.properties["value"]?.type).toBe("string");
+    const opt1 = ir.options[1] as ObjectIR;
+    expect(opt1.properties["value"]?.type).toBe("fallback");
+    expect(fallbacks).toHaveLength(1);
+  });
+
+  it("collects fallback for intersection side", () => {
+    const schema = z.intersection(
+      z.object({ a: z.string() }),
+      z.object({ b: z.string().transform((v) => v.toLowerCase()) }),
+    );
+    const fallbacks: FallbackEntry[] = [];
+    const ir = extractSchema(schema, fallbacks) as IntersectionIR;
+
+    expect(ir.type).toBe("intersection");
+    expect(ir.left.type).toBe("object");
+    const rightObj = ir.right as ObjectIR;
+    expect(rightObj.properties["b"]?.type).toBe("fallback");
+    expect(fallbacks).toHaveLength(1);
+  });
+
+  it("collects fallback for readonly object with transform property", () => {
+    const schema = z
+      .object({
+        name: z.string(),
+        slug: z.string().transform((v) => v.toLowerCase()),
+      })
+      .readonly();
+    const fallbacks: FallbackEntry[] = [];
+    const ir = extractSchema(schema, fallbacks) as ReadonlyIR;
+
+    expect(ir.type).toBe("readonly");
+    expect(ir.inner.type).toBe("object");
+    const objIR = ir.inner as ObjectIR;
+    expect(objIR.properties["slug"]?.type).toBe("fallback");
+    expect(fallbacks).toHaveLength(1);
+  });
+
+  it("collects fallback for default object with transform property", () => {
+    const schema = z
+      .object({
+        name: z.string(),
+        slug: z.string().transform((v) => v.toLowerCase()),
+      })
+      .default({ name: "test", slug: "test" });
+    const fallbacks: FallbackEntry[] = [];
+    const ir = extractSchema(schema, fallbacks) as DefaultIR;
+
+    expect(ir.type).toBe("default");
+    expect(ir.inner.type).toBe("object");
+    const objIR = ir.inner as ObjectIR;
+    expect(objIR.properties["slug"]?.type).toBe("fallback");
+    expect(fallbacks).toHaveLength(1);
+  });
+
+  it("collects fallback through deep nesting", () => {
+    const schema = z.object({
+      items: z.array(
+        z.object({
+          name: z.string(),
+          value: z.string().transform((v) => Number.parseInt(v, 10)),
+        }),
+      ),
+    });
+    const fallbacks: FallbackEntry[] = [];
+    const ir = extractSchema(schema, fallbacks) as ObjectIR;
+
+    expect(ir.type).toBe("object");
+    const itemsIR = ir.properties["items"] as ArrayIR;
+    expect(itemsIR.type).toBe("array");
+    const elemIR = itemsIR.element as ObjectIR;
+    expect(elemIR.type).toBe("object");
+    expect(elemIR.properties["name"]?.type).toBe("string");
+    expect(elemIR.properties["value"]?.type).toBe("fallback");
+    expect((elemIR.properties["value"] as FallbackIR).fallbackIndex).toBe(0);
+    expect(fallbacks).toHaveLength(1);
+  });
+
   it("stores the original Zod schema reference in fallback entries", () => {
     const slugSchema = z.string().transform((v) => v.toLowerCase());
     const schema = z.object({ slug: slugSchema });

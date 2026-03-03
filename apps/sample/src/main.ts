@@ -3,6 +3,7 @@ import {
   validateContact,
   validateEvent,
   validateNotification,
+  validateOrder,
   validateUser,
 } from "./schemas.js";
 
@@ -152,6 +153,32 @@ test("Notification: invalid type", () => {
 test("Notification: missing fields", () => {
   const result = validateNotification.safeParse({
     type: "push",
+  });
+  log(`  success: ${result.success}`);
+  if (!result.success) log(`  issues: ${result.error?.issues.length}`);
+});
+
+// --- Order (partial fallback with transform) ---
+
+test("Order: valid", () => {
+  const result = validateOrder.safeParse({
+    orderId: "ORD-001",
+    amount: 99.99,
+    currency: "USD",
+    slug: "Holiday Sale Item",
+    createdAt: new Date("2026-03-01"),
+  });
+  log(`  success: ${result.success}`);
+  if (result.success) log(`  data.slug: ${result.data.slug}`);
+});
+
+test("Order: invalid amount", () => {
+  const result = validateOrder.safeParse({
+    orderId: "ORD-002",
+    amount: -10,
+    currency: "EUR",
+    slug: "Test Order",
+    createdAt: new Date(),
   });
   log(`  success: ${result.success}`);
   if (!result.success) log(`  issues: ${result.error?.issues.length}`);

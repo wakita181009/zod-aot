@@ -8,17 +8,18 @@
 **Phase 2: Tier 2 Type Support — COMPLETE**
 
 Benchmark results (vitest bench, Node.js):
-- Simple types: 1.7-3.3x faster than Zod v4
-- Medium objects (valid): 4.0x faster
+- Simple types: 1.7-3.1x faster than Zod v4
+- Medium objects (valid): 4.1x faster
 - Medium objects (invalid): ~23x faster
-- Large objects (10-100 nested items): **43-64x faster**
-- Tier 2 types: tuple 3.9x, record 4.3x, discriminatedUnion 5.3x
-- Combined (event log): 12x faster
+- Large objects (10-100 nested items): **44-60x faster**
+- Tier 2 types: tuple 4.2x, record 4.2x, discriminatedUnion 5.4x
+- Combined (event log): 11.5x faster
+- Partial fallback (transform): object 2.5x, array 4.6-4.7x faster
 - Performance gains scale with schema complexity
 
 Phase 1 success criteria (is() 10x+, safeParse() 5x+) met for large/complex schemas. Primitives and small objects show moderate gains due to Zod v4's already-optimized fast path.
 
-Phase 2 adds Tier 2 types: tuple, record, intersection, discriminatedUnion (with O(1) switch optimization), date, any, unknown, default, readonly. 300 tests passing.
+Phase 2 adds Tier 2 types: tuple, record, intersection, discriminatedUnion (with O(1) switch optimization), date, any, unknown, default, readonly. Partial fallback compiles optimizable parts of schemas containing transform/refine. 412 tests passing.
 
 ## Runtime Compatibility
 

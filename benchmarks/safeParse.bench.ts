@@ -4,8 +4,10 @@ import {
   ApiResponseSchema,
   DiscriminatedUnionSchema,
   EventLogSchema,
+  FallbackArraySchema,
   invalidUser,
   NumberWithChecks,
+  PartialFallbackObjectSchema,
   RecordSchema,
   SimpleEnum,
   SimpleString,
@@ -16,7 +18,10 @@ import {
   validApiResponse100,
   validClickEvent,
   validEventLog,
+  validFallbackArray10,
+  validFallbackArray50,
   validNumberWithChecks,
+  validPartialFallbackObject,
   validRecord,
   validSimpleEnum,
   validSimpleString,
@@ -36,6 +41,8 @@ const aotTuple = compileForBench(TupleSchema, "tuple");
 const aotRecord = compileForBench(RecordSchema, "record");
 const aotDiscUnion = compileForBench(DiscriminatedUnionSchema, "discUnion");
 const aotEventLog = compileForBench(EventLogSchema, "eventLog");
+const aotPartialFallback = compileForBench(PartialFallbackObjectSchema, "partialFallback");
+const aotFallbackArray = compileForBench(FallbackArraySchema, "fallbackArray");
 
 // ─── Simple Types ─────────────────────────────────────────────────────────────
 
@@ -150,5 +157,34 @@ describe("safeParse: event log (combined)", () => {
   });
   bench("zod-aot", () => {
     aotEventLog.safeParse(validEventLog);
+  });
+});
+
+// ─── Partial Fallback ───────────────────────────────────────────────────────
+
+describe("safeParse: partial fallback — object with transform", () => {
+  bench("zod", () => {
+    PartialFallbackObjectSchema.safeParse(validPartialFallbackObject);
+  });
+  bench("zod-aot", () => {
+    aotPartialFallback.safeParse(validPartialFallbackObject);
+  });
+});
+
+describe("safeParse: partial fallback — array 10 items with transform", () => {
+  bench("zod", () => {
+    FallbackArraySchema.safeParse(validFallbackArray10);
+  });
+  bench("zod-aot", () => {
+    aotFallbackArray.safeParse(validFallbackArray10);
+  });
+});
+
+describe("safeParse: partial fallback — array 50 items with transform", () => {
+  bench("zod", () => {
+    FallbackArraySchema.safeParse(validFallbackArray50);
+  });
+  bench("zod-aot", () => {
+    aotFallbackArray.safeParse(validFallbackArray50);
   });
 });

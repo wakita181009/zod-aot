@@ -39,15 +39,18 @@ Measured with `vitest bench` on Node.js (Apple M-series):
 | large object (10 nested items) | 111K ops/s | 4.8M ops/s | **43x** |
 | large object (100 nested items) | 11.9K ops/s | 713K ops/s | **60x** |
 | event log (combined) | 431K ops/s | 5.0M ops/s | **12x** |
+| partial fallback object (transform) | 1.2M ops/s | 3.0M ops/s | **2.5x** |
+| partial fallback array 10 (transform) | 447K ops/s | 2.1M ops/s | **4.6x** |
+| partial fallback array 50 (transform) | 100K ops/s | 467K ops/s | **4.7x** |
 
-Performance gains scale with schema complexity. The `discriminatedUnion` optimization uses an O(1) `switch` dispatch instead of Zod's sequential trial approach.
+Performance gains scale with schema complexity. The `discriminatedUnion` optimization uses an O(1) `switch` dispatch instead of Zod's sequential trial approach. Partial fallback schemas (containing `transform`/`refine`) still show 2.5-4.7x speedups by compiling the optimizable portions.
 
 ## Runtime Support
 
 | Runtime | Version | Status |
 |---------|---------|--------|
 | Node.js | 20+     | Fully supported |
-| Bun     | 1.2+    | Fully supported |
+| Bun     | 1.3+    | Fully supported |
 | Deno    | 2.0+    | Fully supported |
 
 ## Install
@@ -401,6 +404,12 @@ These schema types contain JavaScript closures that cannot be compiled to static
 - `custom` — arbitrary validation logic
 - `preprocess` — input preprocessing
 
+#### Partial Fallback
+
+When a schema contains a mix of compilable and non-compilable parts (e.g., an object where some properties use `transform`/`refine`), zod-aot compiles the optimizable parts and delegates only the non-compilable properties to Zod at runtime.
+
+> **Note:** If a schema heavily relies on `transform`, `refine`, or other non-compilable features, the performance benefit from partial fallback will be minimal — most of the validation work is still delegated to Zod. Partial fallback is most effective when only a small portion of the schema uses these features.
+
 ### Planned (Tier 3)
 
 | Tier | Types |
@@ -424,7 +433,7 @@ These schema types contain JavaScript closures that cannot be compiled to static
 - [x] Tier 2 type support (9 types: any, unknown, readonly, date, tuple, record, default, intersection, discriminatedUnion)
 - [x] `discriminatedUnion` → O(1) switch statement optimization
 - [x] CLI (`npx zod-aot generate` / `npx zod-aot check`)
-- [ ] Partial fallback (objects with some transform properties)
+- [x] Partial fallback (objects with some transform properties)
 - [x] unplugin integration (Vite / webpack / esbuild / Rollup)
 - [ ] Watch mode
 

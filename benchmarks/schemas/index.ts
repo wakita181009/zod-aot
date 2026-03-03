@@ -11,6 +11,14 @@ export {
   validScrollEvent,
   validTuple,
 } from "./composites.js";
+export type { PartialFallbackObject } from "./fallback.js";
+export {
+  FallbackArraySchema,
+  PartialFallbackObjectSchema,
+  validFallbackArray10,
+  validFallbackArray50,
+  validPartialFallbackObject,
+} from "./fallback.js";
 export type { ApiResponse, User } from "./objects.js";
 export {
   ApiResponseSchema,

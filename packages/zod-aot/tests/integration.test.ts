@@ -785,6 +785,111 @@ describe("integration — partial fallback (mixed compilable + non-compilable)",
     }
   });
 
+  it("nullable with transform inner matches Zod", () => {
+    const schema = z.object({
+      name: z.string(),
+      label: z.nullable(z.string().transform((v) => v.trim())),
+    });
+
+    const safeParse = compileWithFallbacks(schema, "nullableTransform");
+    const inputs = [
+      { name: "Alice", label: " hello " },
+      { name: "Alice", label: null },
+      { name: "Alice", label: 42 },
+      null,
+    ];
+
+    for (const input of inputs) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+    }
+  });
+
+  it("tuple with transform item matches Zod", () => {
+    const schema = z.tuple([z.string(), z.number().transform((v) => String(v))]);
+
+    const safeParse = compileWithFallbacks(schema, "tupleTransform");
+    const inputs = [["hello", 42], ["hello", "not a number"], [42, 42], "not array"];
+
+    for (const input of inputs) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+    }
+  });
+
+  it("record with transform value matches Zod", () => {
+    const schema = z.record(
+      z.string(),
+      z.string().transform((v) => v.trim()),
+    );
+
+    const safeParse = compileWithFallbacks(schema, "recordTransform");
+    const inputs = [{ a: " hello " }, { a: "hello", b: "world" }, { a: 42 }, {}, null];
+
+    for (const input of inputs) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+    }
+  });
+
+  it("intersection with transform side matches Zod", () => {
+    const schema = z.intersection(
+      z.object({ a: z.string() }),
+      z.object({ b: z.string().transform((v) => v.toLowerCase()) }),
+    );
+
+    const safeParse = compileWithFallbacks(schema, "intersectTransform");
+    const inputs = [{ a: "hello", b: "WORLD" }, { a: "hello" }, { b: "world" }, null];
+
+    for (const input of inputs) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+    }
+  });
+
+  it("deep nested partial fallback matches Zod", () => {
+    const schema = z.object({
+      items: z.array(
+        z.object({
+          name: z.string().min(1),
+          score: z.number().transform((v) => Math.round(v)),
+        }),
+      ),
+    });
+
+    const safeParse = compileWithFallbacks(schema, "deepNested");
+    const inputs = [
+      { items: [{ name: "Alice", score: 95.7 }] },
+      { items: [{ name: "", score: 80 }] },
+      { items: [{ name: "Bob", score: "not a number" }] },
+      { items: [] },
+      null,
+    ];
+
+    for (const input of inputs) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+    }
+  });
+
+  it("nullable transform writes back data on success", () => {
+    const schema = z.object({
+      label: z.nullable(z.string().transform((v) => v.trim())),
+    });
+
+    const safeParse = compileWithFallbacks(schema, "nullableWriteback");
+    const result = safeParse({ label: "  hello  " });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toEqual({ label: "hello" });
+    }
+  });
+
   it("schemas without fallbacks still work normally", () => {
     const schema = z.object({
       name: z.string().min(1),

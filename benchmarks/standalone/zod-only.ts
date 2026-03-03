@@ -3,7 +3,9 @@ import {
   ApiResponseSchema,
   DiscriminatedUnionSchema,
   EventLogSchema,
+  FallbackArraySchema,
   NumberWithChecks,
+  PartialFallbackObjectSchema,
   RecordSchema,
   SimpleEnum,
   SimpleString,
@@ -14,7 +16,10 @@ import {
   validApiResponse100,
   validClickEvent,
   validEventLog,
+  validFallbackArray10,
+  validFallbackArray50,
   validNumberWithChecks,
+  validPartialFallbackObject,
   validRecord,
   validSimpleEnum,
   validSimpleString,
@@ -43,6 +48,11 @@ benchmark("tuple [string, int, bool]", () => TupleSchema.safeParse(validTuple));
 benchmark("record<string, number>", () => RecordSchema.safeParse(validRecord));
 benchmark("discriminatedUnion (3)", () => DiscriminatedUnionSchema.safeParse(validClickEvent));
 benchmark("event log (combined)", () => EventLogSchema.safeParse(validEventLog));
+benchmark("partial fallback object", () =>
+  PartialFallbackObjectSchema.safeParse(validPartialFallbackObject),
+);
+benchmark("partial fallback array (10)", () => FallbackArraySchema.safeParse(validFallbackArray10));
+benchmark("partial fallback array (50)", () => FallbackArraySchema.safeParse(validFallbackArray50));
 
 // biome-ignore lint/suspicious/noConsole: benchmark output
 console.log("\n--- is (type guard) ---");
@@ -64,3 +74,11 @@ benchmark(
   () => DiscriminatedUnionSchema.safeParse(validClickEvent).success,
 );
 benchmark("event log (combined)", () => EventLogSchema.safeParse(validEventLog).success);
+benchmark(
+  "partial fallback object",
+  () => PartialFallbackObjectSchema.safeParse(validPartialFallbackObject).success,
+);
+benchmark(
+  "partial fallback array (10)",
+  () => FallbackArraySchema.safeParse(validFallbackArray10).success,
+);

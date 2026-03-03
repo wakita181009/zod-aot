@@ -4,7 +4,9 @@ import {
   ApiResponseSchema,
   DiscriminatedUnionSchema,
   EventLogSchema,
+  FallbackArraySchema,
   NumberWithChecks,
+  PartialFallbackObjectSchema,
   RecordSchema,
   SimpleEnum,
   SimpleString,
@@ -15,7 +17,9 @@ import {
   validApiResponse100,
   validClickEvent,
   validEventLog,
+  validFallbackArray10,
   validNumberWithChecks,
+  validPartialFallbackObject,
   validRecord,
   validSimpleEnum,
   validSimpleString,
@@ -35,6 +39,8 @@ const aotTuple = compileForBench(TupleSchema, "tuple");
 const aotRecord = compileForBench(RecordSchema, "record");
 const aotDiscUnion = compileForBench(DiscriminatedUnionSchema, "discUnion");
 const aotEventLog = compileForBench(EventLogSchema, "eventLog");
+const aotPartialFallback = compileForBench(PartialFallbackObjectSchema, "partialFallback");
+const aotFallbackArray = compileForBench(FallbackArraySchema, "fallbackArray");
 
 // ─── Simple Types ─────────────────────────────────────────────────────────────
 
@@ -140,5 +146,25 @@ describe("is(): event log (combined)", () => {
   });
   bench("zod-aot", () => {
     aotEventLog.is(validEventLog);
+  });
+});
+
+// ─── Partial Fallback ───────────────────────────────────────────────────────
+
+describe("is(): partial fallback — object with transform", () => {
+  bench("zod (safeParse().success)", () => {
+    PartialFallbackObjectSchema.safeParse(validPartialFallbackObject).success;
+  });
+  bench("zod-aot", () => {
+    aotPartialFallback.is(validPartialFallbackObject);
+  });
+});
+
+describe("is(): partial fallback — array 10 items with transform", () => {
+  bench("zod (safeParse().success)", () => {
+    FallbackArraySchema.safeParse(validFallbackArray10).success;
+  });
+  bench("zod-aot", () => {
+    aotFallbackArray.is(validFallbackArray10);
   });
 });

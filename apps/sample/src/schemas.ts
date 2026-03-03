@@ -51,3 +51,15 @@ const NotificationSchema = z.discriminatedUnion("type", [
 ]);
 
 export const validateNotification = compile<z.infer<typeof NotificationSchema>>(NotificationSchema);
+
+// --- Partial fallback (transform) ---
+
+const OrderSchema = z.object({
+  orderId: z.string().min(1),
+  amount: z.number().positive(),
+  currency: z.enum(["USD", "EUR", "JPY"]),
+  slug: z.string().transform((v) => v.toLowerCase().replace(/\s+/g, "-")),
+  createdAt: z.date(),
+});
+
+export const validateOrder = compile<z.infer<typeof OrderSchema>>(OrderSchema);

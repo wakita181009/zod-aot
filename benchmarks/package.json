@@ -12,6 +12,7 @@
     "./schemas/objects": "./schemas/objects.ts",
     "./schemas/composites": "./schemas/composites.ts",
     "./schemas/combined": "./schemas/combined.ts",
+    "./schemas/fallback": "./schemas/fallback.ts",
     "./helpers/benchmark": "./helpers/benchmark.ts"
   },
   "dependencies": {
