@@ -1,0 +1,104 @@
+/**
+ * Cross-runtime smoke test for zod-aot.
+ *
+ * Runs against the built dist/ output with no test framework dependencies,
+ * so it works on Node.js, Bun, and Deno without any setup.
+ *
+ * Usage:
+ *   pnpm -r build && node packages/zod-aot/tests/compat.mjs
+ *   bun packages/zod-aot/tests/compat.mjs
+ *   deno run -A packages/zod-aot/tests/compat.mjs
+ */
+
+import { z } from "zod";
+import { extractSchema, generateValidator, createFallback } from "../dist/index.js";
+
+let passed = 0;
+let failed = 0;
+
+function assert(condition, message) {
+  if (!condition) {
+    failed++;
+    console.error(`FAIL: ${message}`);
+  } else {
+    passed++;
+  }
+}
+
+function assertEqual(actual, expected, message) {
+  if (actual !== expected) {
+    failed++;
+    console.error(`FAIL: ${message} — expected ${expected}, got ${actual}`);
+  } else {
+    passed++;
+  }
+}
+
+// ─── extractSchema + generateValidator roundtrip ────────────────────────────
+
+const userSchema = z.object({
+  name: z.string().min(1).max(100),
+  age: z.number().int().positive(),
+  role: z.enum(["admin", "user"]),
+  tags: z.array(z.string()),
+  active: z.boolean(),
+  nickname: z.string().optional(),
+});
+
+const ir = extractSchema(userSchema);
+assert(ir !== null && ir !== undefined, "extractSchema returns an IR");
+assertEqual(ir.type, "object", "IR type is object");
+
+const result = generateValidator(ir, "user");
+assert(typeof result.code === "string", "generateValidator produces code string");
+assert(result.code.length > 0, "generated code is non-empty");
+assert(typeof result.functionName === "string", "generateValidator produces function name");
+
+// Compile and run the generated code
+const fn = new Function(`${result.code}\nreturn ${result.functionName};`);
+const safeParse = fn();
+
+// Valid input
+const validInput = {
+  name: "Alice",
+  age: 30,
+  role: "admin",
+  tags: ["ts", "zod"],
+  active: true,
+};
+const validResult = safeParse(validInput);
+assertEqual(validResult.success, true, "valid input passes AOT validation");
+
+// Invalid input (bad types)
+const invalidInput = { name: 42, age: "old", role: "superadmin", tags: "nope", active: "yes" };
+const invalidResult = safeParse(invalidInput);
+assertEqual(invalidResult.success, false, "invalid input fails AOT validation");
+assert(
+  invalidResult.error && invalidResult.error.issues.length > 0,
+  "invalid input has error issues",
+);
+
+// Invalid input (failed checks)
+const badChecks = { name: "", age: -1, role: "admin", tags: [], active: true };
+const badChecksResult = safeParse(badChecks);
+assertEqual(badChecksResult.success, false, "check failures are caught");
+
+// ─── createFallback ─────────────────────────────────────────────────────────
+
+const fallback = createFallback(z.string().min(3));
+
+const fbValid = fallback.safeParse("hello");
+assertEqual(fbValid.success, true, "createFallback safeParse valid input");
+
+const fbInvalid = fallback.safeParse("ab");
+assertEqual(fbInvalid.success, false, "createFallback safeParse invalid input");
+
+assertEqual(fallback.is("hello"), true, "createFallback is() returns true for valid");
+assertEqual(fallback.is("ab"), false, "createFallback is() returns false for invalid");
+
+// ─── Report ─────────────────────────────────────────────────────────────────
+
+console.log(`\ncompat.mjs: ${passed} passed, ${failed} failed`);
+if (failed > 0) {
+  process.exit(1);
+}

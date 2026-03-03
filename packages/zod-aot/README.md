@@ -36,6 +36,14 @@ Measured with `vitest bench` on Node.js (Apple M-series):
 
 Performance gains scale with schema complexity. Larger, nested schemas with arrays see the biggest improvements.
 
+## Runtime Support
+
+| Runtime | Version | Status |
+|---------|---------|--------|
+| Node.js | 20+     | Fully supported |
+| Bun     | 1.2+    | Fully supported |
+| Deno    | 2.0+    | Fully supported |
+
 ## Install
 
 ```bash

@@ -9,6 +9,7 @@
     "./schemas/large": "./schemas/large.ts"
   },
   "dependencies": {
-    "zod": "^4.0.0"
+    "zod": "^4.0.0",
+    "zod-aot": "workspace:*"
   }
 }

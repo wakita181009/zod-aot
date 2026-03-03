@@ -36,6 +36,14 @@ const { code, functionName } = generateValidator(ir, "validateUser");
 
 See the [full documentation](./packages/zod-aot/README.md) for API reference, benchmarks, and usage details.
 
+## Runtime Support
+
+| Runtime | Version | Status |
+|---------|---------|--------|
+| Node.js | 20+     | Fully supported |
+| Bun     | 1.2+    | Fully supported |
+| Deno    | 2.0+    | Fully supported |
+
 ## Development
 
 ```bash

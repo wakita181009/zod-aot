@@ -1,6 +1,7 @@
 {
   "private": true,
   "name": "zod-aot-monorepo",
+  "type": "module",
   "scripts": {
     "build": "pnpm -r build",
     "test": "vitest run",

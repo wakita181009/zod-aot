@@ -62,6 +62,18 @@
       "bracketSpacing": true
     }
   },
+  "overrides": [
+    {
+      "includes": ["packages/**"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noNodejsModules": "error"
+          }
+        }
+      }
+    }
+  ],
   "files": {
     "includes": [
       "**",
