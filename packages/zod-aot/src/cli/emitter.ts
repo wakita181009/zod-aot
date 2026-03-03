@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { CodeGenResult } from "../codegen/context.js";
+import { extractFunctionName } from "../codegen/context.js";
 
 interface EmitSchema {
   exportName: string;
@@ -60,18 +61,6 @@ export function generateCompiledFileContent(schemas: EmitSchema[], sourceRelPath
   }
 
   return lines.join("\n");
-}
-
-/**
- * Extract the function name from a function definition string.
- * e.g. "function safeParse_User(input){..." -> "safeParse_User"
- */
-function extractFunctionName(functionDef: string): string {
-  const match = /^function\s+(\w+)\s*\(/.exec(functionDef);
-  if (!match?.[1]) {
-    throw new Error(`Cannot extract function name from generated code`);
-  }
-  return match[1];
 }
 
 /**

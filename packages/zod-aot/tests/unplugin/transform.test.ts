@@ -1,14 +1,14 @@
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { generateValidator } from "../../src/codegen/index.js";
-import { extractSchema } from "../../src/extractor/index.js";
+import { generateValidator } from "#src/codegen/index.js";
+import { extractSchema } from "#src/extractor/index.js";
 import {
   removeCompileImport,
   rewriteSource,
   shouldTransform,
   transformCode,
-} from "../../src/unplugin/transform.js";
+} from "#src/unplugin/transform.js";
 
 const fixturesDir = path.resolve(import.meta.dirname, "fixtures");
 
@@ -181,6 +181,38 @@ describe("rewriteSource()", () => {
 
     expect(result).toContain("schema:MyUserSchema,");
   });
+
+  it("handles inline schema expressions with nested parentheses", () => {
+    const code = [
+      `import { compile } from "zod-aot";`,
+      `export const validateUser = compile(z.object({ name: z.string() }));`,
+    ].join("\n");
+
+    const schemas = [makeCompiledInfo("validateUser", simpleSchema)];
+    const result = rewriteSource(code, schemas);
+
+    expect(result).toContain("safeParse_validateUser");
+    expect(result).not.toContain("compile(z.object");
+    // The schema arg should capture the full expression
+    expect(result).toContain("schema:z.object({ name: z.string() }),");
+  });
+
+  it("does not match export name as substring (word boundary)", () => {
+    const code = [
+      `import { compile } from "zod-aot";`,
+      `export const revalidateUser = compile(OtherSchema);`,
+      `export const validateUser = compile(UserSchema);`,
+    ].join("\n");
+
+    // Only "validateUser" is in the schemas list
+    const schemas = [makeCompiledInfo("validateUser", simpleSchema)];
+    const result = rewriteSource(code, schemas);
+
+    // "validateUser" should be replaced
+    expect(result).toContain("safeParse_validateUser");
+    // "revalidateUser" should NOT be replaced (still has compile())
+    expect(result).toContain("revalidateUser = compile(OtherSchema)");
+  });
 });
 
 describe("transformCode() E2E", () => {
@@ -193,7 +225,7 @@ describe("transformCode() E2E", () => {
     const fs = require("node:fs") as typeof import("node:fs");
     return fs
       .readFileSync(fixturePath, "utf-8")
-      .replace(/from\s*["']\.\.\/.*?["']/g, 'from "zod-aot"');
+      .replace(/from\s*["'](?:\.\.\/.*?|#src\/.*?)["']/g, 'from "zod-aot"');
   }
 
   it("transforms a simple compile() file and produces working validation", async () => {
@@ -233,5 +265,97 @@ describe("transformCode() E2E", () => {
     const result = await transformCode(code, "/fake/path.ts");
 
     expect(result).toBeNull();
+  });
+});
+
+describe("generated IIFE runtime execution", () => {
+  const userSchema = z.object({
+    name: z.string().min(1),
+    age: z.number().int().positive(),
+  });
+
+  function makeCompiledInfo(exportName: string, schema: z.ZodType) {
+    const ir = extractSchema(schema);
+    const codegenResult = generateValidator(ir, exportName);
+    return { exportName, codegenResult };
+  }
+
+  function executeGeneratedValidator(schemas: Parameters<typeof rewriteSource>[1]) {
+    // Build source where compile() is a placeholder
+    const code = [
+      `import { compile } from "zod-aot";`,
+      ...schemas.map((s) => `export const ${s.exportName} = compile(Schema);`),
+    ].join("\n");
+
+    const transformed = rewriteSource(code, schemas);
+
+    // Extract the IIFE and execute it
+    const iifeMatch = /\/\* @__PURE__ \*\/ \(\(\) => \{[\s\S]*?\}\)\(\)/.exec(transformed);
+    expect(iifeMatch).not.toBeNull();
+
+    // Execute the IIFE using Function constructor.
+    // The IIFE references `Schema` (the original schema variable) in its `schema:` property,
+    // so we inject a dummy value for it.
+    const fn = new Function("Schema", `return ${iifeMatch?.[0]};`);
+    return fn({}) as {
+      parse: (input: unknown) => unknown;
+      safeParse: (input: unknown) => { success: boolean; data?: unknown; error?: unknown };
+      is: (input: unknown) => boolean;
+    };
+  }
+
+  it("generated safeParse returns success for valid input", () => {
+    const schemas = [makeCompiledInfo("validateUser", userSchema)];
+    const validator = executeGeneratedValidator(schemas);
+    const result = validator.safeParse({ name: "Alice", age: 30 });
+
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual({ name: "Alice", age: 30 });
+  });
+
+  it("generated safeParse returns failure for invalid input", () => {
+    const schemas = [makeCompiledInfo("validateUser", userSchema)];
+    const validator = executeGeneratedValidator(schemas);
+    const result = validator.safeParse({ name: "", age: -5 });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBeDefined();
+  });
+
+  it("generated is() returns correct boolean", () => {
+    const schemas = [makeCompiledInfo("validateUser", userSchema)];
+    const validator = executeGeneratedValidator(schemas);
+
+    expect(validator.is({ name: "Alice", age: 30 })).toBe(true);
+    expect(validator.is({ name: 123 })).toBe(false);
+  });
+
+  it("generated parse throws on invalid input", () => {
+    const schemas = [makeCompiledInfo("validateUser", userSchema)];
+    const validator = executeGeneratedValidator(schemas);
+
+    expect(() => validator.parse({ name: 123 })).toThrow("Validation failed");
+    expect(validator.parse({ name: "Alice", age: 30 })).toEqual({ name: "Alice", age: 30 });
+  });
+
+  it("generated validator matches Zod behavior", () => {
+    const schemas = [makeCompiledInfo("validateUser", userSchema)];
+    const validator = executeGeneratedValidator(schemas);
+
+    const inputs = [
+      { name: "Alice", age: 30 },
+      { name: "", age: 30 },
+      { name: "Bob", age: -1 },
+      { name: "Carol", age: 1.5 },
+      { name: 123, age: 30 },
+      "not an object",
+      null,
+    ];
+
+    for (const input of inputs) {
+      const zodResult = userSchema.safeParse(input);
+      const aotResult = validator.safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+    }
   });
 });

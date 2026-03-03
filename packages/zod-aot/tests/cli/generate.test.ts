@@ -2,15 +2,15 @@ import fs from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { z } from "zod";
-import { discoverSchemas } from "../../src/cli/discovery.js";
+import { discoverSchemas } from "#src/cli/discovery.js";
 import {
   generateCompiledFileContent,
   resolveOutputPath,
   writeCompiledFile,
-} from "../../src/cli/emitter.js";
-import { generateValidator } from "../../src/codegen/index.js";
-import { extractSchema } from "../../src/extractor/index.js";
-import type { SafeParseResult } from "../../src/types.js";
+} from "#src/cli/emitter.js";
+import { generateValidator } from "#src/codegen/index.js";
+import { extractSchema } from "#src/extractor/index.js";
+import type { SafeParseResult } from "#src/types.js";
 
 const fixturesDir = path.resolve(import.meta.dirname, "fixtures");
 const outputFiles: string[] = [];

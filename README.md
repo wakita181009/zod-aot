@@ -6,7 +6,7 @@
 [![npm](https://img.shields.io/npm/v/zod-aot)](https://www.npmjs.com/package/zod-aot)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-No code changes required — keep your existing Zod schemas and get **3-47x faster** validation.
+No code changes required — keep your existing Zod schemas and get **2-64x faster** validation.
 
 ## Packages
 

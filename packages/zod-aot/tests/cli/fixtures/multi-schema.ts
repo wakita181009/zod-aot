@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { compile } from "../../../src/index.js";
+import { compile } from "#src/compile.js";
 
 const UserSchema = z.object({
   name: z.string(),
-  email: z.string().email(),
+  email: z.email(),
 });
 
 const ProductSchema = z.object({

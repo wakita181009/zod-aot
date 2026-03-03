@@ -24,3 +24,15 @@ export const EMAIL_REGEX_SOURCE = String.raw`^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.
 export function escapeString(s: string): string {
   return JSON.stringify(s);
 }
+
+/**
+ * Extract the function name from a generated function definition string.
+ * e.g. "function safeParse_User(input){..." -> "safeParse_User"
+ */
+export function extractFunctionName(functionDef: string): string {
+  const match = /^function\s+(\w+)\s*\(/.exec(functionDef);
+  if (!match?.[1]) {
+    throw new Error("Cannot extract function name from generated code");
+  }
+  return match[1];
+}

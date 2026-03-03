@@ -6,7 +6,7 @@
 [![npm](https://img.shields.io/npm/v/zod-aot)](https://www.npmjs.com/package/zod-aot)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-No code changes required — keep your existing Zod schemas and get **2-60x faster** validation.
+No code changes required — keep your existing Zod schemas and get **2-64x faster** validation.
 
 ## Why
 
@@ -27,18 +27,18 @@ Measured with `vitest bench` on Node.js (Apple M-series):
 
 | Scenario | Zod v4 | zod-aot | Speedup |
 |---|---|---|---|
-| simple string | 10.0M ops/s | 16.6M ops/s | **1.7x** |
-| string (min/max) | 5.4M ops/s | 16.8M ops/s | **3.1x** |
-| number (int+positive) | 5.3M ops/s | 17.4M ops/s | **3.3x** |
-| enum | 8.6M ops/s | 15.5M ops/s | **1.8x** |
-| tuple [string, int, boolean] | 4.4M ops/s | 17.5M ops/s | **4.0x** |
-| record\<string, number\> (5 keys) | 2.0M ops/s | 8.5M ops/s | **4.2x** |
-| discriminatedUnion (3 variants) | 3.0M ops/s | 16.2M ops/s | **5.4x** |
-| medium object (7 props, valid) | 1.7M ops/s | 6.5M ops/s | **3.9x** |
-| medium object (7 props, invalid) | 64K ops/s | 1.5M ops/s | **23x** |
-| large object (10 nested items) | 104K ops/s | 4.7M ops/s | **45x** |
-| large object (100 nested items) | 11.7K ops/s | 706K ops/s | **60x** |
-| event log (combined) | 443K ops/s | 5.1M ops/s | **11x** |
+| simple string | 10.4M ops/s | 17.9M ops/s | **1.7x** |
+| string (min/max) | 5.3M ops/s | 17.6M ops/s | **3.3x** |
+| number (int+positive) | 5.2M ops/s | 16.4M ops/s | **3.1x** |
+| enum | 8.7M ops/s | 15.5M ops/s | **1.8x** |
+| tuple [string, int, boolean] | 4.3M ops/s | 17.1M ops/s | **3.9x** |
+| record\<string, number\> (5 keys) | 1.9M ops/s | 8.3M ops/s | **4.3x** |
+| discriminatedUnion (3 variants) | 3.0M ops/s | 15.7M ops/s | **5.3x** |
+| medium object (7 props, valid) | 1.7M ops/s | 6.6M ops/s | **4.0x** |
+| medium object (7 props, invalid) | 65K ops/s | 1.5M ops/s | **23x** |
+| large object (10 nested items) | 111K ops/s | 4.8M ops/s | **43x** |
+| large object (100 nested items) | 11.9K ops/s | 713K ops/s | **60x** |
+| event log (combined) | 431K ops/s | 5.0M ops/s | **12x** |
 
 Performance gains scale with schema complexity. The `discriminatedUnion` optimization uses an O(1) `switch` dispatch instead of Zod's sequential trial approach.
 
@@ -376,9 +376,9 @@ These schema types contain JavaScript closures that cannot be compiled to static
 
 - [x] Tier 2 type support (9 types: any, unknown, readonly, date, tuple, record, default, intersection, discriminatedUnion)
 - [x] `discriminatedUnion` → O(1) switch statement optimization
-- [ ] CLI (`npx zod-aot generate` / `npx zod-aot check`)
+- [x] CLI (`npx zod-aot generate` / `npx zod-aot check`)
 - [ ] Partial fallback (objects with some transform properties)
-- [ ] unplugin integration (Vite / Webpack / esbuild)
+- [x] unplugin integration (Vite / webpack / esbuild / Rollup)
 - [ ] Watch mode
 
 ### Phase 3: Ecosystem

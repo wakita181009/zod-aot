@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { compile } from "../../../src/index.js";
+import { compile } from "#src/compile.js";
 
 const TransformSchema = z.object({
   name: z.string(),

@@ -4,7 +4,7 @@ import { DiscriminatedUnionSchema } from "./composites.js";
 // ─── Event Log (real-world scenario combining multiple type features) ────────
 
 export const EventLogSchema = z.object({
-  sessionId: z.string().uuid(),
+  sessionId: z.uuid(),
   events: z.array(DiscriminatedUnionSchema).min(1),
   dimensions: z.tuple([z.number().int().positive(), z.number().int().positive()]),
   tags: z.record(z.string(), z.string()),

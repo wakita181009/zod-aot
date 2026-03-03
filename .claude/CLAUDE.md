@@ -8,10 +8,12 @@
 **Phase 2: Tier 2 Type Support — COMPLETE**
 
 Benchmark results (vitest bench, Node.js):
-- Simple types: 1.5-2.8x faster than Zod v4
-- Medium objects (valid): 3.2-3.4x faster
+- Simple types: 1.7-3.3x faster than Zod v4
+- Medium objects (valid): 4.0x faster
 - Medium objects (invalid): ~23x faster
-- Large objects (10-100 nested items): **32-47x faster**
+- Large objects (10-100 nested items): **43-64x faster**
+- Tier 2 types: tuple 3.9x, record 4.3x, discriminatedUnion 5.3x
+- Combined (event log): 12x faster
 - Performance gains scale with schema complexity
 
 Phase 1 success criteria (is() 10x+, safeParse() 5x+) met for large/complex schemas. Primitives and small objects show moderate gains due to Zod v4's already-optimized fast path.

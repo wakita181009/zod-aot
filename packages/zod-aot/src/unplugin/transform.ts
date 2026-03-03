@@ -1,5 +1,7 @@
+import type { DiscoveredSchema } from "../cli/discovery.js";
 import { discoverSchemas } from "../cli/discovery.js";
 import type { CodeGenResult } from "../codegen/context.js";
+import { extractFunctionName } from "../codegen/context.js";
 import { generateValidator } from "../codegen/index.js";
 import { extractSchema } from "../extractor/index.js";
 import type { ZodAotPluginOptions } from "./types.js";
@@ -33,7 +35,13 @@ export async function transformCode(code: string, id: string): Promise<string | 
   if (!code.includes("zod-aot") || !code.includes("compile")) return null;
 
   // Discover compiled schemas by executing the file (with cache busting for HMR)
-  const schemas = await discoverSchemas(id, { cacheBust: true });
+  let schemas: DiscoveredSchema[];
+  try {
+    schemas = await discoverSchemas(id, { cacheBust: true });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    throw new Error(`[zod-aot] Failed to load schemas from ${id}: ${msg}`);
+  }
   if (schemas.length === 0) return null;
 
   // For each schema, run the compilation pipeline
@@ -45,18 +53,6 @@ export async function transformCode(code: string, id: string): Promise<string | 
   }
 
   return rewriteSource(code, compiled);
-}
-
-/**
- * Extract the function name from a generated function definition.
- * e.g. "function safeParse_User(input){..." -> "safeParse_User"
- */
-function extractFunctionName(functionDef: string): string {
-  const match = /^function\s+(\w+)\s*\(/.exec(functionDef);
-  if (!match?.[1]) {
-    throw new Error("Cannot extract function name from generated code");
-  }
-  return match[1];
 }
 
 /**
@@ -85,24 +81,46 @@ function generateInlineReplacement(schemaArgName: string, codegenResult: CodeGen
 }
 
 /**
+ * Find the matching closing parenthesis for a compile() call,
+ * handling nested parentheses like compile(z.object({...})).
+ * Returns the index of the closing ')' or -1 if not found.
+ */
+function findMatchingParen(code: string, openIndex: number): number {
+  let depth = 1;
+  for (let i = openIndex + 1; i < code.length; i++) {
+    if (code[i] === "(") depth++;
+    else if (code[i] === ")") {
+      depth--;
+      if (depth === 0) return i;
+    }
+  }
+  return -1;
+}
+
+/**
  * Rewrite source code by replacing compile() calls with IIFE-wrapped optimized validators.
  */
 export function rewriteSource(code: string, schemas: CompiledSchemaInfo[]): string {
   let result = code;
 
   for (const schema of schemas) {
-    // Match: <exportName> = compile<...>(schemaArg) or <exportName> = compile(schemaArg)
-    // The generic type parameter is optional and may contain nested angle brackets
-    const compilePattern = new RegExp(
-      `(${schema.exportName}\\s*=\\s*)compile\\s*(?:<[^>]*(?:<[^>]*>[^>]*)?>)?\\s*\\(([^)]+)\\)`,
+    // Match: <exportName> = compile<...>( with word boundary to prevent substring matches
+    const prefixPattern = new RegExp(
+      `(\\b${schema.exportName}\\s*=\\s*)compile\\s*(?:<[^>]*(?:<[^>]*>[^>]*)?>)?\\s*\\(`,
     );
-    const match = compilePattern.exec(result);
+    const match = prefixPattern.exec(result);
     if (!match) continue;
 
-    const schemaArgName = match[2]?.trim() ?? "";
+    // Find the matching closing paren (handles nested parens)
+    const openParenIndex = match.index + match[0].length - 1;
+    const closeParenIndex = findMatchingParen(result, openParenIndex);
+    if (closeParenIndex === -1) continue;
+
+    const schemaArgName = result.slice(openParenIndex + 1, closeParenIndex).trim();
     const prefix = match[1] ?? "";
+    const fullMatch = result.slice(match.index, closeParenIndex + 1);
     const replacement = prefix + generateInlineReplacement(schemaArgName, schema.codegenResult);
-    result = result.replace(compilePattern, replacement);
+    result = result.replace(fullMatch, replacement);
   }
 
   result = removeCompileImport(result);
