@@ -116,6 +116,9 @@ npx zod-aot generate src/schemas.ts -o src/schemas.compiled.ts
 # Generate from a directory
 npx zod-aot generate src/ -o src/compiled/
 
+# Watch mode — regenerate on file changes
+npx zod-aot generate src/ --watch
+
 # Check if schemas are compilable (without generating)
 npx zod-aot check src/schemas.ts
 ```
@@ -435,7 +438,7 @@ When a schema contains a mix of compilable and non-compilable parts (e.g., an ob
 - [x] CLI (`npx zod-aot generate` / `npx zod-aot check`)
 - [x] Partial fallback (objects with some transform properties)
 - [x] unplugin integration (Vite / webpack / esbuild / Rollup)
-- [ ] Watch mode
+- [x] Watch mode (`--watch` / `-w`)
 
 ### Phase 3: Ecosystem
 
