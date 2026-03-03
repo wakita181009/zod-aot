@@ -424,10 +424,11 @@ zod-aot/
 │       ├── extractor/            # Extractor unit tests
 │       ├── codegen/              # CodeGen unit tests
 │       └── runtime.test.ts       # Fallback tests
-├── benchmarks/               # vitest bench (Zod vs zod-aot)
-├── apps/
-│   ├── bench-zod-only/       # Standalone Zod benchmark
-│   └── bench-zod-aot/        # Standalone zod-aot benchmark
+├── benchmarks/               # vitest bench + standalone scripts
+│   ├── standalone/
+│   │   ├── zod-only.ts       # Standalone Zod benchmark
+│   │   └── zod-aot.ts        # Standalone zod-aot benchmark
+│   └── ...
 └── .github/workflows/        # CI + release automation
 ```
 

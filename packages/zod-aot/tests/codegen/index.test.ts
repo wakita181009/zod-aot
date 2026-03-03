@@ -1,0 +1,194 @@
+import { describe, expect, it } from "vitest";
+import { generateValidator } from "#src/codegen/index.js";
+import type { AnyIR, ObjectIR, ReadonlyIR, StringIR, UnknownIR } from "#src/types.js";
+import { compileIR } from "./helpers.js";
+
+describe("codegen — code quality", () => {
+  it("returns a valid CodeGenResult", () => {
+    const ir: StringIR = { type: "string", checks: [] };
+    const result = generateValidator(ir, "myValidator");
+    expect(result).toHaveProperty("code");
+    expect(result).toHaveProperty("functionName");
+    expect(typeof result.code).toBe("string");
+    expect(typeof result.functionName).toBe("string");
+    expect(result.code.length).toBeGreaterThan(0);
+    expect(result.functionName).toContain("myValidator");
+  });
+
+  it("generates unique function names", () => {
+    const ir: StringIR = { type: "string", checks: [] };
+    const result1 = generateValidator(ir, "schemaA");
+    const result2 = generateValidator(ir, "schemaB");
+    expect(result1.functionName).not.toBe(result2.functionName);
+  });
+
+  it("generates syntactically valid JavaScript", () => {
+    const ir: ObjectIR = {
+      type: "object",
+      properties: {
+        name: { type: "string", checks: [{ kind: "min_length", minimum: 1 }] },
+        items: {
+          type: "array",
+          element: { type: "number", checks: [] },
+          checks: [{ kind: "max_length", maximum: 100 }],
+        },
+        status: { type: "enum", values: ["active", "inactive"] },
+      },
+    };
+    const result = generateValidator(ir, "complexSchema");
+    expect(() => new Function(result.code)).not.toThrow();
+  });
+});
+
+describe("codegen — complex schemas", () => {
+  it("generates validator for user registration schema", () => {
+    const ir: ObjectIR = {
+      type: "object",
+      properties: {
+        username: {
+          type: "string",
+          checks: [
+            { kind: "min_length", minimum: 3 },
+            { kind: "max_length", maximum: 20 },
+            { kind: "string_format", format: "regex", pattern: "^[a-zA-Z0-9_]+$" },
+          ],
+        },
+        email: {
+          type: "string",
+          checks: [{ kind: "string_format", format: "email" }],
+        },
+        age: {
+          type: "number",
+          checks: [
+            { kind: "number_format", format: "safeint" },
+            { kind: "greater_than", value: 0, inclusive: false },
+            { kind: "less_than", value: 150, inclusive: true },
+          ],
+        },
+        role: { type: "enum", values: ["admin", "user"] },
+        bio: {
+          type: "optional",
+          inner: { type: "string", checks: [{ kind: "max_length", maximum: 500 }] },
+        },
+        tags: {
+          type: "array",
+          element: { type: "string", checks: [{ kind: "min_length", minimum: 1 }] },
+          checks: [{ kind: "max_length", maximum: 10 }],
+        },
+      },
+    };
+
+    const safeParse = compileIR(ir);
+
+    // Valid input
+    expect(
+      safeParse({
+        username: "alice_123",
+        email: "alice@example.com",
+        age: 25,
+        role: "user",
+        tags: ["developer"],
+      }).success,
+    ).toBe(true);
+
+    // Valid with optional bio
+    expect(
+      safeParse({
+        username: "bob",
+        email: "bob@test.com",
+        age: 30,
+        role: "admin",
+        bio: "Hello world",
+        tags: [],
+      }).success,
+    ).toBe(true);
+
+    // Invalid: username too short
+    expect(
+      safeParse({
+        username: "ab",
+        email: "valid@test.com",
+        age: 25,
+        role: "user",
+        tags: [],
+      }).success,
+    ).toBe(false);
+
+    // Invalid: bad email
+    expect(
+      safeParse({
+        username: "alice",
+        email: "not-email",
+        age: 25,
+        role: "user",
+        tags: [],
+      }).success,
+    ).toBe(false);
+
+    // Invalid: age is float
+    expect(
+      safeParse({
+        username: "alice",
+        email: "alice@test.com",
+        age: 25.5,
+        role: "user",
+        tags: [],
+      }).success,
+    ).toBe(false);
+
+    // Invalid: bad role
+    expect(
+      safeParse({
+        username: "alice",
+        email: "alice@test.com",
+        age: 25,
+        role: "superadmin",
+        tags: [],
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("codegen — any", () => {
+  it("accepts all values", () => {
+    const ir: AnyIR = { type: "any" };
+    const safeParse = compileIR(ir);
+    expect(safeParse("hello").success).toBe(true);
+    expect(safeParse(42).success).toBe(true);
+    expect(safeParse(null).success).toBe(true);
+    expect(safeParse(undefined).success).toBe(true);
+    expect(safeParse({}).success).toBe(true);
+    expect(safeParse([]).success).toBe(true);
+  });
+});
+
+describe("codegen — unknown", () => {
+  it("accepts all values", () => {
+    const ir: UnknownIR = { type: "unknown" };
+    const safeParse = compileIR(ir);
+    expect(safeParse("hello").success).toBe(true);
+    expect(safeParse(42).success).toBe(true);
+    expect(safeParse(null).success).toBe(true);
+    expect(safeParse(undefined).success).toBe(true);
+    expect(safeParse({}).success).toBe(true);
+  });
+});
+
+describe("codegen — readonly", () => {
+  it("validates inner type", () => {
+    const ir: ReadonlyIR = { type: "readonly", inner: { type: "string", checks: [] } };
+    const safeParse = compileIR(ir);
+    expect(safeParse("hello").success).toBe(true);
+    expect(safeParse(42).success).toBe(false);
+  });
+
+  it("validates inner object", () => {
+    const ir: ReadonlyIR = {
+      type: "readonly",
+      inner: { type: "object", properties: { x: { type: "number", checks: [] } } },
+    };
+    const safeParse = compileIR(ir);
+    expect(safeParse({ x: 1 }).success).toBe(true);
+    expect(safeParse({ x: "a" }).success).toBe(false);
+  });
+});

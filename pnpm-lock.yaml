@@ -24,36 +24,14 @@ importers:
         specifier: ^4.0.0
         version: 4.3.6
 
-  apps/bench-zod-aot:
+  apps/sample:
     dependencies:
-      '@zod-aot/benchmarks':
-        specifier: workspace:*
-        version: link:../../benchmarks
       zod:
         specifier: ^4.0.0
         version: 4.3.6
       zod-aot:
         specifier: workspace:*
         version: link:../../packages/zod-aot
-    devDependencies:
-      '@types/node':
-        specifier: ^24.0.0
-        version: 24.11.0
-      tsx:
-        specifier: ^4.0.0
-        version: 4.21.0
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-
-  apps/bench-zod-only:
-    dependencies:
-      '@zod-aot/benchmarks':
-        specifier: workspace:*
-        version: link:../../benchmarks
-      zod:
-        specifier: ^4.0.0
-        version: 4.3.6
     devDependencies:
       '@types/node':
         specifier: ^24.0.0
@@ -73,9 +51,22 @@ importers:
       zod-aot:
         specifier: workspace:*
         version: link:../packages/zod-aot
+    devDependencies:
+      '@types/node':
+        specifier: ^25.0.0
+        version: 25.3.3
+      tsx:
+        specifier: ^4.0.0
+        version: 4.21.0
 
   packages/zod-aot:
     devDependencies:
+      '@types/node':
+        specifier: ^24.11.0
+        version: 24.11.0
+      tsx:
+        specifier: ^4.21.0
+        version: 4.21.0
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -995,7 +986,6 @@ snapshots:
   '@types/node@25.3.3':
     dependencies:
       undici-types: 7.18.2
-    optional: true
 
   '@vitest/coverage-v8@4.0.18(vitest@4.0.18(@types/node@25.3.3)(tsx@4.21.0))':
     dependencies:
@@ -1226,8 +1216,7 @@ snapshots:
 
   undici-types@7.16.0: {}
 
-  undici-types@7.18.2:
-    optional: true
+  undici-types@7.18.2: {}
 
   vite@7.3.1(@types/node@25.3.3)(tsx@4.21.0):
     dependencies:

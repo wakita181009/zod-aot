@@ -190,12 +190,14 @@ zod-aot/
 │   │   └── index.ts
 │   ├── helpers/
 │   │   └── compile.ts            # AOT compile helper (compileForBench)
+│   ├── standalone/
+│   │   ├── zod-only.ts           # Standalone Zod benchmark script
+│   │   └── zod-aot.ts            # Standalone zod-aot benchmark script
 │   ├── safeParse.bench.ts        # safeParse: zod vs zod-aot
 │   ├── is.bench.ts               # is() type guard: zod vs zod-aot
 │   └── package.json
 ├── apps/
-│   ├── bench-zod-only/           # Standalone Zod benchmark script
-│   └── bench-zod-aot/            # Standalone zod-aot benchmark script
+│   └── sample/                   # CLI demo app
 ├── .github/
 │   └── workflows/
 │       ├── ci.yml                # Lint + typecheck + test + build
@@ -305,5 +307,5 @@ Requires `NPM_TOKEN` secret in GitHub repository settings.
 
 1. `pnpm test` — Vitest for extractor/codegen/integration tests
 2. `pnpm bench` — vitest bench for Zod v4 performance comparison
-3. `pnpm --filter bench-zod-only bench` / `pnpm --filter bench-zod-aot bench` — Standalone benchmark scripts
+3. `pnpm --filter @zod-aot/benchmarks bench:zod-only` / `pnpm --filter @zod-aot/benchmarks bench:zod-aot` — Standalone benchmark scripts
 4. Integration test: schema → extract → generate → execute → compare results with Zod on same input

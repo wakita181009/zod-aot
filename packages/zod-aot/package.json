@@ -18,6 +18,9 @@
     "url": "https://github.com/wakita181009/zod-aot.git",
     "directory": "packages/zod-aot"
   },
+  "bin": {
+    "zod-aot": "./dist/cli/index.js"
+  },
   "files": [
     "dist"
   ],
@@ -36,11 +39,19 @@
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
+    "tsx": "^4.0.0",
     "zod": "^4.0.0"
   },
+  "peerDependenciesMeta": {
+    "tsx": {
+      "optional": true
+    }
+  },
   "devDependencies": {
-    "zod": "^4.0.0",
-    "typescript": "^5.7.0"
+    "@types/node": "^24.11.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.7.0",
+    "zod": "^4.0.0"
   },
   "license": "MIT"
 }

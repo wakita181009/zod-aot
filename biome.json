@@ -72,6 +72,16 @@
           }
         }
       }
+    },
+    {
+      "includes": ["packages/*/src/cli/**", "packages/*/tests/cli/**"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noNodejsModules": "off"
+          }
+        }
+      }
     }
   ],
   "files": {
