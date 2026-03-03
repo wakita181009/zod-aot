@@ -30,19 +30,6 @@ zod-aot runs on Node.js, Bun, and Deno. All runtimes are tested in CI.
 
 Zod compatibility: v4.0.0, v4.1.0, v4.2.0, v4.3.0, latest
 
-## Context
-
-Zod validation traverses schema object graphs at runtime, resulting in ~6.7M ops/sec vs Typia's ~76M ops/sec (~10x slower). Existing AOT approaches (Typia) are TypeScript-type-based and cannot convert from Zod schemas. This library **generates optimized validation functions at build time while keeping existing Zod schemas as-is**.
-
-## Differentiation
-
-| | zod-aot | Typia | AJV standalone | Zod v4 |
-|---|---|---|---|---|
-| Input | Zod schemas | TS types | JSON Schema | Zod schemas |
-| Existing code changes | None required | Full rewrite | Full rewrite | N/A |
-| Type inference | Inherited from Zod | Native | External generation | Native |
-| Expected performance | 10-50x vs Zod | ~10x vs Zod | ~10x vs Zod | baseline |
-
 ## Architecture
 
 ### Compilation Pipeline
@@ -55,6 +42,36 @@ Zod validation traverses schema object graphs at runtime, resulting in ~6.7M ops
 2. **Extraction**: Execute schema file in Node.js → recursively traverse `_zod.def` → produce SchemaIR
 3. **CodeGen**: SchemaIR → JS/TS code with inline type checks, early returns, pre-compiled regexes
 4. **Emit**: Write generated code to files
+
+### Shared Pipeline across CLI / unplugin / Benchmark
+
+All three entry points use the same core pipeline: `extractSchema()` → `generateValidator()`.
+
+```
+                CLI (generate)              unplugin                 Benchmark
+                ──────────────              ────────                 ─────────
+Discovery       discoverSchemas()           discoverSchemas()        (direct schema ref)
+                  └─ loadSourceFile()          └─ loadSourceFile()
+                  └─ isCompiledSchema()        └─ isCompiledSchema()
+                         ↓                           ↓                   ↓
+Extract         extractSchema(s.schema)     extractSchema(s.schema)  extractSchema(zodSchema)
+                         ↓                           ↓                   ↓
+CodeGen         generateValidator(ir, name) generateValidator(ir, name) generateValidator(ir, name)
+                         ↓                           ↓                   ↓
+Output          emitter.ts                  rewriteSource()          new Function()
+                .compiled.ts file           IIFE inline in source    runtime eval
+```
+
+Key files:
+- `compile.ts`: `compile()` is NOT the optimizer — it's a Zod fallback + `COMPILED_MARKER` symbol for discovery
+- `cli/discovery.ts`: `discoverSchemas()` loads file → scans exports with `isCompiledSchema()`
+- `cli/commands/generate.ts`: discovery → extract → generate → `emitter.ts` writes `.compiled.ts`
+- `unplugin/transform.ts`: discovery → extract → generate → `rewriteSource()` replaces `compile()` with IIFE
+- `benchmarks/helpers/compile.ts`: `compileForBench()` directly calls extract → generate → `new Function()`
+
+The generated `safeParse_*` function is identical across all paths. Benchmark results accurately reflect CLI/unplugin output performance.
+
+Note: CLI emitter (`emitter.ts`) does not include `schema` property in the output wrapper, unlike unplugin and benchmark which retain the original Zod schema reference.
 
 ### Why Runtime Extraction
 
@@ -84,19 +101,6 @@ const result = validateUser.safeParse(data);    // { success, data/error }
 const isUser = validateUser.is(data);           // type guard (boolean)
 ```
 
-### compile() Type Definition
-
-```typescript
-function compile<T extends z.ZodType>(schema: T): CompiledSchema<z.output<T>>;
-
-interface CompiledSchema<T> {
-  parse(input: unknown): T;
-  safeParse(input: unknown): SafeParseReturnType<T>;  // ZodError-compatible
-  is(input: unknown): input is T;
-  schema: z.ZodType<T>;  // reference to original schema
-}
-```
-
 ### CLI
 
 ```bash
@@ -105,44 +109,33 @@ npx zod-aot generate src/ -o src/compiled/ --watch
 npx zod-aot check src/schemas.ts   # check if compilable
 ```
 
-## Code Generation Example
+### unplugin (Vite / webpack / esbuild / Rollup)
 
-**Input:**
+Build-time plugin that replaces `compile()` calls with optimized inline validators.
+
 ```typescript
-const schema = z.object({
-  name: z.string().min(3).max(50),
-  age: z.number().int().positive(),
-  email: z.email(),
-  role: z.enum(["admin", "user"]),
-});
+// vite.config.ts
+import zodAot from "zod-aot/unplugin/vite";
+export default { plugins: [zodAot()] };
 ```
 
-**Generated code:**
-```typescript
-const __re_email = /^...$/;
-const __set_role = new Set(["admin", "user"]);
+Plugin entries: `zod-aot/unplugin/vite`, `/webpack`, `/esbuild`, `/rollup`
 
-function safeParse_schema(input: unknown): SafeParseReturnType<Schema> {
-  const issues: ZodIssue[] = [];
-  if (typeof input !== "object" || input === null) {
-    return { success: false, error: new ZodError([{ code: "invalid_type", expected: "object", received: typeof input, path: [] }]) };
-  }
-  const o = input as Record<string, unknown>;
+**Transform flow:**
+1. `shouldTransform(id)` — file extension check, skip `node_modules`/`.d.ts`/`.compiled.ts`
+2. Quick bail-out: source must contain both `"zod-aot"` and `"compile"`
+3. `discoverSchemas(id)` — execute file via `loadSourceFile()`, scan exports with `isCompiledSchema()`
+4. `extractSchema()` → `generateValidator()` (shared pipeline)
+5. `rewriteSource()` — replace `compile(Schema)` with `/* @__PURE__ */ (() => { ... })()` IIFE
+6. `removeCompileImport()` — remove `compile` from import statement
 
-  // name: string().min(3).max(50)
-  if (typeof o.name !== "string") {
-    issues.push({ code: "invalid_type", expected: "string", received: typeof o.name, path: ["name"] });
-  } else {
-    if (o.name.length < 3) issues.push({ code: "too_small", minimum: 3, type: "string", inclusive: true, path: ["name"] });
-    if (o.name.length > 50) issues.push({ code: "too_big", maximum: 50, type: "string", inclusive: true, path: ["name"] });
-  }
-
-  // ... (age, email, role similarly inlined)
-
-  if (issues.length > 0) return { success: false, error: new ZodError(issues) };
-  return { success: true, data: o as Schema };
-}
-```
+**Key implementation details:**
+- `enforce: "pre"` — runs before other plugins
+- `/* @__PURE__ */` annotation enables tree-shaking
+- IIFE wraps preamble (regex/Set) + safeParse function + CompiledSchema object
+- `loadSourceFile()` uses `tsx` on Node.js, native import on Bun/Deno
+- `cacheBust: true` (`?t=${Date.now()}`) for HMR support
+- Options: `include?: string[]`, `exclude?: string[]` (path substring matching)
 
 ## Schema Coverage
 
@@ -172,14 +165,25 @@ zod-aot/
 │       │   ├── types.ts          # SchemaIR, CompiledSchema, CheckIR
 │       │   ├── extractor/
 │       │   │   └── index.ts      # extractSchema() — _zod.def → SchemaIR
-│       │   └── codegen/
-│       │       └── index.ts      # generateValidator() — SchemaIR → JS code
+│       │   ├── codegen/
+│       │   │   └── index.ts      # generateValidator() — SchemaIR → JS code
+│       │   └── unplugin/
+│       │       ├── index.ts      # createUnplugin() factory + transform pipeline
+│       │       ├── transform.ts  # shouldTransform, transformCode, rewriteSource
+│       │       ├── types.ts      # ZodAotPluginOptions
+│       │       ├── vite.ts       # Vite plugin entry
+│       │       ├── webpack.ts    # webpack plugin entry
+│       │       ├── esbuild.ts    # esbuild plugin entry
+│       │       └── rollup.ts     # Rollup plugin entry
 │       ├── tests/
 │       │   ├── integration.test.ts   # E2E: extract → generate → execute → compare with Zod
 │       │   ├── extractor/index.test.ts
 │       │   ├── codegen/index.test.ts
 │       │   ├── runtime.test.ts
-│       │   └── types.test.ts
+│       │   ├── types.test.ts
+│       │   └── unplugin/
+│       │       ├── transform.test.ts # unplugin transform tests (25 tests)
+│       │       └── fixtures/         # Test fixtures for transform
 │       ├── package.json
 │       └── tsconfig.json
 ├── benchmarks/                   # Workspace package (@zod-aot/benchmarks)
@@ -197,7 +201,7 @@ zod-aot/
 │   ├── is.bench.ts               # is() type guard: zod vs zod-aot
 │   └── package.json
 ├── apps/
-│   └── sample/                   # CLI demo app
+│   └── sample/                   # Vite + unplugin demo app
 ├── .github/
 │   └── workflows/
 │       ├── ci.yml                # Lint + typecheck + test + build
@@ -210,24 +214,13 @@ zod-aot/
 
 ## Implementation Phases
 
-### Phase 1: Core Compiler (COMPLETE)
-
-- [x] Project setup: pnpm monorepo, TypeScript, Vitest, Biome
-- [x] SchemaIR type definitions (`types.ts`)
-- [x] Extractor (`extractor/`): `_zod.def` → SchemaIR (Tier 1 types)
-- [x] CodeGen (`codegen/`): SchemaIR → optimized JS code
-- [x] Runtime fallback (`runtime.ts`): createFallback for dev environments
-- [x] Benchmarks: vitest bench + standalone scripts
-- [x] Compatibility tests: E2E comparison with Zod on same input
-- [ ] CLI (`cli/`): `generate` + `check` commands (deferred to Phase 2)
-
 ### Phase 2: Type Expansion + CLI + unplugin
 
 - [x] Tier 2 type support (tuple, record, intersection, discriminatedUnion, date, any, unknown, default, readonly)
 - [x] discriminatedUnion switch statement optimization (O(1) vs O(n))
-- [ ] CLI (`generate` + `check` commands)
+- [x] CLI (`generate` + `check` commands)
 - [ ] Partial fallback (e.g., object with some transform properties)
-- [ ] unplugin integration for Vite/Webpack/esbuild
+- [x] unplugin integration for Vite/webpack/esbuild/Rollup
 - [ ] Watch mode
 
 ### Phase 3: Ecosystem
@@ -291,17 +284,6 @@ Key rules:
 
 - **CI** (`.github/workflows/ci.yml`): Runs on push to main and PRs. Lint → typecheck → test → build on Node 20/22/24, Bun 1.3, Deno v2.x. Also tests Zod v4.0.0–latest compatibility.
 - **Release** (`.github/workflows/release.yml`): Triggered by `v*` tags. Runs full checks, then publishes to npm with provenance.
-
-Release workflow:
-```bash
-# 1. Update version in packages/zod-aot/package.json
-# 2. Commit and tag
-git tag v0.1.0
-git push origin v0.1.0
-# 3. GitHub Actions publishes to npm automatically
-```
-
-Requires `NPM_TOKEN` secret in GitHub repository settings.
 
 ## Verification
 

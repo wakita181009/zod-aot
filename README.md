@@ -12,13 +12,57 @@ No code changes required — keep your existing Zod schemas and get **3-47x fast
 
 | Package | Description |
 |---|---|
-| [zod-aot](./packages/zod-aot/) | Core compiler — extractor, codegen, and runtime fallback |
+| [zod-aot](./packages/zod-aot/) | Core compiler — extractor, codegen, runtime fallback, and build plugins |
 
 ## Quick Start
 
 ```bash
 npm install zod-aot zod@^4
 ```
+
+### Build Plugin (Recommended)
+
+zod-aot provides build plugins for Vite, webpack, esbuild, and Rollup via [unplugin](https://github.com/unjs/unplugin). The plugin automatically detects `compile()` calls and replaces them with optimized inline validators at build time.
+
+```typescript
+// vite.config.ts
+import { defineConfig } from "vite";
+import zodAot from "zod-aot/vite";
+
+export default defineConfig({
+  plugins: [zodAot()],
+});
+```
+
+```typescript
+// src/schemas.ts
+import { z } from "zod";
+import { compile } from "zod-aot";
+
+const UserSchema = z.object({
+  name: z.string().min(3),
+  age: z.number().int().positive(),
+  email: z.email(),
+});
+
+// Falls back to Zod in dev, replaced with optimized code at build time
+export const validateUser = compile(UserSchema);
+
+validateUser.parse(data);       // throws ZodError on failure
+validateUser.safeParse(data);   // { success, data/error }
+validateUser.is(data);          // type guard (boolean)
+```
+
+Available plugins:
+
+| Build Tool | Import |
+|---|---|
+| Vite | `import zodAot from "zod-aot/vite"` |
+| webpack | `import zodAot from "zod-aot/webpack"` |
+| esbuild | `import zodAot from "zod-aot/esbuild"` |
+| Rollup | `import zodAot from "zod-aot/rollup"` |
+
+### Programmatic API
 
 ```typescript
 import { z } from "zod";
