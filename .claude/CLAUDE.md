@@ -18,6 +18,18 @@ Phase 1 success criteria (is() 10x+, safeParse() 5x+) met for large/complex sche
 
 Phase 2 adds Tier 2 types: tuple, record, intersection, discriminatedUnion (with O(1) switch optimization), date, any, unknown, default, readonly. 300 tests passing.
 
+## Runtime Compatibility
+
+zod-aot runs on Node.js, Bun, and Deno. All runtimes are tested in CI.
+
+| Runtime | Tested Versions |
+|---------|----------------|
+| Node.js | 20, 22, 24 |
+| Bun | 1.3 |
+| Deno | v2.x |
+
+Zod compatibility: v4.0.0, v4.1.0, v4.2.0, v4.3.0, latest
+
 ## Context
 
 Zod validation traverses schema object graphs at runtime, resulting in ~6.7M ops/sec vs Typia's ~76M ops/sec (~10x slower). Existing AOT approaches (Typia) are TypeScript-type-based and cannot convert from Zod schemas. This library **generates optimized validation functions at build time while keeping existing Zod schemas as-is**.
@@ -275,7 +287,7 @@ Key rules:
 
 ## CI/CD
 
-- **CI** (`.github/workflows/ci.yml`): Runs on push to main and PRs. Lint → typecheck → test → build on Node 20/22.
+- **CI** (`.github/workflows/ci.yml`): Runs on push to main and PRs. Lint → typecheck → test → build on Node 20/22/24, Bun 1.3, Deno v2.x. Also tests Zod v4.0.0–latest compatibility.
 - **Release** (`.github/workflows/release.yml`): Triggered by `v*` tags. Runs full checks, then publishes to npm with provenance.
 
 Release workflow:

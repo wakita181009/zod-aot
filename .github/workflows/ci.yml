@@ -80,3 +80,26 @@ jobs:
 
       - name: Test (Deno)
         run: deno run -A packages/zod-aot/tests/compat.mjs
+
+  zod-compat:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        zod-version: ["4.0.0", "4.1.0", "4.2.0", "4.3.0", "latest"]
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Override Zod to ${{ matrix.zod-version }}
+        run: pnpm --filter zod-aot exec pnpm add -D zod@${{ matrix.zod-version }} --no-lockfile
+
+      - name: Test
+        run: pnpm test

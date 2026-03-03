@@ -41,7 +41,7 @@ See the [full documentation](./packages/zod-aot/README.md) for API reference, be
 | Runtime | Version | Status |
 |---------|---------|--------|
 | Node.js | 20+     | Fully supported |
-| Bun     | 1.2+    | Fully supported |
+| Bun     | 1.3+    | Fully supported |
 | Deno    | 2.0+    | Fully supported |
 
 ## Development
