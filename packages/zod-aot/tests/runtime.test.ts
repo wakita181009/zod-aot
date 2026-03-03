@@ -133,7 +133,8 @@ describe("createFallback — error compatibility", () => {
     const result = compiled.safeParse({ name: 42 });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const issue = result.error.issues[0]!;
+      const issue = result.error.issues[0];
+      expect(issue).toBeDefined();
       expect(issue).toHaveProperty("code");
       expect(issue).toHaveProperty("path");
       expect(issue).toHaveProperty("message");

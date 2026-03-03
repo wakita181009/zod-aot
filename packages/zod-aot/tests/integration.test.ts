@@ -12,7 +12,11 @@ function compileZodSchema(schema: z.ZodType, name = "test") {
   const ir = extractSchema(schema);
   const result = generateValidator(ir, name);
   const fn = new Function(`${result.code}\nreturn ${result.functionName};`);
-  return fn() as (input: unknown) => { success: boolean; data?: unknown; error?: { issues: unknown[] } };
+  return fn() as (input: unknown) => {
+    success: boolean;
+    data?: unknown;
+    error?: { issues: unknown[] };
+  };
 }
 
 /**
@@ -223,16 +227,7 @@ describe("integration — object schemas match Zod", () => {
 describe("integration — array schemas match Zod", () => {
   it("basic array", () => {
     const schema = z.array(z.string());
-    const inputs = [
-      [],
-      ["a"],
-      ["a", "b", "c"],
-      [1, 2, 3],
-      ["a", 1, "b"],
-      "not array",
-      null,
-      {},
-    ];
+    const inputs = [[], ["a"], ["a", "b", "c"], [1, 2, 3], ["a", 1, "b"], "not array", null, {}];
     for (const input of inputs) {
       assertSameResult(schema, input, "basicArr");
     }

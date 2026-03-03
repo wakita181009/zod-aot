@@ -5,8 +5,8 @@ import type {
   BooleanIR,
   EnumIR,
   LiteralIR,
-  NullIR,
   NullableIR,
+  NullIR,
   NumberIR,
   ObjectIR,
   OptionalIR,
@@ -19,11 +19,18 @@ import type {
 /**
  * Helper: generate code from IR, compile it, and return the safeParse function.
  */
-function compileIR(ir: SchemaIR, name = "test"): (input: unknown) => { success: boolean; data?: unknown; error?: { issues: unknown[] } } {
+function compileIR(
+  ir: SchemaIR,
+  name = "test",
+): (input: unknown) => { success: boolean; data?: unknown; error?: { issues: unknown[] } } {
   const result = generateValidator(ir, name);
   // The generated code should export a safeParse function
   const fn = new Function(`${result.code}\nreturn ${result.functionName};`);
-  return fn() as (input: unknown) => { success: boolean; data?: unknown; error?: { issues: unknown[] } };
+  return fn() as (input: unknown) => {
+    success: boolean;
+    data?: unknown;
+    error?: { issues: unknown[] };
+  };
 }
 
 // ─── String Validation ──────────────────────────────────────────────────────
@@ -40,7 +47,7 @@ describe("codegen — string", () => {
     const safeParse = compileIR(ir);
     const result = safeParse(42);
     expect(result.success).toBe(false);
-    expect(result.error!.issues[0]).toMatchObject({
+    expect(result.error?.issues[0]).toMatchObject({
       code: "invalid_type",
       expected: "string",
     });
@@ -130,7 +137,7 @@ describe("codegen — string", () => {
     // "ab" fails both min_length and regex
     const result = safeParse("ab");
     expect(result.success).toBe(false);
-    expect(result.error!.issues.length).toBeGreaterThanOrEqual(1);
+    expect(result.error?.issues.length).toBeGreaterThanOrEqual(1);
   });
 });
 
@@ -475,7 +482,7 @@ describe("codegen — object", () => {
     const safeParse = compileIR(ir);
     const result = safeParse({ user: { name: "Al" } });
     expect(result.success).toBe(false);
-    expect(result.error!.issues[0]).toMatchObject({
+    expect(result.error?.issues[0]).toMatchObject({
       path: ["user", "name"],
     });
   });
@@ -498,7 +505,7 @@ describe("codegen — object", () => {
     const safeParse = compileIR(ir);
     const result = safeParse({ a: 1, b: "two", c: "three" });
     expect(result.success).toBe(false);
-    expect(result.error!.issues.length).toBe(3);
+    expect(result.error?.issues.length).toBe(3);
   });
 });
 
@@ -538,7 +545,7 @@ describe("codegen — array", () => {
     const safeParse = compileIR(ir);
     const result = safeParse([1, "two", 3]);
     expect(result.success).toBe(false);
-    expect(result.error!.issues[0]).toMatchObject({
+    expect(result.error?.issues[0]).toMatchObject({
       path: [1],
     });
   });
@@ -803,7 +810,10 @@ describe("codegen — complex schemas", () => {
           ],
         },
         role: { type: "enum", values: ["admin", "user"] },
-        bio: { type: "optional", inner: { type: "string", checks: [{ kind: "max_length", maximum: 500 }] } },
+        bio: {
+          type: "optional",
+          inner: { type: "string", checks: [{ kind: "max_length", maximum: 500 }] },
+        },
         tags: {
           type: "array",
           element: { type: "string", checks: [{ kind: "min_length", minimum: 1 }] },
