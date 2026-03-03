@@ -47,6 +47,16 @@ metadata:
     - z.globalRegistry
     - .register
     - .meta
+    - _zod
+    - _zod.def
+    - _zod.bag
+    - _zod.version
+    - schema-internals
+    - schema-introspection
+    - aot-compiler
+    - code-generation
+    - schema-extraction
+    - compilability
     - error-customization
     - localization
     - i18n
@@ -725,6 +735,43 @@ z.toJSONSchema(schema, options)
 .extend(), .pick(), .omit(), .partial(), .required(), .merge()
 ```
 
+## Zod v4 Internals (`_zod` Property)
+
+**Load `references/v4-internals.md` for complete internal structure documentation.**
+
+### Quick Reference
+
+Every Zod schema exposes `_zod` with the schema's internal definition:
+
+```typescript
+const schema = z.string().min(3).max(50);
+
+schema._zod.def.type;    // "string"
+schema._zod.def.checks;  // Array of check schema instances
+schema._zod.bag;          // { minimum: 3, maximum: 50 }
+schema._zod.version;      // { major, minor, patch }
+```
+
+**Schema-specific `def` fields**:
+- **Object**: `def.shape` (Record of key to Zod schema instance)
+- **Array**: `def.element` (inner Zod schema)
+- **Union**: `def.options` (array of Zod schemas)
+- **Optional/Nullable**: `def.innerType` (wrapped schema)
+- **Literal**: `def.values` (array of primitive values)
+- **Enum**: `def.entries` (object where keys === values)
+- **Transform**: `def.type === "pipe"` with `def.out._zod.def.type === "transform"`
+- **Refine**: Adds check with `check._zod.def.check === "custom"`
+
+**String format schemas** (`z.email()`, `z.uuid()`, etc.) put format info directly on `_zod.def`:
+```typescript
+z.email()._zod.def.type;    // "string"
+z.email()._zod.def.check;   // "string_format"
+z.email()._zod.def.format;  // "email"
+z.email()._zod.def.pattern; // regex source string
+```
+
+**Load `references/v4-internals.md` for:** Complete `_zod.def` field reference, check structure details, `_zod.bag` metadata examples, transform/refine detection patterns, recursive traversal patterns, compilability checks
+
 ## When to Load References
 
 **Load `references/migration-guide.md` when:**
@@ -771,6 +818,18 @@ z.toJSONSchema(schema, options)
 - Questions about circular dependencies
 - Need best practices or testing patterns
 - Confusion between `.refine()` and `.transform()`
+
+**Load `references/v4-internals.md` when:**
+- Building tools that programmatically inspect or extract Zod schemas
+- Need to access `_zod.def`, `_zod.bag`, or `_zod.version`
+- Implementing AOT compilers, code generators, or schema serializers
+- Need to detect transforms, refines, or check compilability of schemas
+- Working with schema definition objects (`_zod.def.type`, `_zod.def.checks`)
+- Need to understand check structure (string checks, number checks, array checks)
+- Working with string format schemas (`z.email()`, `z.uuid()`) internal representation
+- Need recursive schema traversal patterns
+- Understanding the difference between top-level format schemas and chained format checks
+- Questions about `_zod.bag` aggregated metadata
 
 ## Additional Resources
 
