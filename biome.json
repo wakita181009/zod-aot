@@ -10,7 +10,15 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true
+      "all": true,
+      "nursery": { "all": true },
+      "correctness": {
+        "noNodejsModules": "off"
+      },
+      "style": {
+        "noDefaultExport": "off",
+        "useNamingConvention": "off"
+      }
     }
   },
   "formatter": {
