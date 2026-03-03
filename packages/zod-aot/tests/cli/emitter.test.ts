@@ -114,7 +114,7 @@ describe("generateCompiledFileContent()", () => {
       code: "/* zod-aot */",
       // Note: This has the expected format with `{\n` after the function signature
       functionName:
-        'function safeParse_test(input){\nvar __issues=[];\nreturn{success:true,data:input};\n}',
+        "function safeParse_test(input){\nvar __issues=[];\nreturn{success:true,data:input};\n}",
       fallbackCount: 1,
     };
 
@@ -139,7 +139,7 @@ describe("generateCompiledFileContent()", () => {
       code: "/* zod-aot */",
       // No newline after `{` — the regex /^(function\s+\w+\(input\)\{)\n/ won't match
       functionName:
-        'function safeParse_test(input){var __issues=[];return{success:true,data:input};}',
+        "function safeParse_test(input){var __issues=[];return{success:true,data:input};}",
       fallbackCount: 1,
     };
 

@@ -94,12 +94,7 @@ describe("removeCompileImport()", () => {
 
   // H4: Should handle multi-line import statements
   it("removes compile from multi-line import", () => {
-    const code = [
-      "import {",
-      "  compile,",
-      "  createFallback",
-      '} from "zod-aot";',
-    ].join("\n");
+    const code = ["import {", "  compile,", "  createFallback", '} from "zod-aot";'].join("\n");
     const result = removeCompileImport(code);
     expect(result).not.toContain("compile");
     expect(result).toContain("createFallback");
