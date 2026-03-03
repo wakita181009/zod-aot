@@ -3,6 +3,24 @@
   "version": "0.0.1",
   "description": "Compile Zod schemas into zero-overhead validation functions at build time",
   "type": "module",
+  "keywords": [
+    "zod",
+    "validation",
+    "aot",
+    "compiler",
+    "codegen",
+    "performance",
+    "schema",
+    "typescript"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wakita181009/zod-aot.git",
+    "directory": "packages/zod-aot"
+  },
+  "files": [
+    "dist"
+  ],
   "imports": {
     "#src/*": "./src/*"
   },
