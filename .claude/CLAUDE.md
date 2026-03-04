@@ -2,28 +2,6 @@
 
 **Tagline:** "Compile Zod schemas into zero-overhead validation functions at build time."
 
-## Status
-
-**Phase 1: Core Compiler — COMPLETE**
-**Phase 2: Tier 2 Type Support — COMPLETE**
-**Phase 3: Tier 3 Type Support — IN PROGRESS**
-
-Benchmark results (vitest bench, Node.js):
-- Simple types: 1.7-3.1x faster than Zod v4
-- Medium objects (valid): 4.1x faster
-- Medium objects (invalid): ~23x faster
-- Large objects (10-100 nested items): **44-60x faster**
-- Tier 2 types: tuple 4.2x, record 4.2x, discriminatedUnion 5.4x
-- Combined (event log): 11.5x faster
-- Partial fallback (transform): object 2.5x, array 4.6-4.7x faster
-- Performance gains scale with schema complexity
-
-Phase 1 success criteria (is() 10x+, safeParse() 5x+) met for large/complex schemas. Primitives and small objects show moderate gains due to Zod v4's already-optimized fast path.
-
-Phase 2 adds Tier 2 types: tuple, record, intersection, discriminatedUnion (with O(1) switch optimization), date, any, unknown, default, readonly. Partial fallback compiles optimizable parts of schemas containing transform/refine.
-
-Phase 3 adds Tier 3 types: bigint, set, map, pipe (non-transform). Lazy schemas fall back to Zod (getter functions are not serializable). 517 tests passing.
-
 ## Runtime Compatibility
 
 zod-aot runs on Node.js, Bun, and Deno. All runtimes are tested in CI.
@@ -146,15 +124,7 @@ Plugin entries: `zod-aot/vite`, `zod-aot/webpack`, `zod-aot/esbuild`, `zod-aot/r
 
 ## Schema Coverage
 
-### Tier 1 (Phase 1 — COMPLETE)
-string, number, int, boolean, object, array, literal, enum, union, optional, nullable, null, undefined
-
-### Tier 2 (Phase 2 — COMPLETE)
-tuple, record, intersection, discriminatedUnion, date, any, unknown, default, readonly
-
-### Tier 3 (Phase 3 — IN PROGRESS)
-bigint, set, map, pipe (non-transform) — DONE
-template_literal — pending (requires Zod v4 API verification)
+string, number, int, boolean, object, array, literal, enum, union, optional, nullable, null, undefined, tuple, record, intersection, discriminatedUnion, date, any, unknown, default, readonly, bigint, set, map, pipe (non-transform)
 
 ### Fallback to Zod
 transform, refine, superRefine, custom, preprocess, lazy
@@ -235,24 +205,6 @@ unplugin/ ✗── cli/
 Cross-module imports use `#src/` path alias (e.g., `#src/core/codegen/index.js`).
 Within-module imports use relative paths.
 
-## Implementation Phases
-
-### Phase 2: Type Expansion + CLI + unplugin
-
-- [x] Tier 2 type support (tuple, record, intersection, discriminatedUnion, date, any, unknown, default, readonly)
-- [x] discriminatedUnion switch statement optimization (O(1) vs O(n))
-- [x] CLI (`generate` + `check` commands)
-- [x] Partial fallback (e.g., object with some transform properties)
-- [x] unplugin integration for Vite/webpack/esbuild/Rollup
-- [x] Watch mode
-
-### Phase 3: Ecosystem
-
-- [x] Tier 3 type support: bigint, set, map, pipe (non-transform)
-- [x] Lazy schema fallback (explicit reason: "lazy")
-- [ ] template_literal type support (pending Zod v4 API verification)
-- [ ] Documentation site
-
 ## Key Reference Files (Zod v4 internals)
 
 Source files to reference during implementation:
@@ -266,8 +218,7 @@ Source files to reference during implementation:
 1. **Don't replace Zod** — Keep Zod's type inference and DX intact. Only accelerate hot paths
 2. **Runtime extraction** — Execute schema files to get `_zod.def` rather than static AST analysis
 3. **transform/refine out of scope** — JS closures cannot be compiled. Fall back to Zod
-4. **Phase 1 benchmarks first** — Pivot if 10x is not achieved. Data-driven decisions
-5. **Pre-compiled regex + Set for enums** — These optimizations create the performance gap
+4. **Pre-compiled regex + Set for enums** — These optimizations create the performance gap
 
 ## Development Tools
 
