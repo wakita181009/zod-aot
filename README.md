@@ -62,9 +62,9 @@ Available plugins:
 | esbuild | `import zodAot from "zod-aot/esbuild"` |
 | Rollup | `import zodAot from "zod-aot/rollup"` |
 
-### CLI
+### CLI (Alternative)
 
-Generate optimized validation files from the command line:
+If you don't use a bundler, you can generate optimized validation files from the command line:
 
 ```bash
 npx zod-aot generate src/schemas.ts -o src/schemas.compiled.ts
