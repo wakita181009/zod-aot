@@ -62,20 +62,14 @@ Available plugins:
 | esbuild | `import zodAot from "zod-aot/esbuild"` |
 | Rollup | `import zodAot from "zod-aot/rollup"` |
 
-### Programmatic API
+### CLI
 
-```typescript
-import { z } from "zod";
-import { extractSchema, generateValidator } from "zod-aot";
+Generate optimized validation files from the command line:
 
-const UserSchema = z.object({
-  name: z.string().min(3),
-  age: z.number().int().positive(),
-  email: z.email(),
-});
-
-const ir = extractSchema(UserSchema);
-const { code, functionName } = generateValidator(ir, "validateUser");
+```bash
+npx zod-aot generate src/schemas.ts -o src/schemas.compiled.ts
+npx zod-aot generate src/ -o src/compiled/
+npx zod-aot generate src/ --watch
 ```
 
 See the [full documentation](./packages/zod-aot/README.md) for API reference, benchmarks, and usage details.
