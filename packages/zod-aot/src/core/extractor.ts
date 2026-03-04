@@ -1,4 +1,11 @@
-import type { CheckIR, DateCheckIR, FallbackIR, SchemaIR } from "./types.js";
+import type {
+  BigIntCheckIR,
+  CheckIR,
+  DateCheckIR,
+  FallbackIR,
+  SchemaIR,
+  SetCheckIR,
+} from "./types.js";
 
 interface ZodCheckDef {
   check: string;
@@ -138,13 +145,16 @@ export function extractSchema(
   const def = schema._zod.def;
   const p = currentPath ?? "";
 
-  // Transform: pipe with transform output
+  // Pipe: transform pipes fall back, non-transform pipes are compilable
   if (def.type === "pipe") {
     const outDef = def.out?._zod?.def;
     if (outDef && outDef.type === "transform") {
       return makeFallback("transform", zodSchema, fallbacks, p);
     }
-    return makeFallback("unsupported", zodSchema, fallbacks, p);
+    // Non-transform pipe: compile both in and out schemas
+    const inIR = extractSchema(def.in, fallbacks, `${p}._zod.def.in`);
+    const outIR = extractSchema(def.out, fallbacks, `${p}._zod.def.out`);
+    return { type: "pipe", in: inIR, out: outIR };
   }
 
   // String format schemas (z.email(), z.url(), z.uuid())
@@ -333,6 +343,65 @@ export function extractSchema(
         left: extractSchema(def.left, fallbacks, `${p}._zod.def.left`),
         right: extractSchema(def.right, fallbacks, `${p}._zod.def.right`),
       };
+
+    case "set": {
+      const valueType = extractSchema(def.valueType, fallbacks, `${p}._zod.def.valueType`);
+      const setChecks: SetCheckIR[] = [];
+      if (def.checks) {
+        for (const check of def.checks) {
+          const checkDef = check._zod?.def;
+          if (!checkDef) continue;
+          if (checkDef.check === "min_size") {
+            setChecks.push({ kind: "min_size", minimum: checkDef.minimum });
+          } else if (checkDef.check === "max_size") {
+            setChecks.push({ kind: "max_size", maximum: checkDef.maximum });
+          }
+        }
+      }
+      return { type: "set", valueType, ...(setChecks.length > 0 ? { checks: setChecks } : {}) };
+    }
+
+    case "map": {
+      const keyType = extractSchema(def.keyType, fallbacks, `${p}._zod.def.keyType`);
+      const valueType = extractSchema(def.valueType, fallbacks, `${p}._zod.def.valueType`);
+      return { type: "map", keyType, valueType };
+    }
+
+    case "bigint": {
+      const bigintChecks: BigIntCheckIR[] = [];
+      if (def.checks) {
+        for (const check of def.checks) {
+          const checkDef = check._zod?.def;
+          if (!checkDef) continue;
+          switch (checkDef.check) {
+            case "greater_than":
+              bigintChecks.push({
+                kind: "bigint_greater_than",
+                value: String(checkDef.value),
+                inclusive: checkDef.inclusive,
+              });
+              break;
+            case "less_than":
+              bigintChecks.push({
+                kind: "bigint_less_than",
+                value: String(checkDef.value),
+                inclusive: checkDef.inclusive,
+              });
+              break;
+            case "multiple_of":
+              bigintChecks.push({
+                kind: "bigint_multiple_of",
+                value: String(checkDef.value),
+              });
+              break;
+          }
+        }
+      }
+      return { type: "bigint", checks: bigintChecks };
+    }
+
+    case "lazy":
+      return makeFallback("lazy", zodSchema, fallbacks, p);
 
     default:
       return makeFallback("unsupported", zodSchema, fallbacks, p);

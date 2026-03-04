@@ -6,6 +6,7 @@ export type { CodeGenResult } from "./context.js";
 import {
   generateAnyValidation,
   generateArrayValidation,
+  generateBigIntValidation,
   generateBooleanValidation,
   generateDateValidation,
   generateDefaultValidation,
@@ -13,13 +14,16 @@ import {
   generateEnumValidation,
   generateIntersectionValidation,
   generateLiteralValidation,
+  generateMapValidation,
   generateNullableValidation,
   generateNullValidation,
   generateNumberValidation,
   generateObjectValidation,
   generateOptionalValidation,
+  generatePipeValidation,
   generateReadonlyValidation,
   generateRecordValidation,
+  generateSetValidation,
   generateStringValidation,
   generateTupleValidation,
   generateUndefinedValidation,
@@ -129,6 +133,14 @@ function generateValidation(
         ctx,
         generateValidation,
       );
+    case "bigint":
+      return generateBigIntValidation(ir, inputExpr, pathExpr, issuesVar, ctx);
+    case "set":
+      return generateSetValidation(ir, inputExpr, pathExpr, issuesVar, ctx, generateValidation);
+    case "map":
+      return generateMapValidation(ir, inputExpr, pathExpr, issuesVar, ctx, generateValidation);
+    case "pipe":
+      return generatePipeValidation(ir, inputExpr, pathExpr, issuesVar, ctx, generateValidation);
   }
 }
 

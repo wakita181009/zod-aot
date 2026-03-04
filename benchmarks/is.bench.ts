@@ -2,12 +2,16 @@ import { bench, describe } from "vitest";
 import { compileForBench } from "./helpers/compile.js";
 import {
   ApiResponseSchema,
+  BigIntSchema,
   DiscriminatedUnionSchema,
   EventLogSchema,
   FallbackArraySchema,
+  MapSchema,
   NumberWithChecks,
   PartialFallbackObjectSchema,
+  PipeSchema,
   RecordSchema,
+  SetSchema,
   SimpleEnum,
   SimpleString,
   StringWithChecks,
@@ -15,12 +19,16 @@ import {
   UserSchema,
   validApiResponse10,
   validApiResponse100,
+  validBigInt,
   validClickEvent,
   validEventLog,
   validFallbackArray10,
+  validMap5,
   validNumberWithChecks,
   validPartialFallbackObject,
+  validPipe,
   validRecord,
+  validSet5,
   validSimpleEnum,
   validSimpleString,
   validStringWithChecks,
@@ -41,8 +49,12 @@ const aotDiscUnion = compileForBench(DiscriminatedUnionSchema, "discUnion");
 const aotEventLog = compileForBench(EventLogSchema, "eventLog");
 const aotPartialFallback = compileForBench(PartialFallbackObjectSchema, "partialFallback");
 const aotFallbackArray = compileForBench(FallbackArraySchema, "fallbackArray");
+const aotBigInt = compileForBench(BigIntSchema, "bigint");
+const aotSet = compileForBench(SetSchema, "set");
+const aotMap = compileForBench(MapSchema, "map");
+const aotPipe = compileForBench(PipeSchema, "pipe");
 
-// ─── Simple Types ─────────────────────────────────────────────────────────────
+// ─── Primitives ──────────────────────────────────────────────────────────────
 
 describe("is(): simple string", () => {
   bench("zod (safeParse().success)", () => {
@@ -80,7 +92,16 @@ describe("is(): enum", () => {
   });
 });
 
-// ─── Medium: User Object ──────────────────────────────────────────────────────
+describe("is(): bigint with checks", () => {
+  bench("zod (safeParse().success)", () => {
+    BigIntSchema.safeParse(validBigInt).success;
+  });
+  bench("zod-aot", () => {
+    aotBigInt.is(validBigInt);
+  });
+});
+
+// ─── Objects ─────────────────────────────────────────────────────────────────
 
 describe("is(): medium object — valid user", () => {
   bench("zod (safeParse().success)", () => {
@@ -90,8 +111,6 @@ describe("is(): medium object — valid user", () => {
     aotUser.is(validUser);
   });
 });
-
-// ─── Large: API Response ──────────────────────────────────────────────────────
 
 describe("is(): large object — 10 items", () => {
   bench("zod (safeParse().success)", () => {
@@ -111,7 +130,7 @@ describe("is(): large object — 100 items", () => {
   });
 });
 
-// ─── Composite Types ─────────────────────────────────────────────────────────
+// ─── Composites ──────────────────────────────────────────────────────────────
 
 describe("is(): tuple [string, int, boolean]", () => {
   bench("zod (safeParse().success)", () => {
@@ -139,6 +158,35 @@ describe("is(): discriminatedUnion (3 options)", () => {
     aotDiscUnion.is(validClickEvent);
   });
 });
+
+describe("is(): set<string> (5 items)", () => {
+  bench("zod (safeParse().success)", () => {
+    SetSchema.safeParse(validSet5).success;
+  });
+  bench("zod-aot", () => {
+    aotSet.is(validSet5);
+  });
+});
+
+describe("is(): map<string, number> (5 entries)", () => {
+  bench("zod (safeParse().success)", () => {
+    MapSchema.safeParse(validMap5).success;
+  });
+  bench("zod-aot", () => {
+    aotMap.is(validMap5);
+  });
+});
+
+describe("is(): pipe (string → string with max)", () => {
+  bench("zod (safeParse().success)", () => {
+    PipeSchema.safeParse(validPipe).success;
+  });
+  bench("zod-aot", () => {
+    aotPipe.is(validPipe);
+  });
+});
+
+// ─── Combined ────────────────────────────────────────────────────────────────
 
 describe("is(): event log (combined)", () => {
   bench("zod (safeParse().success)", () => {

@@ -363,7 +363,11 @@ The intermediate representation — a discriminated union of all supported schem
 | `DefaultIR` | `.default(...)` |
 | `IntersectionIR` | `z.intersection(...)` / `.and(...)` |
 | `DiscriminatedUnionIR` | `z.discriminatedUnion(...)` |
-| `FallbackIR` | `transform`, `refine`, etc. |
+| `BigIntIR` | `z.bigint()` |
+| `SetIR` | `z.set(...)` |
+| `MapIR` | `z.map(...)` |
+| `PipeIR` | `.pipe(...)` (non-transform) |
+| `FallbackIR` | `transform`, `refine`, `lazy`, etc. |
 
 ## Supported Types
 
@@ -398,14 +402,24 @@ The intermediate representation — a discriminated union of all supported schem
 | `intersection` | validates both left and right schemas |
 | `discriminatedUnion` | O(1) `switch` dispatch on discriminator field |
 
+### Tier 3 — Collections & Pipeline
+
+| Type | Supported Checks |
+|---|---|
+| `bigint` | `min`, `max`, `positive`, `negative`, `nonnegative`, `nonpositive`, `multipleOf` |
+| `set` | `min`, `max` (size), element validation |
+| `map` | key and value type validation |
+| `pipe` (non-transform) | sequential in→out validation |
+
 ### Automatic Fallback to Zod
 
-These schema types contain JavaScript closures that cannot be compiled to static code. They are detected during extraction and produce a `FallbackIR`:
+These schema types contain JavaScript closures or runtime-dependent logic that cannot be compiled to static code. They are detected during extraction and produce a `FallbackIR`:
 
 - `transform` — runtime data transformation
 - `refine` / `superRefine` — custom validation with closures
 - `custom` — arbitrary validation logic
 - `preprocess` — input preprocessing
+- `lazy` — deferred schema resolution (getter function not serializable)
 
 #### Partial Fallback
 
@@ -413,11 +427,11 @@ When a schema contains a mix of compilable and non-compilable parts (e.g., an ob
 
 > **Note:** If a schema heavily relies on `transform`, `refine`, or other non-compilable features, the performance benefit from partial fallback will be minimal — most of the validation work is still delegated to Zod. Partial fallback is most effective when only a small portion of the schema uses these features.
 
-### Planned (Tier 3)
+### Planned
 
-| Tier | Types |
+| Type | Status |
 |---|---|
-| Tier 3 | `lazy`, `pipe` (non-transform), `template_literal`, `bigint`, `map`, `set` |
+| `template_literal` | Pending Zod v4 API verification |
 
 ## Roadmap
 
@@ -442,7 +456,9 @@ When a schema contains a mix of compilable and non-compilable parts (e.g., an ob
 
 ### Phase 3: Ecosystem
 
-- [ ] Tier 3 type support
+- [x] Tier 3 type support (bigint, set, map, pipe non-transform)
+- [x] Lazy schema fallback
+- [ ] `template_literal` type support
 - [ ] Documentation site
 
 ## Development

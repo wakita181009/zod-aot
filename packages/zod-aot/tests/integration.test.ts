@@ -484,6 +484,15 @@ describe("integration — fallback for non-compilable schemas", () => {
     const ir = extractSchema(schema);
     expect(ir.type).toBe("fallback");
   });
+
+  it("lazy schema produces fallback IR", () => {
+    const schema = z.lazy(() => z.string());
+    const ir = extractSchema(schema);
+    expect(ir.type).toBe("fallback");
+    if (ir.type === "fallback") {
+      expect(ir.reason).toBe("lazy");
+    }
+  });
 });
 
 // ─── Tier 2: any / unknown Compatibility ────────────────────────────────────
@@ -651,6 +660,148 @@ describe("integration — discriminatedUnion match Zod", () => {
       { kind: "circle", radius: "not number" },
     ]) {
       assertSameResult(schema, input, "discUnion3");
+    }
+  });
+});
+
+// ─── Tier 3: bigint Compatibility ────────────────────────────────────────────
+
+describe("integration — bigint match Zod", () => {
+  it("plain bigint", () => {
+    const schema = z.bigint();
+    for (const input of [0n, 42n, -1n, 42, "42", null, undefined, true]) {
+      assertSameResult(schema, input, "bigintSchema");
+    }
+  });
+
+  it("bigint with min/max", () => {
+    const schema = z.bigint().min(10n).max(100n);
+    for (const input of [10n, 50n, 100n, 9n, 101n, 0n]) {
+      assertSameResult(schema, input, "bigintMinMax");
+    }
+  });
+
+  it("bigint positive", () => {
+    const schema = z.bigint().positive();
+    for (const input of [1n, 100n, 0n, -1n]) {
+      assertSameResult(schema, input, "bigintPos");
+    }
+  });
+
+  it("bigint negative", () => {
+    const schema = z.bigint().negative();
+    for (const input of [-1n, -100n, 0n, 1n]) {
+      assertSameResult(schema, input, "bigintNeg");
+    }
+  });
+
+  it("bigint nonnegative", () => {
+    const schema = z.bigint().nonnegative();
+    for (const input of [0n, 1n, -1n]) {
+      assertSameResult(schema, input, "bigintNonneg");
+    }
+  });
+
+  it("bigint multipleOf", () => {
+    const schema = z.bigint().multipleOf(3n);
+    for (const input of [0n, 3n, 6n, 9n, 1n, 2n, 7n]) {
+      assertSameResult(schema, input, "bigintMul");
+    }
+  });
+});
+
+// ─── Tier 3: set Compatibility ───────────────────────────────────────────────
+
+describe("integration — set match Zod", () => {
+  it("plain set of strings", () => {
+    const schema = z.set(z.string());
+    for (const input of [
+      new Set(["a", "b"]),
+      new Set(),
+      new Set([1, 2]),
+      ["a", "b"],
+      null,
+      "not a set",
+    ]) {
+      assertSameResult(schema, input, "setStr");
+    }
+  });
+
+  it("set with min/max size", () => {
+    const schema = z.set(z.number()).min(1).max(3);
+    for (const input of [
+      new Set([1]),
+      new Set([1, 2, 3]),
+      new Set<number>(),
+      new Set([1, 2, 3, 4]),
+    ]) {
+      assertSameResult(schema, input, "setMinMax");
+    }
+  });
+
+  it("set of objects", () => {
+    const schema = z.set(z.object({ id: z.number() }));
+    for (const input of [new Set([{ id: 1 }]), new Set([{ id: "bad" }])]) {
+      assertSameResult(schema, input, "setObj");
+    }
+  });
+});
+
+// ─── Tier 3: map Compatibility ──────────────────────────────────────────────
+
+describe("integration — map match Zod", () => {
+  it("plain map string→number", () => {
+    const schema = z.map(z.string(), z.number());
+    for (const input of [
+      new Map([
+        ["a", 1],
+        ["b", 2],
+      ]),
+      new Map(),
+      new Map([["a", "bad"]]) as unknown,
+      { a: 1 },
+      null,
+      "not a map",
+    ]) {
+      assertSameResult(schema, input, "mapStrNum");
+    }
+  });
+
+  it("map with number keys", () => {
+    const schema = z.map(z.number(), z.string());
+    for (const input of [
+      new Map([
+        [1, "a"],
+        [2, "b"],
+      ]),
+      new Map([["bad", "a"]]) as unknown,
+    ]) {
+      assertSameResult(schema, input, "mapNumStr");
+    }
+  });
+
+  it("map with object values", () => {
+    const schema = z.map(z.string(), z.object({ id: z.number() }));
+    for (const input of [new Map([["x", { id: 1 }]]), new Map([["x", { id: "bad" }]]) as unknown]) {
+      assertSameResult(schema, input, "mapObj");
+    }
+  });
+});
+
+// ─── Tier 3: pipe (non-transform) Compatibility ─────────────────────────────
+
+describe("integration — pipe (non-transform) match Zod", () => {
+  it("string pipe to string with min length", () => {
+    const schema = z.string().pipe(z.string().min(3));
+    for (const input of ["hello", "ab", "", 42, null]) {
+      assertSameResult(schema, input, "pipeStrMin");
+    }
+  });
+
+  it("number pipe to number with range", () => {
+    const schema = z.number().pipe(z.number().min(0).max(100));
+    for (const input of [50, 0, 100, -1, 101, "not number"]) {
+      assertSameResult(schema, input, "pipeNumRange");
     }
   });
 });
