@@ -25,8 +25,8 @@ Measured with `vitest bench` on Node.js (Apple M-series):
 
 ### safeParse
 
-| Scenario | Zod v4 | zod-aot | Speedup |
-|---|---|---|---|
+| Scenario | Zod v4 | zod-aot | Speedup  |
+|---|---|---|----------|
 | simple string | 10.4M ops/s | 17.9M ops/s | **1.7x** |
 | string (min/max) | 5.3M ops/s | 17.6M ops/s | **3.3x** |
 | number (int+positive) | 5.2M ops/s | 16.4M ops/s | **3.1x** |
@@ -35,10 +35,10 @@ Measured with `vitest bench` on Node.js (Apple M-series):
 | record\<string, number\> (5 keys) | 1.9M ops/s | 8.3M ops/s | **4.3x** |
 | discriminatedUnion (3 variants) | 3.0M ops/s | 15.7M ops/s | **5.3x** |
 | medium object (7 props, valid) | 1.7M ops/s | 6.6M ops/s | **4.0x** |
-| medium object (7 props, invalid) | 65K ops/s | 1.5M ops/s | **23x** |
-| large object (10 nested items) | 111K ops/s | 4.8M ops/s | **43x** |
-| large object (100 nested items) | 11.9K ops/s | 713K ops/s | **60x** |
-| event log (combined) | 431K ops/s | 5.0M ops/s | **12x** |
+| medium object (7 props, invalid) | 65K ops/s | 1.5M ops/s | **23x**  |
+| large object (10 nested items) | 111K ops/s | 4.8M ops/s | **43x**  |
+| large object (100 nested items) | 11.9K ops/s | 713K ops/s | **64x**  |
+| event log (combined) | 431K ops/s | 5.0M ops/s | **12x**  |
 | partial fallback object (transform) | 1.2M ops/s | 3.0M ops/s | **2.5x** |
 | partial fallback array 10 (transform) | 447K ops/s | 2.1M ops/s | **4.6x** |
 | partial fallback array 50 (transform) | 100K ops/s | 467K ops/s | **4.7x** |
@@ -233,8 +233,7 @@ z.object({
 
 ```javascript
 /* zod-aot */
-var __re_email_0 = new RegExp("...");
-var __set_1 = new Set(["admin", "user"]);
+var __set_0 = new Set(["admin", "user"]);
 
 function safeParse_validate(input) {
   var __issues = [];
@@ -252,7 +251,7 @@ function safeParse_validate(input) {
     }
 
     // role: enum(["admin", "user"])
-    if (!__set_1.has(input["role"])) {
+    if (!__set_0.has(input["role"])) {
       __issues.push({ code: "invalid_enum_value", path: ["role"] });
     }
   }
@@ -371,45 +370,33 @@ The intermediate representation — a discriminated union of all supported schem
 
 ## Supported Types
 
-### Tier 1 — Primitives & Core
-
 | Type | Supported Checks |
 |---|---|
 | `string` | `min`, `max`, `length`, `email`, `url`, `uuid`, `regex` |
 | `number` | `int`, `positive`, `negative`, `nonnegative`, `nonpositive`, `min`, `max`, `multipleOf` |
+| `bigint` | `min`, `max`, `positive`, `negative`, `nonnegative`, `nonpositive`, `multipleOf` |
 | `boolean` | — |
 | `null` | — |
 | `undefined` | — |
-| `literal` | single value, multi-value |
-| `enum` | string enum values |
-| `object` | nested objects, mixed property types |
-| `array` | `min`, `max`, `length`, element validation |
-| `union` | sequential trial of all options |
-| `optional` | wraps any supported type |
-| `nullable` | wraps any supported type |
-
-### Tier 2 — Composites & Extended
-
-| Type | Supported Checks |
-|---|---|
 | `any` | — (always passes) |
 | `unknown` | — (always passes) |
-| `readonly` | validates inner type (TS-only concept) |
+| `literal` | single value, multi-value |
+| `enum` | string enum values |
 | `date` | `min`, `max` (timestamp comparison) |
+| `object` | nested objects, mixed property types |
+| `array` | `min`, `max`, `length`, element validation |
 | `tuple` | per-element types, optional rest element |
 | `record` | key and value type validation |
-| `default` | replaces `undefined` with default value, then validates inner |
-| `intersection` | validates both left and right schemas |
-| `discriminatedUnion` | O(1) `switch` dispatch on discriminator field |
-
-### Tier 3 — Collections & Pipeline
-
-| Type | Supported Checks |
-|---|---|
-| `bigint` | `min`, `max`, `positive`, `negative`, `nonnegative`, `nonpositive`, `multipleOf` |
 | `set` | `min`, `max` (size), element validation |
 | `map` | key and value type validation |
+| `union` | sequential trial of all options |
+| `discriminatedUnion` | O(1) `switch` dispatch on discriminator field |
+| `intersection` | validates both left and right schemas |
 | `pipe` (non-transform) | sequential in→out validation |
+| `optional` | wraps any supported type |
+| `nullable` | wraps any supported type |
+| `readonly` | validates inner type (TS-only concept) |
+| `default` | replaces `undefined` with default value, then validates inner |
 
 ### Automatic Fallback to Zod
 
@@ -426,40 +413,6 @@ These schema types contain JavaScript closures or runtime-dependent logic that c
 When a schema contains a mix of compilable and non-compilable parts (e.g., an object where some properties use `transform`/`refine`), zod-aot compiles the optimizable parts and delegates only the non-compilable properties to Zod at runtime.
 
 > **Note:** If a schema heavily relies on `transform`, `refine`, or other non-compilable features, the performance benefit from partial fallback will be minimal — most of the validation work is still delegated to Zod. Partial fallback is most effective when only a small portion of the schema uses these features.
-
-### Planned
-
-| Type | Status |
-|---|---|
-| `template_literal` | Pending Zod v4 API verification |
-
-## Roadmap
-
-### Phase 1: Core Compiler — Complete
-
-- [x] SchemaIR type definitions
-- [x] Extractor: `_zod.def` → SchemaIR (Tier 1 types)
-- [x] CodeGen: SchemaIR → optimized JS
-- [x] Runtime fallback (`createFallback`)
-- [x] Benchmarks (vitest bench + standalone scripts)
-- [x] E2E compatibility tests (Zod ↔ generated code)
-- [x] CI/CD (GitHub Actions + npm publish)
-
-### Phase 2: Type Expansion + CLI + Build Plugin
-
-- [x] Tier 2 type support (9 types: any, unknown, readonly, date, tuple, record, default, intersection, discriminatedUnion)
-- [x] `discriminatedUnion` → O(1) switch statement optimization
-- [x] CLI (`npx zod-aot generate` / `npx zod-aot check`)
-- [x] Partial fallback (objects with some transform properties)
-- [x] unplugin integration (Vite / webpack / esbuild / Rollup)
-- [x] Watch mode (`--watch` / `-w`)
-
-### Phase 3: Ecosystem
-
-- [x] Tier 3 type support (bigint, set, map, pipe non-transform)
-- [x] Lazy schema fallback
-- [ ] `template_literal` type support
-- [ ] Documentation site
 
 ## Development
 
@@ -490,20 +443,18 @@ zod-aot/
 ├── packages/zod-aot/        # Main npm package
 │   ├── src/
 │   │   ├── index.ts          # Public API exports
-│   │   ├── types.ts          # SchemaIR, CompiledSchema, CheckIR
-│   │   ├── runtime.ts        # createFallback (dev-time)
-│   │   ├── extractor/        # _zod.def → SchemaIR
-│   │   └── codegen/          # SchemaIR → optimized JS
+│   │   ├── discovery.ts      # Schema discovery (shared by CLI & unplugin)
+│   │   ├── loader.ts         # Runtime-aware file loader
+│   │   ├── core/             # Pure logic (no CLI/unplugin deps)
+│   │   │   ├── types.ts      # SchemaIR, CompiledSchema, CheckIR
+│   │   │   ├── compile.ts    # compile() marker + isCompiledSchema()
+│   │   │   ├── runtime.ts    # createFallback (dev-time)
+│   │   │   ├── extractor.ts  # _zod.def → SchemaIR
+│   │   │   └── codegen/      # SchemaIR → optimized JS
+│   │   ├── cli/              # CLI commands (generate, check, watch)
+│   │   └── unplugin/         # Build plugin (Vite/webpack/esbuild/Rollup)
 │   └── tests/
-│       ├── integration.test.ts   # E2E: Zod ↔ generated code
-│       ├── extractor/            # Extractor unit tests
-│       ├── codegen/              # CodeGen unit tests
-│       └── runtime.test.ts       # Fallback tests
 ├── benchmarks/               # vitest bench + standalone scripts
-│   ├── standalone/
-│   │   ├── zod-only.ts       # Standalone Zod benchmark
-│   │   └── zod-aot.ts        # Standalone zod-aot benchmark
-│   └── ...
 └── .github/workflows/        # CI + release automation
 ```
 
