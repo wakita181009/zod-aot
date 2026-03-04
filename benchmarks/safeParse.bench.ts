@@ -58,7 +58,7 @@ const aotSet = compileForBench(SetSchema, "set");
 const aotMap = compileForBench(MapSchema, "map");
 const aotPipe = compileForBench(PipeSchema, "pipe");
 
-// ─── Simple Types ─────────────────────────────────────────────────────────────
+// ─── Primitives ──────────────────────────────────────────────────────────────
 
 describe("safeParse: simple string", () => {
   bench("zod", () => {
@@ -96,7 +96,16 @@ describe("safeParse: enum", () => {
   });
 });
 
-// ─── Medium: User Object ──────────────────────────────────────────────────────
+describe("safeParse: bigint with checks (min/max)", () => {
+  bench("zod", () => {
+    BigIntSchema.safeParse(validBigInt);
+  });
+  bench("zod-aot", () => {
+    aotBigInt.safeParse(validBigInt);
+  });
+});
+
+// ─── Objects ─────────────────────────────────────────────────────────────────
 
 describe("safeParse: medium object — valid user", () => {
   bench("zod", () => {
@@ -116,8 +125,6 @@ describe("safeParse: medium object — invalid user", () => {
   });
 });
 
-// ─── Large: API Response ──────────────────────────────────────────────────────
-
 describe("safeParse: large object — 10 items", () => {
   bench("zod", () => {
     ApiResponseSchema.safeParse(validApiResponse10);
@@ -136,7 +143,7 @@ describe("safeParse: large object — 100 items", () => {
   });
 });
 
-// ─── Composite Types ─────────────────────────────────────────────────────────
+// ─── Composites ──────────────────────────────────────────────────────────────
 
 describe("safeParse: tuple [string, int, boolean]", () => {
   bench("zod", () => {
@@ -162,26 +169,6 @@ describe("safeParse: discriminatedUnion (3 options)", () => {
   });
   bench("zod-aot", () => {
     aotDiscUnion.safeParse(validClickEvent);
-  });
-});
-
-describe("safeParse: event log (combined)", () => {
-  bench("zod", () => {
-    EventLogSchema.safeParse(validEventLog);
-  });
-  bench("zod-aot", () => {
-    aotEventLog.safeParse(validEventLog);
-  });
-});
-
-// ─── Tier 3 Types ───────────────────────────────────────────────────────────
-
-describe("safeParse: bigint with checks (min/max)", () => {
-  bench("zod", () => {
-    BigIntSchema.safeParse(validBigInt);
-  });
-  bench("zod-aot", () => {
-    aotBigInt.safeParse(validBigInt);
   });
 });
 
@@ -227,6 +214,17 @@ describe("safeParse: pipe (string → string with max)", () => {
   });
   bench("zod-aot", () => {
     aotPipe.safeParse(validPipe);
+  });
+});
+
+// ─── Combined ────────────────────────────────────────────────────────────────
+
+describe("safeParse: event log (combined)", () => {
+  bench("zod", () => {
+    EventLogSchema.safeParse(validEventLog);
+  });
+  bench("zod-aot", () => {
+    aotEventLog.safeParse(validEventLog);
   });
 });
 

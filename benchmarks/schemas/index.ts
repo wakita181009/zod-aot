@@ -3,12 +3,20 @@ export { EventLogSchema, validEventLog } from "./combined.js";
 export type { UIEvent } from "./composites.js";
 export {
   DiscriminatedUnionSchema,
+  MapSchema,
+  PipeSchema,
   RecordSchema,
+  SetSchema,
   TupleSchema,
   validClickEvent,
   validKeypressEvent,
+  validMap5,
+  validMap20,
+  validPipe,
   validRecord,
   validScrollEvent,
+  validSet5,
+  validSet20,
   validTuple,
 } from "./composites.js";
 export type { PartialFallbackObject } from "./fallback.js";
@@ -29,12 +37,14 @@ export {
   validUser,
 } from "./objects.js";
 export {
+  BigIntSchema,
   NumberWithChecks,
   SimpleBoolean,
   SimpleEnum,
   SimpleNumber,
   SimpleString,
   StringWithChecks,
+  validBigInt,
   validNumberWithChecks,
   validSimpleBoolean,
   validSimpleEnum,
@@ -42,15 +52,3 @@ export {
   validSimpleString,
   validStringWithChecks,
 } from "./primitives.js";
-export {
-  BigIntSchema,
-  MapSchema,
-  PipeSchema,
-  SetSchema,
-  validBigInt,
-  validMap5,
-  validMap20,
-  validPipe,
-  validSet5,
-  validSet20,
-} from "./tier3.js";

@@ -54,7 +54,7 @@ const aotSet = compileForBench(SetSchema, "set");
 const aotMap = compileForBench(MapSchema, "map");
 const aotPipe = compileForBench(PipeSchema, "pipe");
 
-// ─── Simple Types ─────────────────────────────────────────────────────────────
+// ─── Primitives ──────────────────────────────────────────────────────────────
 
 describe("is(): simple string", () => {
   bench("zod (safeParse().success)", () => {
@@ -92,7 +92,16 @@ describe("is(): enum", () => {
   });
 });
 
-// ─── Medium: User Object ──────────────────────────────────────────────────────
+describe("is(): bigint with checks", () => {
+  bench("zod (safeParse().success)", () => {
+    BigIntSchema.safeParse(validBigInt).success;
+  });
+  bench("zod-aot", () => {
+    aotBigInt.is(validBigInt);
+  });
+});
+
+// ─── Objects ─────────────────────────────────────────────────────────────────
 
 describe("is(): medium object — valid user", () => {
   bench("zod (safeParse().success)", () => {
@@ -102,8 +111,6 @@ describe("is(): medium object — valid user", () => {
     aotUser.is(validUser);
   });
 });
-
-// ─── Large: API Response ──────────────────────────────────────────────────────
 
 describe("is(): large object — 10 items", () => {
   bench("zod (safeParse().success)", () => {
@@ -123,7 +130,7 @@ describe("is(): large object — 100 items", () => {
   });
 });
 
-// ─── Composite Types ─────────────────────────────────────────────────────────
+// ─── Composites ──────────────────────────────────────────────────────────────
 
 describe("is(): tuple [string, int, boolean]", () => {
   bench("zod (safeParse().success)", () => {
@@ -152,26 +159,6 @@ describe("is(): discriminatedUnion (3 options)", () => {
   });
 });
 
-describe("is(): event log (combined)", () => {
-  bench("zod (safeParse().success)", () => {
-    EventLogSchema.safeParse(validEventLog).success;
-  });
-  bench("zod-aot", () => {
-    aotEventLog.is(validEventLog);
-  });
-});
-
-// ─── Tier 3 Types ───────────────────────────────────────────────────────────
-
-describe("is(): bigint with checks", () => {
-  bench("zod (safeParse().success)", () => {
-    BigIntSchema.safeParse(validBigInt).success;
-  });
-  bench("zod-aot", () => {
-    aotBigInt.is(validBigInt);
-  });
-});
-
 describe("is(): set<string> (5 items)", () => {
   bench("zod (safeParse().success)", () => {
     SetSchema.safeParse(validSet5).success;
@@ -196,6 +183,17 @@ describe("is(): pipe (string → string with max)", () => {
   });
   bench("zod-aot", () => {
     aotPipe.is(validPipe);
+  });
+});
+
+// ─── Combined ────────────────────────────────────────────────────────────────
+
+describe("is(): event log (combined)", () => {
+  bench("zod (safeParse().success)", () => {
+    EventLogSchema.safeParse(validEventLog).success;
+  });
+  bench("zod-aot", () => {
+    aotEventLog.is(validEventLog);
   });
 });
 
