@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import { getErrorMessage } from "../errors.js";
 import { logger } from "../logger.js";
 import {
   type GenerateFileResult,
@@ -90,7 +91,7 @@ export async function runWatch(options: WatchOptions): Promise<void> {
         totalFiles++;
       }
     } catch (err) {
-      logger.error(err instanceof Error ? err.message : String(err));
+      logger.error(getErrorMessage(err));
     }
   }
 
@@ -119,7 +120,7 @@ export async function runWatch(options: WatchOptions): Promise<void> {
           logResult(result);
         }
       } catch (err) {
-        logger.error(err instanceof Error ? err.message : String(err));
+        logger.error(getErrorMessage(err));
       }
     }
   }, 150);
@@ -138,7 +139,7 @@ export async function runWatch(options: WatchOptions): Promise<void> {
       });
       watchers.push(watcher);
     } catch (err) {
-      logger.error(`Failed to watch ${dir}: ${err instanceof Error ? err.message : String(err)}`);
+      logger.error(`Failed to watch ${dir}: ${getErrorMessage(err)}`);
     }
   }
 

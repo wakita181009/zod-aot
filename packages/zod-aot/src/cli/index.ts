@@ -3,6 +3,7 @@
 import { createRequire } from "node:module";
 import process from "node:process";
 import type { GenerateOptions as BaseGenerateOptions } from "./commands/generate.js";
+import { getErrorMessage } from "./errors.js";
 import { logger } from "./logger.js";
 
 const require = createRequire(import.meta.url);
@@ -147,6 +148,6 @@ async function main(): Promise<void> {
 }
 
 void main().catch((err: unknown) => {
-  logger.error(err instanceof Error ? err.message : String(err));
+  logger.error(getErrorMessage(err));
   process.exit(1);
 });

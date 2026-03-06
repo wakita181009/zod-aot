@@ -2,54 +2,14 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { extractSchema } from "#src/core/extractor.js";
-import type { SchemaIR } from "#src/core/types.js";
+import { hasFallback } from "#src/core/fallback.js";
 import type { DiscoveredSchema } from "#src/discovery.js";
 import { discoverSchemas } from "#src/discovery.js";
+import { getErrorMessage } from "../errors.js";
 import { logger } from "../logger.js";
 
 interface CheckOptions {
   inputs: string[];
-}
-
-function hasFallback(ir: SchemaIR): string | null {
-  if (ir.type === "fallback") {
-    return ir.reason;
-  }
-  if (ir.type === "object") {
-    for (const [key, prop] of Object.entries(ir.properties)) {
-      const reason = hasFallback(prop);
-      if (reason) return `${reason} at .${key}`;
-    }
-  }
-  if (ir.type === "array") {
-    return hasFallback(ir.element);
-  }
-  if (ir.type === "optional" || ir.type === "nullable" || ir.type === "readonly") {
-    return hasFallback(ir.inner);
-  }
-  if (ir.type === "default") {
-    return hasFallback(ir.inner);
-  }
-  if (ir.type === "union" || ir.type === "discriminatedUnion") {
-    for (const opt of ir.options) {
-      const reason = hasFallback(opt);
-      if (reason) return reason;
-    }
-  }
-  if (ir.type === "tuple") {
-    for (const item of ir.items) {
-      const reason = hasFallback(item);
-      if (reason) return reason;
-    }
-    if (ir.rest) return hasFallback(ir.rest);
-  }
-  if (ir.type === "record") {
-    return hasFallback(ir.keyType) ?? hasFallback(ir.valueType);
-  }
-  if (ir.type === "intersection") {
-    return hasFallback(ir.left) ?? hasFallback(ir.right);
-  }
-  return null;
 }
 
 export async function runCheck(options: CheckOptions): Promise<void> {
@@ -81,9 +41,7 @@ export async function runCheck(options: CheckOptions): Promise<void> {
     try {
       schemas = await discoverSchemas(filePath);
     } catch (err) {
-      logger.error(
-        `Failed to load ${relPath}: ${err instanceof Error ? err.message : String(err)}`,
-      );
+      logger.error(`Failed to load ${relPath}: ${getErrorMessage(err)}`);
       process.exit(1);
     }
 

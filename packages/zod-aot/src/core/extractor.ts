@@ -145,33 +145,16 @@ export function extractSchema(
   const def = schema._zod.def;
   const p = currentPath ?? "";
 
-  // Pipe: transform pipes fall back, non-transform pipes are compilable
-  if (def.type === "pipe") {
-    const outDef = def.out?._zod?.def;
-    if (outDef && outDef.type === "transform") {
-      return makeFallback("transform", zodSchema, fallbacks, p);
-    }
-    // Non-transform pipe: compile both in and out schemas
-    const inIR = extractSchema(def.in, fallbacks, `${p}._zod.def.in`);
-    const outIR = extractSchema(def.out, fallbacks, `${p}._zod.def.out`);
-    return { type: "pipe", in: inIR, out: outIR };
-  }
-
-  // String format schemas (z.email(), z.url(), z.uuid())
-  if (def.type === "string" && def.check === "string_format") {
-    const pattern = def.pattern instanceof RegExp ? def.pattern.source : def.pattern;
-    const checks: CheckIR[] = [
-      {
-        kind: "string_format",
-        format: def.format,
-        ...(pattern ? { pattern } : {}),
-      },
-    ];
-    return { type: "string", checks };
-  }
-
   switch (def.type) {
     case "string": {
+      // String format schemas (z.email(), z.url(), z.uuid())
+      if (def.check === "string_format") {
+        const pattern = def.pattern instanceof RegExp ? def.pattern.source : def.pattern;
+        return {
+          type: "string",
+          checks: [{ kind: "string_format", format: def.format, ...(pattern ? { pattern } : {}) }],
+        };
+      }
       if (!def.checks || def.checks.length === 0) {
         return { type: "string", checks: [] };
       }
@@ -398,6 +381,16 @@ export function extractSchema(
         }
       }
       return { type: "bigint", checks: bigintChecks };
+    }
+
+    case "pipe": {
+      const outDef = def.out?._zod?.def;
+      if (outDef && outDef.type === "transform") {
+        return makeFallback("transform", zodSchema, fallbacks, p);
+      }
+      const inIR = extractSchema(def.in, fallbacks, `${p}._zod.def.in`);
+      const outIR = extractSchema(def.out, fallbacks, `${p}._zod.def.out`);
+      return { type: "pipe", in: inIR, out: outIR };
     }
 
     case "lazy":

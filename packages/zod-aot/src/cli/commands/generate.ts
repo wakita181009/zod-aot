@@ -7,6 +7,7 @@ import { extractSchema } from "#src/core/extractor.js";
 import type { DiscoveredSchema } from "#src/discovery.js";
 import { discoverSchemas } from "#src/discovery.js";
 import { generateCompiledFileContent, resolveOutputPath, writeCompiledFile } from "../emitter.js";
+import { getErrorMessage } from "../errors.js";
 import { logger } from "../logger.js";
 
 export interface GenerateOptions {
@@ -99,9 +100,7 @@ export async function generateFile(
   try {
     schemas = await discoverSchemas(filePath, options?.cacheBust ? { cacheBust: true } : undefined);
   } catch (err) {
-    throw new Error(
-      `Failed to load ${relPath}: ${err instanceof Error ? err.message : String(err)}`,
-    );
+    throw new Error(`Failed to load ${relPath}: ${getErrorMessage(err)}`);
   }
 
   if (schemas.length === 0) {
@@ -147,7 +146,7 @@ export async function runGenerate(options: GenerateOptions): Promise<void> {
     try {
       result = await generateFile(filePath, options.output);
     } catch (err) {
-      logger.error(err instanceof Error ? err.message : String(err));
+      logger.error(getErrorMessage(err));
       process.exit(1);
     }
 

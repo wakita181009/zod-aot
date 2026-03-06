@@ -1,13 +1,5 @@
 import type { SchemaIR } from "../../types.js";
-import type { CodeGenContext } from "../context.js";
-
-type GenerateValidationFn = (
-  ir: SchemaIR,
-  inputExpr: string,
-  pathExpr: string,
-  issuesVar: string,
-  ctx: CodeGenContext,
-) => string;
+import type { CodeGenContext, GenerateValidationFn } from "../context.js";
 
 export function generatePipeValidation(
   ir: SchemaIR & { type: "pipe" },
