@@ -1,6 +1,6 @@
 import type { SchemaIR } from "../../types.js";
 import type { CodeGenContext, GenerateValidationFn } from "../context.js";
-import { escapeString } from "../context.js";
+import { escapeString, generateObjectCheck } from "../context.js";
 
 export function generateDiscriminatedUnionValidation(
   ir: SchemaIR & { type: "discriminatedUnion" },
@@ -12,7 +12,7 @@ export function generateDiscriminatedUnionValidation(
 ): string {
   const discKey = escapeString(ir.discriminator);
 
-  let code = `if(typeof ${inputExpr}!=="object"||${inputExpr}===null||Array.isArray(${inputExpr})){${issuesVar}.push({code:"invalid_type",expected:"object",received:Array.isArray(${inputExpr})?"array":${inputExpr}===null?"null":typeof ${inputExpr},path:${pathExpr},message:"Expected object"});}else{`;
+  let code = `${generateObjectCheck(inputExpr, pathExpr, issuesVar)}else{`;
 
   const objVar = `__du_${ctx.counter++}`;
   code += `var ${objVar}=${inputExpr};`;

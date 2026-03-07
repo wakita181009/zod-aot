@@ -1,5 +1,6 @@
 import type { SchemaIR } from "../../types.js";
 import type { CodeGenContext, GenerateValidationFn } from "../context.js";
+import { generateObjectCheck } from "../context.js";
 
 export function generateRecordValidation(
   ir: SchemaIR & { type: "record" },
@@ -9,7 +10,7 @@ export function generateRecordValidation(
   ctx: CodeGenContext,
   generateFn: GenerateValidationFn,
 ): string {
-  let code = `if(typeof ${inputExpr}!=="object"||${inputExpr}===null||Array.isArray(${inputExpr})){${issuesVar}.push({code:"invalid_type",expected:"object",received:Array.isArray(${inputExpr})?"array":${inputExpr}===null?"null":typeof ${inputExpr},path:${pathExpr},message:"Expected object"});}else{`;
+  let code = `${generateObjectCheck(inputExpr, pathExpr, issuesVar)}else{`;
 
   const keysVar = `__rk_${ctx.counter++}`;
   const idxVar = `__ri_${ctx.counter++}`;
