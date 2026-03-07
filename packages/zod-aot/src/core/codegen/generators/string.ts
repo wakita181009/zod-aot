@@ -1,6 +1,6 @@
 import type { SchemaIR } from "../../types.js";
 import type { CodeGenContext } from "../context.js";
-import { EMAIL_REGEX_SOURCE, escapeString } from "../context.js";
+import { EMAIL_REGEX_SOURCE, escapeString, generateTypeofCheck } from "../context.js";
 
 export function generateStringValidation(
   ir: SchemaIR & { type: "string" },
@@ -9,7 +9,7 @@ export function generateStringValidation(
   issuesVar: string,
   ctx: CodeGenContext,
 ): string {
-  let code = `if(typeof ${inputExpr}!=="string"){${issuesVar}.push({code:"invalid_type",expected:"string",received:typeof ${inputExpr},path:${pathExpr},message:"Expected string"});}`;
+  let code = generateTypeofCheck(inputExpr, "string", pathExpr, issuesVar);
 
   if (ir.checks.length > 0) {
     code += `else{`;

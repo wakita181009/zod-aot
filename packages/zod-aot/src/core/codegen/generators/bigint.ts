@@ -1,5 +1,6 @@
 import type { SchemaIR } from "../../types.js";
 import type { CodeGenContext } from "../context.js";
+import { generateTypeofCheck } from "../context.js";
 
 export function generateBigIntValidation(
   ir: SchemaIR & { type: "bigint" },
@@ -8,7 +9,7 @@ export function generateBigIntValidation(
   issuesVar: string,
   _ctx: CodeGenContext,
 ): string {
-  let code = `if(typeof ${inputExpr}!=="bigint"){${issuesVar}.push({code:"invalid_type",expected:"bigint",received:typeof ${inputExpr},path:${pathExpr},message:"Expected bigint"});}`;
+  let code = generateTypeofCheck(inputExpr, "bigint", pathExpr, issuesVar);
 
   if (ir.checks.length > 0) {
     code += `else{`;
