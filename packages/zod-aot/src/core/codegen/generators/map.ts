@@ -7,7 +7,7 @@ export function generateMapValidation(
   pathExpr: string,
   issuesVar: string,
   ctx: CodeGenContext,
-  generateValidation: GenerateValidationFn,
+  generateFn: GenerateValidationFn,
 ): string {
   let code = `if(!(${inputExpr} instanceof Map)){${issuesVar}.push({code:"invalid_type",expected:"map",received:typeof ${inputExpr},path:${pathExpr},message:"Expected Map"});}`;
 
@@ -20,7 +20,7 @@ export function generateMapValidation(
   code += `for(var ${entryVar} of ${inputExpr}){`;
 
   // Validate key
-  code += generateValidation(
+  code += generateFn(
     ir.keyType,
     `${entryVar}[0]`,
     `${pathExpr}.concat(${idxVar},"key")`,
@@ -29,7 +29,7 @@ export function generateMapValidation(
   );
 
   // Validate value
-  code += generateValidation(
+  code += generateFn(
     ir.valueType,
     `${entryVar}[1]`,
     `${pathExpr}.concat(${idxVar},"value")`,

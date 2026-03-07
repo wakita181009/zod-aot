@@ -7,7 +7,7 @@ export function generateSetValidation(
   pathExpr: string,
   issuesVar: string,
   ctx: CodeGenContext,
-  generateValidation: GenerateValidationFn,
+  generateFn: GenerateValidationFn,
 ): string {
   let code = `if(!(${inputExpr} instanceof Set)){${issuesVar}.push({code:"invalid_type",expected:"set",received:typeof ${inputExpr},path:${pathExpr},message:"Expected Set"});}`;
 
@@ -33,13 +33,7 @@ export function generateSetValidation(
   const idxVar = `__set_i${idx}`;
   code += `var ${idxVar}=0;`;
   code += `for(var ${iterVar} of ${inputExpr}){`;
-  code += generateValidation(
-    ir.valueType,
-    iterVar,
-    `${pathExpr}.concat(${idxVar})`,
-    issuesVar,
-    ctx,
-  );
+  code += generateFn(ir.valueType, iterVar, `${pathExpr}.concat(${idxVar})`, issuesVar, ctx);
   code += `${idxVar}++;`;
   code += `}`;
 

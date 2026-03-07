@@ -7,10 +7,10 @@ export function generatePipeValidation(
   pathExpr: string,
   issuesVar: string,
   ctx: CodeGenContext,
-  generateValidation: GenerateValidationFn,
+  generateFn: GenerateValidationFn,
 ): string {
   // Validate input schema first, then output schema sequentially
-  let code = generateValidation(ir.in, inputExpr, pathExpr, issuesVar, ctx);
-  code += generateValidation(ir.out, inputExpr, pathExpr, issuesVar, ctx);
+  let code = generateFn(ir.in, inputExpr, pathExpr, issuesVar, ctx);
+  code += generateFn(ir.out, inputExpr, pathExpr, issuesVar, ctx);
   return code;
 }
