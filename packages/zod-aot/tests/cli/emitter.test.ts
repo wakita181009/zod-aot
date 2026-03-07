@@ -25,7 +25,7 @@ describe("generateCompiledFileContent()", () => {
 
   it("includes preamble declarations", () => {
     const result: CodeGenResult = {
-      code: '/* zod-aot */\nconst __set_role_0 = new Set(["admin","user"]);',
+      code: '/* zod-aot */\nconst __enumSet_role_0 = new Set(["admin","user"]);',
       functionName: "function safeParse_role(input){\nreturn{success:true,data:input};\n}",
       fallbackCount: 0,
     };
@@ -36,7 +36,7 @@ describe("generateCompiledFileContent()", () => {
     );
 
     expect(content).toContain("/* zod-aot:preamble */");
-    expect(content).toContain('const __set_role_0 = new Set(["admin","user"]);');
+    expect(content).toContain('const __enumSet_role_0 = new Set(["admin","user"]);');
   });
 
   it("generates multiple schemas in one file", () => {

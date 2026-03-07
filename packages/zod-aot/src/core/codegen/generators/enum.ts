@@ -8,7 +8,7 @@ export function generateEnumValidation(
   issuesVar: string,
   ctx: CodeGenContext,
 ): string {
-  const setVar = `__set_${ctx.counter++}`;
+  const setVar = `__enumSet_${ctx.counter++}`;
   ctx.preamble.push(`var ${setVar}=new Set(${JSON.stringify(ir.values)});`);
   return `if(!${setVar}.has(${inputExpr})){${issuesVar}.push({code:"invalid_enum_value",options:${JSON.stringify(ir.values)},received:${inputExpr},path:${pathExpr},message:"Invalid enum value"});}\n`;
 }
