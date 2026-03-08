@@ -27,21 +27,21 @@ Measured with `vitest bench` on Node.js (Apple M-series):
 
 | Scenario | Zod v4 | zod-aot | Speedup  |
 |---|---|---|----------|
-| simple string | 10.4M ops/s | 17.9M ops/s | **1.7x** |
-| string (min/max) | 5.3M ops/s | 17.6M ops/s | **3.3x** |
-| number (int+positive) | 5.2M ops/s | 16.4M ops/s | **3.1x** |
-| enum | 8.7M ops/s | 15.5M ops/s | **1.8x** |
-| tuple [string, int, boolean] | 4.3M ops/s | 17.1M ops/s | **3.9x** |
-| record\<string, number\> (5 keys) | 1.9M ops/s | 8.3M ops/s | **4.3x** |
-| discriminatedUnion (3 variants) | 3.0M ops/s | 15.7M ops/s | **5.3x** |
-| medium object (7 props, valid) | 1.7M ops/s | 6.6M ops/s | **4.0x** |
-| medium object (7 props, invalid) | 65K ops/s | 1.5M ops/s | **23x**  |
-| large object (10 nested items) | 111K ops/s | 4.8M ops/s | **43x**  |
-| large object (100 nested items) | 11.9K ops/s | 713K ops/s | **64x**  |
-| event log (combined) | 431K ops/s | 5.0M ops/s | **12x**  |
-| partial fallback object (transform) | 1.2M ops/s | 3.0M ops/s | **2.5x** |
-| partial fallback array 10 (transform) | 447K ops/s | 2.1M ops/s | **4.6x** |
-| partial fallback array 50 (transform) | 100K ops/s | 467K ops/s | **4.7x** |
+| simple string | 11.1M ops/s | 19.6M ops/s | **1.8x** |
+| string (min/max) | 5.5M ops/s | 20.0M ops/s | **3.6x** |
+| number (int+positive) | 5.5M ops/s | 18.7M ops/s | **3.4x** |
+| enum | 9.1M ops/s | 17.2M ops/s | **1.9x** |
+| tuple [string, int, boolean] | 4.3M ops/s | 18.1M ops/s | **4.2x** |
+| record\<string, number\> (5 keys) | 1.9M ops/s | 7.1M ops/s | **3.7x** |
+| discriminatedUnion (3 variants) | 3.0M ops/s | 17.3M ops/s | **5.8x** |
+| medium object (7 props, valid) | 1.6M ops/s | 6.6M ops/s | **4.1x** |
+| medium object (7 props, invalid) | 63K ops/s | 474K ops/s | **7.5x** |
+| large object (10 nested items) | 107K ops/s | 5.0M ops/s | **46x**  |
+| large object (100 nested items) | 11.6K ops/s | 740K ops/s | **64x**  |
+| event log (combined) | 442K ops/s | 5.5M ops/s | **12x**  |
+| partial fallback object (transform) | 1.7M ops/s | 3.9M ops/s | **2.3x** |
+| partial fallback array 10 (transform) | 139K ops/s | 577K ops/s | **4.1x** |
+| partial fallback array 50 (transform) | 28K ops/s | 119K ops/s | **4.2x** |
 
 Performance gains scale with schema complexity. The `discriminatedUnion` optimization uses an O(1) `switch` dispatch instead of Zod's sequential trial approach. Partial fallback schemas (containing `transform`/`refine`) still show 2.5-4.7x speedups by compiling the optimizable portions.
 
@@ -152,43 +152,6 @@ The plugin:
 - Adds `/* @__PURE__ */` annotations for tree-shaking
 - Supports HMR in development
 
-## Low-Level API
-
-For custom build scripts or advanced use cases, you can use the extractor and code generator directly:
-
-```typescript
-import { z } from "zod";
-import { extractSchema, generateValidator } from "zod-aot";
-
-const UserSchema = z.object({
-  name: z.string().min(3),
-  age: z.number().int().positive(),
-});
-
-// Extract schema into intermediate representation (IR)
-const ir = extractSchema(UserSchema);
-
-// Generate optimized JavaScript validation code
-const { code, functionName } = generateValidator(ir, "validateUser");
-
-// Execute the generated code
-const safeParse = new Function(`${code}\nreturn ${functionName};`)();
-const result = safeParse({ name: "Alice", age: 30 });
-```
-
-### `createFallback(zodSchema)`
-
-Wraps a Zod schema to provide the `CompiledSchema` interface, delegating to Zod at runtime. Useful for development or unsupported schema types:
-
-```typescript
-import { createFallback } from "zod-aot";
-
-const validator = createFallback(UserSchema);
-validator.parse(data);      // throws on failure
-validator.safeParse(data);  // { success, data/error }
-validator.is(data);         // type guard (boolean)
-```
-
 ## How It Works
 
 ```
@@ -270,103 +233,32 @@ Key optimizations in the generated code:
 
 ## API Reference
 
-### `extractSchema(zodSchema): SchemaIR`
+### `compile<T>(zodSchema): CompiledSchema<T>`
 
-Extracts a JSON-serializable intermediate representation (IR) from a Zod schema by traversing its internal `_zod.def` structure.
+Wraps a Zod schema for AOT compilation. In development, it falls back to Zod's built-in validation. After build (via CLI or unplugin), it uses the generated optimized validator.
 
 ```typescript
 import { z } from "zod";
-import { extractSchema } from "zod-aot";
+import { compile } from "zod-aot";
 
-const ir = extractSchema(z.string().min(3));
-// { type: "string", checks: [{ kind: "min_length", minimum: 3 }] }
-```
-
-Schemas containing `transform`, `refine`, `superRefine`, or `custom` produce a `FallbackIR`:
-
-```typescript
-const ir = extractSchema(z.string().transform((s) => parseInt(s)));
-// { type: "fallback", reason: "transform" }
-```
-
-### `generateValidator(ir, name): CodeGenResult`
-
-Generates optimized JavaScript validation code from a SchemaIR.
-
-```typescript
-import { generateValidator } from "zod-aot";
-
-const { code, functionName } = generateValidator(ir, "myValidator");
-// code: preamble (var declarations for Sets, RegExps, etc.)
-// functionName: full function expression string
-```
-
-To execute the generated code:
-
-```typescript
-const safeParse = new Function(`${code}\nreturn ${functionName};`)();
-const result = safeParse({ name: "Alice", age: 30 });
-```
-
-### `createFallback<T>(zodSchema): CompiledSchema<T>`
-
-Wraps a Zod schema to provide the `CompiledSchema` interface, delegating to Zod at runtime.
-
-```typescript
-import { createFallback } from "zod-aot";
-
-const validator = createFallback<User>(UserSchema);
-validator.parse(data);      // T — throws on failure
-validator.safeParse(data);  // SafeParseResult<T>
-validator.is(data);         // input is T (type guard)
-validator.schema;           // reference to original Zod schema
+const validateUser = compile(z.object({
+  name: z.string().min(3),
+  age: z.number().int().positive(),
+}));
 ```
 
 ### `CompiledSchema<T>`
 
-The shared interface for both generated validators and runtime fallbacks:
+The interface returned by `compile()`:
 
 ```typescript
 interface CompiledSchema<T> {
-  parse(input: unknown): T;
-  safeParse(input: unknown): SafeParseResult<T>;
-  is(input: unknown): input is T;
-  schema: unknown;
+  parse(input: unknown): T;           // throws on failure
+  safeParse(input: unknown): SafeParseResult<T>;  // { success, data/error }
+  is(input: unknown): input is T;     // type guard (boolean)
+  schema: unknown;                    // reference to original Zod schema
 }
 ```
-
-### `SchemaIR`
-
-The intermediate representation — a discriminated union of all supported schema types:
-
-| IR Type | Zod Equivalent |
-|---|---|
-| `StringIR` | `z.string()`, `z.email()`, `z.url()`, `z.uuid()` |
-| `NumberIR` | `z.number()`, `z.int()` |
-| `BooleanIR` | `z.boolean()` |
-| `NullIR` | `z.null()` |
-| `UndefinedIR` | `z.undefined()` |
-| `LiteralIR` | `z.literal(...)` |
-| `EnumIR` | `z.enum([...])` |
-| `ObjectIR` | `z.object({...})` |
-| `ArrayIR` | `z.array(...)` |
-| `UnionIR` | `z.union([...])` |
-| `OptionalIR` | `.optional()` |
-| `NullableIR` | `.nullable()` |
-| `AnyIR` | `z.any()` |
-| `UnknownIR` | `z.unknown()` |
-| `ReadonlyIR` | `.readonly()` |
-| `DateIR` | `z.date()` |
-| `TupleIR` | `z.tuple([...])` |
-| `RecordIR` | `z.record(...)` |
-| `DefaultIR` | `.default(...)` |
-| `IntersectionIR` | `z.intersection(...)` / `.and(...)` |
-| `DiscriminatedUnionIR` | `z.discriminatedUnion(...)` |
-| `BigIntIR` | `z.bigint()` |
-| `SetIR` | `z.set(...)` |
-| `MapIR` | `z.map(...)` |
-| `PipeIR` | `.pipe(...)` (non-transform) |
-| `FallbackIR` | `transform`, `refine`, `lazy`, etc. |
 
 ## Supported Types
 
@@ -442,7 +334,8 @@ pnpm -r build
 zod-aot/
 ├── packages/zod-aot/        # Main npm package
 │   ├── src/
-│   │   ├── index.ts          # Public API exports
+│   │   ├── index.ts          # Public API exports (zod-aot)
+│   │   ├── internals.ts      # Internal API exports (zod-aot/internals)
 │   │   ├── discovery.ts      # Schema discovery (shared by CLI & unplugin)
 │   │   ├── loader.ts         # Runtime-aware file loader
 │   │   ├── core/             # Pure logic (no CLI/unplugin deps)

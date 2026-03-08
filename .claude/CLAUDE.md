@@ -65,7 +65,7 @@ Note: CLI emitter (`emitter.ts`) does not include `schema` property in the outpu
 - `_zod.bag` contains aggregated metadata from checks (minimum, maximum, patterns, etc.)
 - Reliable detection of transform/refine
 
-## Public API
+## Public API (`zod-aot`)
 
 ```typescript
 import { z } from "zod";
@@ -85,6 +85,18 @@ const user = validateUser.parse(data);          // throws ZodError on failure
 const result = validateUser.safeParse(data);    // { success, data/error }
 const isUser = validateUser.is(data);           // type guard (boolean)
 ```
+
+Exports: `compile`, `isCompiledSchema`, `unplugin`, types (`CompiledSchema`, `SafeParseResult`, `SafeParseError`, `SafeParseSuccess`, `ZodErrorLike`, `ZodIssueLike`, `ZodAotPluginOptions`)
+
+### Internal API (`zod-aot/internals`)
+
+Low-level extraction and codegen functions. Not intended for end users — used by benchmarks and custom build scripts.
+
+```typescript
+import { extractSchema, generateValidator, createFallback } from "zod-aot/internals";
+```
+
+Exports: `extractSchema`, `generateValidator`, `createFallback`, types (`SchemaIR`, `CheckIR`, `DateCheckIR`, `CodeGenResult`, `FallbackEntry`)
 
 ### CLI
 
@@ -139,7 +151,8 @@ zod-aot/
 ├── packages/
 │   └── zod-aot/                  # Main npm package (published as "zod-aot")
 │       ├── src/
-│       │   ├── index.ts          # Public API exports
+│       │   ├── index.ts          # Public API exports (zod-aot)
+│       │   ├── internals.ts      # Internal API exports (zod-aot/internals)
 │       │   ├── discovery.ts      # discoverSchemas() — shared by cli & unplugin
 │       │   ├── loader.ts         # loadSourceFile() — runtime-aware file loader
 │       │   ├── core/             # Pure logic (no cli/unplugin/discovery/loader deps)
