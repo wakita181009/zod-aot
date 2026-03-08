@@ -23,6 +23,10 @@ export type GenerateValidationFn = (
 // Zod v4's email regex pattern (as a source string for new RegExp())
 export const EMAIL_REGEX_SOURCE = String.raw`^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$`;
 
+/** Fallback UUID regex used when the extractor doesn't provide a pattern (e.g. in unit tests). */
+export const UUID_REGEX_SOURCE =
+  "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$";
+
 export function escapeString(s: string): string {
   return JSON.stringify(s);
 }

@@ -1,6 +1,6 @@
 import type { SchemaIR } from "../../types.js";
 import type { CodeGenContext } from "../context.js";
-import { EMAIL_REGEX_SOURCE, escapeString } from "../context.js";
+import { EMAIL_REGEX_SOURCE, escapeString, UUID_REGEX_SOURCE } from "../context.js";
 
 export function generateStringValidation(
   ir: SchemaIR & { type: "string" },
@@ -37,9 +37,8 @@ export function generateStringValidation(
             continue;
           } else if (check.format === "uuid") {
             regexVar = `__re_uuid_${ctx.counter++}`;
-            ctx.preamble.push(
-              `var ${regexVar}=/^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/;`,
-            );
+            const uuidPattern = check.pattern ?? UUID_REGEX_SOURCE;
+            ctx.preamble.push(`var ${regexVar}=new RegExp(${escapeString(uuidPattern)});`);
           } else {
             regexVar = `__re_${ctx.counter++}`;
             if (check.pattern) {

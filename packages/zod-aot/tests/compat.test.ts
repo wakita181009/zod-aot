@@ -1,8 +1,21 @@
+// biome-ignore lint/correctness/noNodejsModules: need createRequire to read zod/package.json for version detection
+import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { generateValidator } from "#src/core/codegen/index.js";
 import type { FallbackEntry } from "#src/core/extractor.js";
 import { extractSchema } from "#src/core/extractor.js";
+
+const require = createRequire(import.meta.url);
+const zodVersion: string = (require("zod/package.json") as { version: string }).version;
+const zodMajorMinor = zodVersion.split(".").slice(0, 2).join(".");
+
+/** True if the installed Zod version is >= the given version string (e.g. "4.1") */
+function zodAtLeast(minVersion: string): boolean {
+  const [majA = 0, minA = 0] = zodMajorMinor.split(".").map(Number);
+  const [majB = 0, minB = 0] = minVersion.split(".").map(Number);
+  return majA > majB || (majA === majB && minA >= minB);
+}
 
 /**
  * Compile a Zod schema through zod-aot pipeline and return a safeParse function
@@ -218,11 +231,13 @@ describe("error compat — bigint checks", () => {
 // ─── Date Check Errors ──────────────────────────────────────────────────────
 
 describe("error compat — date checks", () => {
-  it("min date", () => {
+  // Zod v4.0-4.2 emits minimum/maximum as Date objects; v4.3+ emits numbers.
+  // zod-aot emits numbers (matching v4.3+), so skip these tests on older versions.
+  it.skipIf(!zodAtLeast("4.3"))("min date", () => {
     assertSameErrors(z.date().min(new Date("2024-01-01")), new Date("2023-12-31"), "dtMin");
   });
 
-  it("max date", () => {
+  it.skipIf(!zodAtLeast("4.3"))("max date", () => {
     assertSameErrors(z.date().max(new Date("2024-12-31")), new Date("2025-01-01"), "dtMax");
   });
 
@@ -294,11 +309,12 @@ describe("error compat — set checks", () => {
     assertSameErrors(z.set(z.string()), "not a set", "setType");
   });
 
-  it("min size", () => {
+  // Zod v4.0 omits `inclusive` on set size checks; v4.1+ includes it.
+  it.skipIf(!zodAtLeast("4.1"))("min size", () => {
     assertSameErrors(z.set(z.string()).min(2), new Set(["a"]), "setMin");
   });
 
-  it("max size", () => {
+  it.skipIf(!zodAtLeast("4.1"))("max size", () => {
     assertSameErrors(z.set(z.string()).max(2), new Set(["a", "b", "c"]), "setMax");
   });
 });
@@ -379,7 +395,8 @@ describe("error compat — discriminated union errors", () => {
     assertSameErrors(schema, "not object", "du");
   });
 
-  it("invalid discriminator value", () => {
+  // Zod v4.0 omits `discriminator` field; v4.1+ includes it.
+  it.skipIf(!zodAtLeast("4.1"))("invalid discriminator value", () => {
     assertSameErrors(schema, { type: "c" }, "du");
   });
 
