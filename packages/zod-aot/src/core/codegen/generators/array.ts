@@ -9,18 +9,18 @@ export function generateArrayValidation(
   ctx: CodeGenContext,
   generateFn: GenerateValidationFn,
 ): string {
-  let code = `if(!Array.isArray(${inputExpr})){${issuesVar}.push({code:"invalid_type",expected:"array",received:typeof ${inputExpr},path:${pathExpr},message:"Expected array"});}else{`;
+  let code = `if(!Array.isArray(${inputExpr})){${issuesVar}.push({code:"invalid_type",expected:"array",input:${inputExpr},path:${pathExpr}});}else{`;
 
   for (const check of ir.checks) {
     switch (check.kind) {
       case "min_length":
-        code += `if(${inputExpr}.length<${check.minimum}){${issuesVar}.push({code:"too_small",minimum:${check.minimum},type:"array",inclusive:true,path:${pathExpr},message:"Array must contain at least ${check.minimum} element(s)"});}`;
+        code += `if(${inputExpr}.length<${check.minimum}){${issuesVar}.push({code:"too_small",minimum:${check.minimum},origin:"array",inclusive:true,input:${inputExpr},path:${pathExpr}});}`;
         break;
       case "max_length":
-        code += `if(${inputExpr}.length>${check.maximum}){${issuesVar}.push({code:"too_big",maximum:${check.maximum},type:"array",inclusive:true,path:${pathExpr},message:"Array must contain at most ${check.maximum} element(s)"});}`;
+        code += `if(${inputExpr}.length>${check.maximum}){${issuesVar}.push({code:"too_big",maximum:${check.maximum},origin:"array",inclusive:true,input:${inputExpr},path:${pathExpr}});}`;
         break;
       case "length_equals":
-        code += `if(${inputExpr}.length!==${check.length}){${issuesVar}.push({code:"invalid_length",exact:${check.length},type:"array",path:${pathExpr},message:"Array must contain exactly ${check.length} element(s)"});}`;
+        code += `if(${inputExpr}.length<${check.length}){${issuesVar}.push({code:"too_small",minimum:${check.length},origin:"array",inclusive:true,exact:true,input:${inputExpr},path:${pathExpr}});}else if(${inputExpr}.length>${check.length}){${issuesVar}.push({code:"too_big",maximum:${check.length},origin:"array",inclusive:true,exact:true,input:${inputExpr},path:${pathExpr}});}`;
         break;
     }
   }

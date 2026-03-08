@@ -3,5 +3,5 @@ export function generateBooleanValidation(
   pathExpr: string,
   issuesVar: string,
 ): string {
-  return `if(typeof ${inputExpr}!=="boolean"){${issuesVar}.push({code:"invalid_type",expected:"boolean",received:typeof ${inputExpr},path:${pathExpr},message:"Expected boolean"});}\n`;
+  return `if(typeof ${inputExpr}!=="boolean"){${issuesVar}.push({code:"invalid_type",expected:"boolean",input:${inputExpr},path:${pathExpr}});}\n`;
 }

@@ -10,5 +10,5 @@ export function generateEnumValidation(
 ): string {
   const setVar = `__enumSet_${ctx.counter++}`;
   ctx.preamble.push(`var ${setVar}=new Set(${JSON.stringify(ir.values)});`);
-  return `if(!${setVar}.has(${inputExpr})){${issuesVar}.push({code:"invalid_enum_value",options:${JSON.stringify(ir.values)},received:${inputExpr},path:${pathExpr},message:"Invalid enum value"});}\n`;
+  return `if(!${setVar}.has(${inputExpr})){${issuesVar}.push({code:"invalid_value",values:${JSON.stringify(ir.values)},input:${inputExpr},path:${pathExpr}});}\n`;
 }

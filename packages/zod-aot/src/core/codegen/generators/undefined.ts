@@ -3,5 +3,5 @@ export function generateUndefinedValidation(
   pathExpr: string,
   issuesVar: string,
 ): string {
-  return `if(${inputExpr}!==undefined){${issuesVar}.push({code:"invalid_type",expected:"undefined",received:typeof ${inputExpr},path:${pathExpr},message:"Expected undefined"});}\n`;
+  return `if(${inputExpr}!==undefined){${issuesVar}.push({code:"invalid_type",expected:"undefined",input:${inputExpr},path:${pathExpr}});}\n`;
 }

@@ -9,7 +9,7 @@ export function generateMapValidation(
   ctx: CodeGenContext,
   generateFn: GenerateValidationFn,
 ): string {
-  let code = `if(!(${inputExpr} instanceof Map)){${issuesVar}.push({code:"invalid_type",expected:"map",received:typeof ${inputExpr},path:${pathExpr},message:"Expected Map"});}`;
+  let code = `if(!(${inputExpr} instanceof Map)){${issuesVar}.push({code:"invalid_type",expected:"map",input:${inputExpr},path:${pathExpr}});}`;
 
   code += `else{`;
 

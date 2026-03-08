@@ -80,8 +80,8 @@ describe("codegen — literal", () => {
       const result = safeParse("c");
       expect(result.success).toBe(false);
       expect(result.error?.issues[0]).toMatchObject({
-        code: "invalid_literal",
-        expected: ["a", "b"],
+        code: "invalid_value",
+        values: ["a", "b"],
       });
     });
   });

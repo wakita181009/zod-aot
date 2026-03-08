@@ -86,10 +86,10 @@ describe("codegen — union", () => {
     expect(result.success).toBe(false);
     const issue = result.error?.issues[0] as Record<string, unknown>;
     expect(issue.code).toBe("invalid_union");
-    // unionErrors should contain one entry per failed branch
-    const unionErrors = issue.unionErrors as { issues: unknown[] }[];
-    expect(unionErrors).toHaveLength(2);
-    expect(unionErrors[0]?.issues.length).toBeGreaterThanOrEqual(1);
-    expect(unionErrors[1]?.issues.length).toBeGreaterThanOrEqual(1);
+    // errors should contain one flat array per failed branch
+    const errors = issue.errors as Record<string, unknown>[][];
+    expect(errors).toHaveLength(2);
+    expect(errors[0]?.length).toBeGreaterThanOrEqual(1);
+    expect(errors[1]?.length).toBeGreaterThanOrEqual(1);
   });
 });

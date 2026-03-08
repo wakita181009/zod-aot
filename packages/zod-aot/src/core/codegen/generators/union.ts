@@ -17,9 +17,13 @@ export function generateUnionValidation(
     const tmpIssues = `__ui_${ctx.counter++}`;
     code += `if(!${resultVar}){var ${tmpIssues}=[];`;
     code += generateFn(option, inputExpr, pathExpr, tmpIssues, ctx);
-    code += `if(${tmpIssues}.length===0){${resultVar}=true;}else{${errorsVar}.push({issues:${tmpIssues}});}}`;
+    code += `if(${tmpIssues}.length===0){${resultVar}=true;}else{`;
+    // Apply __msg to inner branch issues so they have messages when included in union errors
+    const innerIdx = `__ufi_${ctx.counter++}`;
+    code += `if(typeof __msg==="function"){for(var ${innerIdx}=0;${innerIdx}<${tmpIssues}.length;${innerIdx}++){${tmpIssues}[${innerIdx}].message=__msg(${tmpIssues}[${innerIdx}]);delete ${tmpIssues}[${innerIdx}].input;}}`;
+    code += `${errorsVar}.push(${tmpIssues});}}`;
   }
 
-  code += `if(!${resultVar}){${issuesVar}.push({code:"invalid_union",unionErrors:${errorsVar},path:${pathExpr},message:"Invalid input"});}\n`;
+  code += `if(!${resultVar}){${issuesVar}.push({code:"invalid_union",errors:${errorsVar},input:${inputExpr},path:${pathExpr}});}\n`;
   return code;
 }

@@ -11,14 +11,11 @@ export function generateTupleValidation(
 ): string {
   const len = ir.items.length;
 
-  let code = `if(!Array.isArray(${inputExpr})){${issuesVar}.push({code:"invalid_type",expected:"tuple",received:${inputExpr}===null?"null":typeof ${inputExpr},path:${pathExpr},message:"Expected tuple"});}else{`;
+  let code = `if(!Array.isArray(${inputExpr})){${issuesVar}.push({code:"invalid_type",expected:"tuple",input:${inputExpr},path:${pathExpr}});}else{`;
 
-  if (len > 0) {
-    code += `if(${inputExpr}.length<${len}){${issuesVar}.push({code:"too_small",minimum:${len},inclusive:true,origin:"tuple",path:${pathExpr},message:"Expected array with at least ${len} element(s)"});}`;
-  }
-
+  // Reject extra elements when no rest element is defined
   if (ir.rest === null) {
-    code += `if(${inputExpr}.length>${len}){${issuesVar}.push({code:"too_big",maximum:${len},inclusive:true,origin:"tuple",path:${pathExpr},message:"Expected array with at most ${len} element(s)"});}`;
+    code += `if(${inputExpr}.length>${len}){${issuesVar}.push({code:"too_big",maximum:${len},inclusive:true,origin:"array",input:${inputExpr},path:${pathExpr}});}`;
   }
 
   for (let i = 0; i < len; i++) {

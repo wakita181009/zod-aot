@@ -17,7 +17,7 @@ export function generateLiteralValidation(
     } else {
       cond = `${inputExpr}!==${String(v)}`;
     }
-    return `if(${cond}){${issuesVar}.push({code:"invalid_literal",expected:${JSON.stringify(v)},received:${inputExpr},path:${pathExpr},message:"Invalid literal value"});}\n`;
+    return `if(${cond}){${issuesVar}.push({code:"invalid_value",values:${JSON.stringify([v])},input:${inputExpr},path:${pathExpr}});}\n`;
   }
 
   const valueChecks = ir.values
@@ -28,5 +28,5 @@ export function generateLiteralValidation(
     })
     .join("||");
 
-  return `if(!(${valueChecks})){${issuesVar}.push({code:"invalid_literal",expected:${JSON.stringify(ir.values)},received:${inputExpr},path:${pathExpr},message:"Invalid literal value"});}\n`;
+  return `if(!(${valueChecks})){${issuesVar}.push({code:"invalid_value",values:${JSON.stringify(ir.values)},input:${inputExpr},path:${pathExpr}});}\n`;
 }

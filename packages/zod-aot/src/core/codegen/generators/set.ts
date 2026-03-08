@@ -9,7 +9,7 @@ export function generateSetValidation(
   ctx: CodeGenContext,
   generateFn: GenerateValidationFn,
 ): string {
-  let code = `if(!(${inputExpr} instanceof Set)){${issuesVar}.push({code:"invalid_type",expected:"set",received:typeof ${inputExpr},path:${pathExpr},message:"Expected Set"});}`;
+  let code = `if(!(${inputExpr} instanceof Set)){${issuesVar}.push({code:"invalid_type",expected:"set",input:${inputExpr},path:${pathExpr}});}`;
 
   code += `else{`;
 
@@ -18,10 +18,10 @@ export function generateSetValidation(
     for (const check of ir.checks) {
       switch (check.kind) {
         case "min_size":
-          code += `if(${inputExpr}.size<${check.minimum}){${issuesVar}.push({code:"too_small",minimum:${check.minimum},type:"set",inclusive:true,path:${pathExpr},message:"Set must have at least ${check.minimum} element(s)"});}`;
+          code += `if(${inputExpr}.size<${check.minimum}){${issuesVar}.push({code:"too_small",minimum:${check.minimum},origin:"set",inclusive:true,input:${inputExpr},path:${pathExpr}});}`;
           break;
         case "max_size":
-          code += `if(${inputExpr}.size>${check.maximum}){${issuesVar}.push({code:"too_big",maximum:${check.maximum},type:"set",inclusive:true,path:${pathExpr},message:"Set must have at most ${check.maximum} element(s)"});}`;
+          code += `if(${inputExpr}.size>${check.maximum}){${issuesVar}.push({code:"too_big",maximum:${check.maximum},origin:"set",inclusive:true,input:${inputExpr},path:${pathExpr}});}`;
           break;
       }
     }
