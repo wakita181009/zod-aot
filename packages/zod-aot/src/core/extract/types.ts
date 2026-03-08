@@ -45,6 +45,8 @@ export interface ZodSchema {
   _zod: {
     def: ZodDef;
     bag?: Record<string, unknown>;
+    /** Resolved inner type for lazy schemas. */
+    innerType?: ZodSchema;
   };
 }
 
@@ -61,4 +63,5 @@ export type ExtractFn = (
   zodSchema: unknown,
   fallbacks?: FallbackEntry[],
   currentPath?: string,
+  visiting?: Set<unknown>,
 ) => import("../types.js").SchemaIR;

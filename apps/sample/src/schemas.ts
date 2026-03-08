@@ -84,3 +84,19 @@ export const validateHeaders = compile<z.infer<typeof HeadersSchema>>(HeadersSch
 const PositiveIntSchema = z.number().int().pipe(z.number().positive());
 
 export const validatePositiveInt = compile<z.infer<typeof PositiveIntSchema>>(PositiveIntSchema);
+
+// --- Lazy schemas ---
+
+const CategorySchema = z.object({
+  name: z.lazy(() => z.string().min(1).max(100)),
+  description: z.lazy(() => z.nullable(z.string())),
+});
+
+export const validateCategory = compile<z.infer<typeof CategorySchema>>(CategorySchema);
+
+const TreeNodeSchema: z.ZodType = z.object({
+  value: z.string().min(1),
+  children: z.array(z.lazy(() => TreeNodeSchema)),
+});
+
+export const validateTreeNode = compile(TreeNodeSchema);

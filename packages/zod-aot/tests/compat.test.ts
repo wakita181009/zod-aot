@@ -417,6 +417,74 @@ describe("error compat — intersection errors", () => {
   });
 });
 
+// ─── Lazy Schema Errors ──────────────────────────────────────────────────────
+
+describe("error compat — lazy (non-recursive)", () => {
+  it("lazy string receives number", () => {
+    assertSameErrors(
+      z.lazy(() => z.string()),
+      42,
+      "lazyStr",
+    );
+  });
+
+  it("lazy string.min() too short", () => {
+    assertSameErrors(
+      z.lazy(() => z.string().min(3)),
+      "ab",
+      "lazyStrMin",
+    );
+  });
+
+  it("lazy number receives string", () => {
+    assertSameErrors(
+      z.lazy(() => z.number()),
+      "hello",
+      "lazyNum",
+    );
+  });
+
+  it("lazy object missing field", () => {
+    assertSameErrors(
+      z.lazy(() => z.object({ name: z.string(), age: z.number() })),
+      { name: "Alice" },
+      "lazyObj",
+    );
+  });
+
+  it("lazy inside object property", () => {
+    const schema = z.object({
+      label: z.lazy(() => z.string().min(1)),
+      count: z.number(),
+    });
+    assertSameErrors(schema, { label: "", count: 5 }, "lazyProp");
+  });
+
+  it("lazy inside array element", () => {
+    const schema = z.array(z.lazy(() => z.number()));
+    assertSameErrors(schema, [1, "two", 3], "lazyArr");
+  });
+});
+
+describe("error compat — lazy (recursive with fallback)", () => {
+  const TreeNode: z.ZodType = z.object({
+    value: z.string(),
+    children: z.array(z.lazy(() => TreeNode)),
+  });
+
+  it("invalid root type", () => {
+    assertSameErrors(TreeNode, "not object", "tree");
+  });
+
+  it("invalid root value type", () => {
+    assertSameErrors(TreeNode, { value: 42, children: [] }, "tree");
+  });
+
+  it("invalid children type", () => {
+    assertSameErrors(TreeNode, { value: "root", children: "not array" }, "tree");
+  });
+});
+
 // ─── Combined Schema Errors ─────────────────────────────────────────────────
 
 describe("error compat — combined real-world schemas", () => {

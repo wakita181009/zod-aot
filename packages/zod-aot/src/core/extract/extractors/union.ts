@@ -6,10 +6,11 @@ export function extractUnion(
   p: string,
   fallbacks: FallbackEntry[] | undefined,
   recurse: ExtractFn,
+  visiting?: Set<unknown>,
 ): SchemaIR {
   if (def.discriminator) {
     const options = def.options.map((opt, i) =>
-      recurse(opt, fallbacks, `${p}._zod.def.options[${i}]`),
+      recurse(opt, fallbacks, `${p}._zod.def.options[${i}]`, visiting),
     );
     const mapping: Record<string, number> = {};
     for (let i = 0; i < def.options.length; i++) {
@@ -29,6 +30,8 @@ export function extractUnion(
   }
   return {
     type: "union",
-    options: def.options.map((opt, i) => recurse(opt, fallbacks, `${p}._zod.def.options[${i}]`)),
+    options: def.options.map((opt, i) =>
+      recurse(opt, fallbacks, `${p}._zod.def.options[${i}]`, visiting),
+    ),
   };
 }

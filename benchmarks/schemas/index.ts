@@ -27,6 +27,16 @@ export {
   validFallbackArray50,
   validPartialFallbackObject,
 } from "./fallback.js";
+export type { LazyObject } from "./lazy.js";
+export {
+  LazyObjectSchema,
+  LazyStringSchema,
+  TreeNodeSchema,
+  validLazyObject,
+  validLazyString,
+  validTreeDeep,
+  validTreeShallow,
+} from "./lazy.js";
 export type { ApiResponse, User } from "./objects.js";
 export {
   ApiResponseSchema,

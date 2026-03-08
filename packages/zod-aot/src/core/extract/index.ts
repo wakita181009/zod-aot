@@ -4,6 +4,7 @@ import {
   extractBigint,
   extractDate,
   extractDefault,
+  extractLazy,
   extractNumber,
   extractPipe,
   extractSet,
@@ -25,11 +26,30 @@ export function extractSchema(
   zodSchema: unknown,
   fallbacks?: FallbackEntry[],
   currentPath?: string,
+  visiting?: Set<unknown>,
 ): SchemaIR {
   const schema = zodSchema as ZodSchema;
   const def = schema._zod.def;
   const p = currentPath ?? "";
+  const v = visiting ?? new Set<unknown>();
 
+  // Track current schema for cycle detection in lazy resolution
+  v.add(zodSchema);
+
+  const ir = extractSchemaInner(schema, def, p, v, fallbacks, zodSchema);
+
+  v.delete(zodSchema);
+  return ir;
+}
+
+function extractSchemaInner(
+  schema: ZodSchema,
+  def: ZodSchema["_zod"]["def"],
+  p: string,
+  v: Set<unknown>,
+  fallbacks: FallbackEntry[] | undefined,
+  zodSchema: unknown,
+): SchemaIR {
   switch (def.type) {
     // ── Simple cases (inline) ──────────────────────────────────────────────
     case "boolean":
@@ -56,41 +76,41 @@ export function extractSchema(
     case "optional":
       return {
         type: "optional",
-        inner: extractSchema(def.innerType, fallbacks, `${p}._zod.def.innerType`),
+        inner: extractSchema(def.innerType, fallbacks, `${p}._zod.def.innerType`, v),
       };
 
     case "nullable":
       return {
         type: "nullable",
-        inner: extractSchema(def.innerType, fallbacks, `${p}._zod.def.innerType`),
+        inner: extractSchema(def.innerType, fallbacks, `${p}._zod.def.innerType`, v),
       };
 
     case "readonly":
       return {
         type: "readonly",
-        inner: extractSchema(def.innerType, fallbacks, `${p}._zod.def.innerType`),
+        inner: extractSchema(def.innerType, fallbacks, `${p}._zod.def.innerType`, v),
       };
 
     case "object": {
       const properties: Record<string, SchemaIR> = {};
       for (const [key, value] of Object.entries(def.shape)) {
         const propPath = `${p}.shape[${JSON.stringify(key)}]`;
-        properties[key] = extractSchema(value, fallbacks, propPath);
+        properties[key] = extractSchema(value, fallbacks, propPath, v);
       }
       return { type: "object", properties };
     }
 
     case "array": {
-      const element = extractSchema(def.element, fallbacks, `${p}._zod.def.element`);
+      const element = extractSchema(def.element, fallbacks, `${p}._zod.def.element`, v);
       const { checkIRs } = def.checks ? extractChecks(def.checks) : { checkIRs: [] };
       return { type: "array", element, checks: checkIRs };
     }
 
     case "tuple": {
       const items = def.items.map((item, i) =>
-        extractSchema(item, fallbacks, `${p}._zod.def.items[${i}]`),
+        extractSchema(item, fallbacks, `${p}._zod.def.items[${i}]`, v),
       );
-      const rest = def.rest ? extractSchema(def.rest, fallbacks, `${p}._zod.def.rest`) : null;
+      const rest = def.rest ? extractSchema(def.rest, fallbacks, `${p}._zod.def.rest`, v) : null;
       return { type: "tuple", items, rest };
     }
 
@@ -98,26 +118,26 @@ export function extractSchema(
       if (!def.valueType) {
         return makeFallback("unsupported", zodSchema, fallbacks, p);
       }
-      const keyType = extractSchema(def.keyType, fallbacks, `${p}._zod.def.keyType`);
-      const valueType = extractSchema(def.valueType, fallbacks, `${p}._zod.def.valueType`);
+      const keyType = extractSchema(def.keyType, fallbacks, `${p}._zod.def.keyType`, v);
+      const valueType = extractSchema(def.valueType, fallbacks, `${p}._zod.def.valueType`, v);
       return { type: "record", keyType, valueType };
     }
 
     case "intersection":
       return {
         type: "intersection",
-        left: extractSchema(def.left, fallbacks, `${p}._zod.def.left`),
-        right: extractSchema(def.right, fallbacks, `${p}._zod.def.right`),
+        left: extractSchema(def.left, fallbacks, `${p}._zod.def.left`, v),
+        right: extractSchema(def.right, fallbacks, `${p}._zod.def.right`, v),
       };
 
     case "map": {
-      const keyType = extractSchema(def.keyType, fallbacks, `${p}._zod.def.keyType`);
-      const valueType = extractSchema(def.valueType, fallbacks, `${p}._zod.def.valueType`);
+      const keyType = extractSchema(def.keyType, fallbacks, `${p}._zod.def.keyType`, v);
+      const valueType = extractSchema(def.valueType, fallbacks, `${p}._zod.def.valueType`, v);
       return { type: "map", keyType, valueType };
     }
 
     case "lazy":
-      return makeFallback("lazy", zodSchema, fallbacks, p);
+      return extractLazy(schema, zodSchema, p, fallbacks, extractSchema, v);
 
     // ── Complex cases (delegated to extractors/) ───────────────────────────
     case "string":
@@ -133,16 +153,16 @@ export function extractSchema(
       return extractBigint(def);
 
     case "set":
-      return extractSet(def, p, fallbacks, extractSchema);
+      return extractSet(def, p, fallbacks, extractSchema, v);
 
     case "union":
-      return extractUnion(def, p, fallbacks, extractSchema);
+      return extractUnion(def, p, fallbacks, extractSchema, v);
 
     case "default":
-      return extractDefault(def, zodSchema, p, fallbacks, extractSchema);
+      return extractDefault(def, zodSchema, p, fallbacks, extractSchema, v);
 
     case "pipe":
-      return extractPipe(def, zodSchema, p, fallbacks, extractSchema);
+      return extractPipe(def, zodSchema, p, fallbacks, extractSchema, v);
 
     default:
       return makeFallback("unsupported", zodSchema, fallbacks, p);

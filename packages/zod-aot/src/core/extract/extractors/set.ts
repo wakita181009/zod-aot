@@ -6,8 +6,9 @@ export function extractSet(
   p: string,
   fallbacks: FallbackEntry[] | undefined,
   recurse: ExtractFn,
+  visiting?: Set<unknown>,
 ): SchemaIR {
-  const valueType = recurse(def.valueType, fallbacks, `${p}._zod.def.valueType`);
+  const valueType = recurse(def.valueType, fallbacks, `${p}._zod.def.valueType`, visiting);
   const setChecks: SetCheckIR[] = [];
   if (def.checks) {
     for (const check of def.checks) {

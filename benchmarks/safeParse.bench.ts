@@ -7,6 +7,8 @@ import {
   EventLogSchema,
   FallbackArraySchema,
   invalidUser,
+  LazyObjectSchema,
+  LazyStringSchema,
   MapSchema,
   NumberWithChecks,
   PartialFallbackObjectSchema,
@@ -16,6 +18,7 @@ import {
   SimpleEnum,
   SimpleString,
   StringWithChecks,
+  TreeNodeSchema,
   TupleSchema,
   UserSchema,
   validApiResponse10,
@@ -25,6 +28,8 @@ import {
   validEventLog,
   validFallbackArray10,
   validFallbackArray50,
+  validLazyObject,
+  validLazyString,
   validMap5,
   validMap20,
   validNumberWithChecks,
@@ -36,6 +41,8 @@ import {
   validSimpleEnum,
   validSimpleString,
   validStringWithChecks,
+  validTreeDeep,
+  validTreeShallow,
   validTuple,
   validUser,
 } from "./schemas/index.js";
@@ -57,6 +64,9 @@ const aotBigInt = compileForBench(BigIntSchema, "bigint");
 const aotSet = compileForBench(SetSchema, "set");
 const aotMap = compileForBench(MapSchema, "map");
 const aotPipe = compileForBench(PipeSchema, "pipe");
+const aotLazyString = compileForBench(LazyStringSchema, "lazyString");
+const aotLazyObject = compileForBench(LazyObjectSchema, "lazyObject");
+const aotTree = compileForBench(TreeNodeSchema, "tree");
 
 // ─── Primitives ──────────────────────────────────────────────────────────────
 
@@ -254,5 +264,43 @@ describe("safeParse: partial fallback — array 50 items with transform", () => 
   });
   bench("zod-aot", () => {
     aotFallbackArray.safeParse(validFallbackArray50);
+  });
+});
+
+// ─── Lazy ───────────────────────────────────────────────────────────────────
+
+describe("safeParse: lazy string (non-recursive)", () => {
+  bench("zod", () => {
+    LazyStringSchema.safeParse(validLazyString);
+  });
+  bench("zod-aot", () => {
+    aotLazyString.safeParse(validLazyString);
+  });
+});
+
+describe("safeParse: lazy object (non-recursive)", () => {
+  bench("zod", () => {
+    LazyObjectSchema.safeParse(validLazyObject);
+  });
+  bench("zod-aot", () => {
+    aotLazyObject.safeParse(validLazyObject);
+  });
+});
+
+describe("safeParse: recursive tree — shallow (7 nodes)", () => {
+  bench("zod", () => {
+    TreeNodeSchema.safeParse(validTreeShallow);
+  });
+  bench("zod-aot", () => {
+    aotTree.safeParse(validTreeShallow);
+  });
+});
+
+describe("safeParse: recursive tree — deep (121 nodes)", () => {
+  bench("zod", () => {
+    TreeNodeSchema.safeParse(validTreeDeep);
+  });
+  bench("zod-aot", () => {
+    aotTree.safeParse(validTreeDeep);
   });
 });

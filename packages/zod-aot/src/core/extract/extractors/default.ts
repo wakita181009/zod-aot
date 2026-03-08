@@ -8,8 +8,9 @@ export function extractDefault(
   p: string,
   fallbacks: FallbackEntry[] | undefined,
   recurse: ExtractFn,
+  visiting?: Set<unknown>,
 ): SchemaIR {
-  const inner = recurse(def.innerType, fallbacks, `${p}._zod.def.innerType`);
+  const inner = recurse(def.innerType, fallbacks, `${p}._zod.def.innerType`, visiting);
   const defaultValue = def.defaultValue;
   // Date objects serialize to strings via JSON.stringify, losing their type.
   // Fall back to Zod for Date defaults to preserve correct runtime behavior.

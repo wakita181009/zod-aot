@@ -6,6 +6,8 @@ import {
   DiscriminatedUnionSchema,
   EventLogSchema,
   FallbackArraySchema,
+  LazyObjectSchema,
+  LazyStringSchema,
   MapSchema,
   NumberWithChecks,
   PartialFallbackObjectSchema,
@@ -15,6 +17,7 @@ import {
   SimpleEnum,
   SimpleString,
   StringWithChecks,
+  TreeNodeSchema,
   TupleSchema,
   UserSchema,
   validApiResponse10,
@@ -23,6 +26,8 @@ import {
   validClickEvent,
   validEventLog,
   validFallbackArray10,
+  validLazyObject,
+  validLazyString,
   validMap5,
   validNumberWithChecks,
   validPartialFallbackObject,
@@ -32,6 +37,7 @@ import {
   validSimpleEnum,
   validSimpleString,
   validStringWithChecks,
+  validTreeShallow,
   validTuple,
   validUser,
 } from "./schemas/index.js";
@@ -53,6 +59,9 @@ const aotBigInt = compileForBench(BigIntSchema, "bigint");
 const aotSet = compileForBench(SetSchema, "set");
 const aotMap = compileForBench(MapSchema, "map");
 const aotPipe = compileForBench(PipeSchema, "pipe");
+const aotLazyString = compileForBench(LazyStringSchema, "lazyString");
+const aotLazyObject = compileForBench(LazyObjectSchema, "lazyObject");
+const aotTree = compileForBench(TreeNodeSchema, "tree");
 
 // ─── Primitives ──────────────────────────────────────────────────────────────
 
@@ -214,5 +223,34 @@ describe("is(): partial fallback — array 10 items with transform", () => {
   });
   bench("zod-aot", () => {
     aotFallbackArray.is(validFallbackArray10);
+  });
+});
+
+// ─── Lazy ───────────────────────────────────────────────────────────────────
+
+describe("is(): lazy string (non-recursive)", () => {
+  bench("zod (safeParse().success)", () => {
+    LazyStringSchema.safeParse(validLazyString).success;
+  });
+  bench("zod-aot", () => {
+    aotLazyString.is(validLazyString);
+  });
+});
+
+describe("is(): lazy object (non-recursive)", () => {
+  bench("zod (safeParse().success)", () => {
+    LazyObjectSchema.safeParse(validLazyObject).success;
+  });
+  bench("zod-aot", () => {
+    aotLazyObject.is(validLazyObject);
+  });
+});
+
+describe("is(): recursive tree — shallow (7 nodes)", () => {
+  bench("zod (safeParse().success)", () => {
+    TreeNodeSchema.safeParse(validTreeShallow).success;
+  });
+  bench("zod-aot", () => {
+    aotTree.is(validTreeShallow);
   });
 });

@@ -485,13 +485,19 @@ describe("integration — fallback for non-compilable schemas", () => {
     expect(ir.type).toBe("fallback");
   });
 
-  it("lazy schema produces fallback IR", () => {
+  it("lazy wrapping non-recursive schema is fully compiled", () => {
     const schema = z.lazy(() => z.string());
     const ir = extractSchema(schema);
-    expect(ir.type).toBe("fallback");
-    if (ir.type === "fallback") {
-      expect(ir.reason).toBe("lazy");
-    }
+    expect(ir.type).toBe("string");
+  });
+
+  it("recursive lazy falls back only at the recursion point", () => {
+    const TreeNode: z.ZodType = z.object({
+      value: z.string(),
+      children: z.array(z.lazy(() => TreeNode)),
+    });
+    const ir = extractSchema(TreeNode);
+    expect(ir.type).toBe("object");
   });
 });
 
@@ -1036,6 +1042,48 @@ describe("integration — partial fallback (mixed compilable + non-compilable)",
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data).toEqual({ label: "hello" });
+    }
+  });
+
+  it("recursive lazy tree node matches Zod success/failure", () => {
+    const TreeNode: z.ZodType = z.object({
+      value: z.string(),
+      children: z.array(z.lazy(() => TreeNode)),
+    });
+
+    const safeParse = compileWithFallbacks(TreeNode, "tree");
+    const inputs = [
+      { value: "root", children: [] },
+      { value: "root", children: [{ value: "child", children: [] }] },
+      {
+        value: "root",
+        children: [{ value: "child", children: [{ value: "grandchild", children: [] }] }],
+      },
+      { value: 42, children: [] },
+      { value: "root", children: "not array" },
+      null,
+    ];
+
+    for (const input of inputs) {
+      const zodResult = TreeNode.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+    }
+  });
+
+  it("non-recursive lazy compiles fully without fallback", () => {
+    const schema = z.object({
+      name: z.lazy(() => z.string().min(1)),
+      age: z.number(),
+    });
+
+    const safeParse = compileWithFallbacks(schema, "lazySimple");
+    const inputs = [{ name: "Alice", age: 30 }, { name: "", age: 30 }, { name: 42, age: 30 }, null];
+
+    for (const input of inputs) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
     }
   });
 

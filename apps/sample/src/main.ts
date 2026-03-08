@@ -1,5 +1,6 @@
 import {
   validateAddress,
+  validateCategory,
   validateContact,
   validateEvent,
   validateHeaders,
@@ -7,6 +8,7 @@ import {
   validateOrder,
   validatePositiveInt,
   validateTagSet,
+  validateTreeNode,
   validateUser,
   validateWallet,
 } from "./schemas.js";
@@ -243,6 +245,56 @@ test("PositiveInt: zero (not positive)", () => {
 
 test("PositiveInt: float (not int)", () => {
   const result = validatePositiveInt.safeParse(3.14);
+  log(`  success: ${result.success}`);
+});
+
+// --- Category (non-recursive lazy) ---
+
+test("Category: valid", () => {
+  const result = validateCategory.safeParse({ name: "Electronics", description: "Gadgets & tech" });
+  log(`  success: ${result.success}`);
+});
+
+test("Category: null description", () => {
+  const result = validateCategory.safeParse({ name: "Books", description: null });
+  log(`  success: ${result.success}`);
+});
+
+test("Category: empty name (too short)", () => {
+  const result = validateCategory.safeParse({ name: "", description: null });
+  log(`  success: ${result.success}`);
+  if (!result.success) log(`  issues: ${result.error?.issues.length}`);
+});
+
+// --- TreeNode (recursive lazy) ---
+
+test("TreeNode: leaf", () => {
+  const result = validateTreeNode.safeParse({ value: "root", children: [] });
+  log(`  success: ${result.success}`);
+});
+
+test("TreeNode: nested tree", () => {
+  const result = validateTreeNode.safeParse({
+    value: "root",
+    children: [
+      { value: "child-1", children: [] },
+      { value: "child-2", children: [{ value: "grandchild", children: [] }] },
+    ],
+  });
+  log(`  success: ${result.success}`);
+});
+
+test("TreeNode: invalid child value", () => {
+  const result = validateTreeNode.safeParse({
+    value: "root",
+    children: [{ value: 42, children: [] }],
+  });
+  log(`  success: ${result.success}`);
+  if (!result.success) log(`  issues: ${result.error?.issues.length}`);
+});
+
+test("TreeNode: invalid children type", () => {
+  const result = validateTreeNode.safeParse({ value: "root", children: "not array" });
   log(`  success: ${result.success}`);
 });
 
