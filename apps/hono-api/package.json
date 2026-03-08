@@ -1,0 +1,25 @@
+{
+  "name": "@zod-aot/hono-api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/app.ts",
+    "start": "tsx src/app.ts",
+    "generate": "zod-aot generate src/schemas.ts -o src/schemas.compiled.ts",
+    "check": "zod-aot check src/schemas.ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.11",
+    "hono": "^4.7.0",
+    "zod": "^4.0.0",
+    "zod-aot": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "vitest": "^4.0.18"
+  }
+}
