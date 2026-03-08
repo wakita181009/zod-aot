@@ -1,12 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import type { FallbackEntry } from "#src/core/extractor.js";
-import { extractSchema } from "#src/core/extractor.js";
+import type { FallbackEntry } from "#src/core/extract/index.js";
+import { extractSchema } from "#src/core/extract/index.js";
 import type {
   AnyIR,
   ArrayIR,
   BooleanIR,
-  DateIR,
   DefaultIR,
   DiscriminatedUnionIR,
   EnumIR,
@@ -65,130 +64,6 @@ describe("extractSchema — primitives", () => {
     expect(ir).toEqual<UndefinedIR>({
       type: "undefined",
     });
-  });
-});
-
-// ─── String Checks ──────────────────────────────────────────────────────────
-
-describe("extractSchema — string checks", () => {
-  it("extracts min length check", () => {
-    const ir = extractSchema(z.string().min(3)) as StringIR;
-    expect(ir.type).toBe("string");
-    expect(ir.checks).toContainEqual({ kind: "min_length", minimum: 3 });
-  });
-
-  it("extracts max length check", () => {
-    const ir = extractSchema(z.string().max(50)) as StringIR;
-    expect(ir.type).toBe("string");
-    expect(ir.checks).toContainEqual({ kind: "max_length", maximum: 50 });
-  });
-
-  it("extracts length equals check", () => {
-    const ir = extractSchema(z.string().length(10)) as StringIR;
-    expect(ir.type).toBe("string");
-    expect(ir.checks).toContainEqual({ kind: "length_equals", length: 10 });
-  });
-
-  it("extracts combined min + max checks", () => {
-    const ir = extractSchema(z.string().min(3).max(50)) as StringIR;
-    expect(ir.type).toBe("string");
-    expect(ir.checks).toHaveLength(2);
-    expect(ir.checks).toContainEqual({ kind: "min_length", minimum: 3 });
-    expect(ir.checks).toContainEqual({ kind: "max_length", maximum: 50 });
-  });
-
-  it("extracts regex pattern check", () => {
-    const ir = extractSchema(z.string().regex(/^[a-z]+$/)) as StringIR;
-    expect(ir.type).toBe("string");
-    expect(ir.checks).toContainEqual({
-      kind: "string_format",
-      format: "regex",
-      pattern: "^[a-z]+$",
-    });
-  });
-
-  it("extracts email format check", () => {
-    const ir = extractSchema(z.email()) as StringIR;
-    expect(ir.type).toBe("string");
-    expect(ir.checks).toContainEqual(
-      expect.objectContaining({ kind: "string_format", format: "email" }),
-    );
-  });
-
-  it("extracts url format check", () => {
-    const ir = extractSchema(z.url()) as StringIR;
-    expect(ir.type).toBe("string");
-    expect(ir.checks).toContainEqual(
-      expect.objectContaining({ kind: "string_format", format: "url" }),
-    );
-  });
-
-  it("extracts uuid format check", () => {
-    const ir = extractSchema(z.uuid()) as StringIR;
-    expect(ir.type).toBe("string");
-    expect(ir.checks).toContainEqual(
-      expect.objectContaining({ kind: "string_format", format: "uuid" }),
-    );
-  });
-
-  it("extracts multiple checks in correct order", () => {
-    const ir = extractSchema(z.string().min(1).max(100).regex(/^\w+$/)) as StringIR;
-    expect(ir.checks).toHaveLength(3);
-    expect(ir.checks[0]?.kind).toBe("min_length");
-    expect(ir.checks[1]?.kind).toBe("max_length");
-    expect(ir.checks[2]?.kind).toBe("string_format");
-  });
-});
-
-// ─── Number Checks ──────────────────────────────────────────────────────────
-
-describe("extractSchema — number checks", () => {
-  it("extracts min (inclusive) check", () => {
-    const ir = extractSchema(z.number().min(0)) as NumberIR;
-    expect(ir.checks).toContainEqual({ kind: "greater_than", value: 0, inclusive: true });
-  });
-
-  it("extracts max (inclusive) check", () => {
-    const ir = extractSchema(z.number().max(100)) as NumberIR;
-    expect(ir.checks).toContainEqual({ kind: "less_than", value: 100, inclusive: true });
-  });
-
-  it("extracts positive (exclusive > 0) check", () => {
-    const ir = extractSchema(z.number().positive()) as NumberIR;
-    expect(ir.checks).toContainEqual({ kind: "greater_than", value: 0, inclusive: false });
-  });
-
-  it("extracts negative (exclusive < 0) check", () => {
-    const ir = extractSchema(z.number().negative()) as NumberIR;
-    expect(ir.checks).toContainEqual({ kind: "less_than", value: 0, inclusive: false });
-  });
-
-  it("extracts nonnegative (inclusive >= 0) check", () => {
-    const ir = extractSchema(z.number().nonnegative()) as NumberIR;
-    expect(ir.checks).toContainEqual({ kind: "greater_than", value: 0, inclusive: true });
-  });
-
-  it("extracts int (safeint format) check", () => {
-    const ir = extractSchema(z.number().int()) as NumberIR;
-    expect(ir.checks).toContainEqual({ kind: "number_format", format: "safeint" });
-  });
-
-  it("extracts multipleOf check", () => {
-    const ir = extractSchema(z.number().multipleOf(5)) as NumberIR;
-    expect(ir.checks).toContainEqual({ kind: "multiple_of", value: 5 });
-  });
-
-  it("extracts combined int + positive checks", () => {
-    const ir = extractSchema(z.number().int().positive()) as NumberIR;
-    expect(ir.checks).toContainEqual({ kind: "number_format", format: "safeint" });
-    expect(ir.checks).toContainEqual({ kind: "greater_than", value: 0, inclusive: false });
-  });
-
-  it("extracts min + max range checks", () => {
-    const ir = extractSchema(z.number().min(1).max(100)) as NumberIR;
-    expect(ir.checks).toHaveLength(2);
-    expect(ir.checks).toContainEqual({ kind: "greater_than", value: 1, inclusive: true });
-    expect(ir.checks).toContainEqual({ kind: "less_than", value: 100, inclusive: true });
   });
 });
 
@@ -344,36 +219,6 @@ describe("extractSchema — literal", () => {
   });
 });
 
-// ─── Union Schemas ──────────────────────────────────────────────────────────
-
-describe("extractSchema — union", () => {
-  it("extracts a string | number union", () => {
-    const ir = extractSchema(z.union([z.string(), z.number()])) as UnionIR;
-    expect(ir.type).toBe("union");
-    expect(ir.options).toHaveLength(2);
-    expect(ir.options[0]?.type).toBe("string");
-    expect(ir.options[1]?.type).toBe("number");
-  });
-
-  it("extracts a union with multiple types", () => {
-    const ir = extractSchema(z.union([z.string(), z.number(), z.boolean()])) as UnionIR;
-    expect(ir.options).toHaveLength(3);
-    expect(ir.options.map((o) => o.type)).toEqual(["string", "number", "boolean"]);
-  });
-
-  it("extracts a union containing object schemas", () => {
-    const ir = extractSchema(
-      z.union([
-        z.object({ type: z.literal("a"), value: z.string() }),
-        z.object({ type: z.literal("b"), value: z.number() }),
-      ]),
-    ) as UnionIR;
-    expect(ir.options).toHaveLength(2);
-    expect(ir.options[0]?.type).toBe("object");
-    expect(ir.options[1]?.type).toBe("object");
-  });
-});
-
 // ─── Optional / Nullable Wrappers ───────────────────────────────────────────
 
 describe("extractSchema — optional", () => {
@@ -433,6 +278,103 @@ describe("extractSchema — optional + nullable combined", () => {
     expect(ir.inner.type).toBe("optional");
     const optIR = ir.inner as OptionalIR;
     expect(optIR.inner.type).toBe("string");
+  });
+});
+
+// ─── Tier 2: any / unknown ─────────────────────────────────────────────────
+
+describe("extractSchema — any", () => {
+  it("extracts z.any()", () => {
+    const ir = extractSchema(z.any());
+    expect(ir).toEqual<AnyIR>({ type: "any" });
+  });
+});
+
+describe("extractSchema — unknown", () => {
+  it("extracts z.unknown()", () => {
+    const ir = extractSchema(z.unknown());
+    expect(ir).toEqual<UnknownIR>({ type: "unknown" });
+  });
+});
+
+// ─── Tier 2: readonly ──────────────────────────────────────────────────────
+
+describe("extractSchema — readonly", () => {
+  it("extracts readonly string", () => {
+    const ir = extractSchema(z.string().readonly()) as ReadonlyIR;
+    expect(ir.type).toBe("readonly");
+    expect(ir.inner.type).toBe("string");
+  });
+
+  it("extracts readonly object", () => {
+    const ir = extractSchema(z.object({ name: z.string() }).readonly()) as ReadonlyIR;
+    expect(ir.type).toBe("readonly");
+    expect(ir.inner.type).toBe("object");
+  });
+});
+
+// ─── Tier 2: tuple ─────────────────────────────────────────────────────────
+
+describe("extractSchema — tuple", () => {
+  it("extracts basic tuple", () => {
+    const ir = extractSchema(z.tuple([z.string(), z.number()])) as TupleIR;
+    expect(ir.type).toBe("tuple");
+    expect(ir.items).toHaveLength(2);
+    expect(ir.items[0]?.type).toBe("string");
+    expect(ir.items[1]?.type).toBe("number");
+    expect(ir.rest).toBeNull();
+  });
+
+  it("extracts tuple with rest", () => {
+    const ir = extractSchema(z.tuple([z.string()]).rest(z.number())) as TupleIR;
+    expect(ir.items).toHaveLength(1);
+    expect(ir.items[0]?.type).toBe("string");
+    expect(ir.rest).not.toBeNull();
+    expect(ir.rest?.type).toBe("number");
+  });
+
+  it("extracts empty tuple", () => {
+    const ir = extractSchema(z.tuple([])) as TupleIR;
+    expect(ir.items).toHaveLength(0);
+    expect(ir.rest).toBeNull();
+  });
+});
+
+// ─── Tier 2: record ────────────────────────────────────────────────────────
+
+describe("extractSchema — record", () => {
+  it("extracts string key record", () => {
+    const ir = extractSchema(z.record(z.string(), z.number())) as RecordIR;
+    expect(ir.type).toBe("record");
+    expect(ir.keyType.type).toBe("string");
+    expect(ir.valueType.type).toBe("number");
+  });
+
+  it("extracts enum key record", () => {
+    const ir = extractSchema(z.record(z.enum(["a", "b"]), z.string())) as RecordIR;
+    expect(ir.type).toBe("record");
+    expect(ir.keyType.type).toBe("enum");
+    expect(ir.valueType.type).toBe("string");
+  });
+});
+
+// ─── Tier 2: intersection ──────────────────────────────────────────────────
+
+describe("extractSchema — intersection", () => {
+  it("extracts object intersection", () => {
+    const ir = extractSchema(
+      z.intersection(z.object({ a: z.string() }), z.object({ b: z.number() })),
+    ) as IntersectionIR;
+    expect(ir.type).toBe("intersection");
+    expect(ir.left.type).toBe("object");
+    expect(ir.right.type).toBe("object");
+  });
+
+  it("extracts .and() syntax", () => {
+    const ir = extractSchema(
+      z.object({ a: z.string() }).and(z.object({ b: z.number() })),
+    ) as IntersectionIR;
+    expect(ir.type).toBe("intersection");
   });
 });
 
@@ -627,224 +569,6 @@ describe("extractSchema — edge cases", () => {
     expect(ir.properties["lit"]?.type).toBe("literal");
     expect(ir.properties["union"]?.type).toBe("union");
     expect(ir.properties["nested"]?.type).toBe("object");
-  });
-});
-
-// ─── Tier 2: any / unknown ─────────────────────────────────────────────────
-
-describe("extractSchema — any", () => {
-  it("extracts z.any()", () => {
-    const ir = extractSchema(z.any());
-    expect(ir).toEqual<AnyIR>({ type: "any" });
-  });
-});
-
-describe("extractSchema — unknown", () => {
-  it("extracts z.unknown()", () => {
-    const ir = extractSchema(z.unknown());
-    expect(ir).toEqual<UnknownIR>({ type: "unknown" });
-  });
-});
-
-// ─── Tier 2: readonly ──────────────────────────────────────────────────────
-
-describe("extractSchema — readonly", () => {
-  it("extracts readonly string", () => {
-    const ir = extractSchema(z.string().readonly()) as ReadonlyIR;
-    expect(ir.type).toBe("readonly");
-    expect(ir.inner.type).toBe("string");
-  });
-
-  it("extracts readonly object", () => {
-    const ir = extractSchema(z.object({ name: z.string() }).readonly()) as ReadonlyIR;
-    expect(ir.type).toBe("readonly");
-    expect(ir.inner.type).toBe("object");
-  });
-});
-
-// ─── Tier 2: date ──────────────────────────────────────────────────────────
-
-describe("extractSchema — date", () => {
-  it("extracts plain date", () => {
-    const ir = extractSchema(z.date());
-    expect(ir).toEqual<DateIR>({ type: "date", checks: [] });
-  });
-
-  it("extracts date with min check", () => {
-    const minDate = new Date("2020-01-01T00:00:00.000Z");
-    const ir = extractSchema(z.date().min(minDate)) as DateIR;
-    expect(ir.type).toBe("date");
-    expect(ir.checks).toHaveLength(1);
-    expect(ir.checks[0]?.kind).toBe("date_greater_than");
-    expect(ir.checks[0]).toMatchObject({ inclusive: true });
-  });
-
-  it("extracts date with max check", () => {
-    const maxDate = new Date("2030-01-01T00:00:00.000Z");
-    const ir = extractSchema(z.date().max(maxDate)) as DateIR;
-    expect(ir.type).toBe("date");
-    expect(ir.checks).toHaveLength(1);
-    expect(ir.checks[0]?.kind).toBe("date_less_than");
-    expect(ir.checks[0]).toMatchObject({ inclusive: true });
-  });
-
-  it("extracts date with both min and max", () => {
-    const ir = extractSchema(
-      z.date().min(new Date("2020-01-01")).max(new Date("2030-01-01")),
-    ) as DateIR;
-    expect(ir.checks).toHaveLength(2);
-  });
-
-  // H2: Date checks should not produce NaN timestamps
-  it("extracted date check timestamps are never NaN", () => {
-    const minDate = new Date("2020-01-01T00:00:00.000Z");
-    const maxDate = new Date("2030-12-31T23:59:59.999Z");
-    const ir = extractSchema(z.date().min(minDate).max(maxDate)) as DateIR;
-    for (const check of ir.checks) {
-      expect(Number.isNaN(check.timestamp)).toBe(false);
-    }
-  });
-});
-
-// ─── Tier 2: tuple ─────────────────────────────────────────────────────────
-
-describe("extractSchema — tuple", () => {
-  it("extracts basic tuple", () => {
-    const ir = extractSchema(z.tuple([z.string(), z.number()])) as TupleIR;
-    expect(ir.type).toBe("tuple");
-    expect(ir.items).toHaveLength(2);
-    expect(ir.items[0]?.type).toBe("string");
-    expect(ir.items[1]?.type).toBe("number");
-    expect(ir.rest).toBeNull();
-  });
-
-  it("extracts tuple with rest", () => {
-    const ir = extractSchema(z.tuple([z.string()]).rest(z.number())) as TupleIR;
-    expect(ir.items).toHaveLength(1);
-    expect(ir.items[0]?.type).toBe("string");
-    expect(ir.rest).not.toBeNull();
-    expect(ir.rest?.type).toBe("number");
-  });
-
-  it("extracts empty tuple", () => {
-    const ir = extractSchema(z.tuple([])) as TupleIR;
-    expect(ir.items).toHaveLength(0);
-    expect(ir.rest).toBeNull();
-  });
-});
-
-// ─── Tier 2: record ────────────────────────────────────────────────────────
-
-describe("extractSchema — record", () => {
-  it("extracts string key record", () => {
-    const ir = extractSchema(z.record(z.string(), z.number())) as RecordIR;
-    expect(ir.type).toBe("record");
-    expect(ir.keyType.type).toBe("string");
-    expect(ir.valueType.type).toBe("number");
-  });
-
-  it("extracts enum key record", () => {
-    const ir = extractSchema(z.record(z.enum(["a", "b"]), z.string())) as RecordIR;
-    expect(ir.type).toBe("record");
-    expect(ir.keyType.type).toBe("enum");
-    expect(ir.valueType.type).toBe("string");
-  });
-});
-
-// ─── Tier 2: default ───────────────────────────────────────────────────────
-
-describe("extractSchema — default", () => {
-  it("extracts string with static default", () => {
-    const ir = extractSchema(z.string().default("hello")) as DefaultIR;
-    expect(ir.type).toBe("default");
-    expect(ir.inner.type).toBe("string");
-    expect(ir.defaultValue).toBe("hello");
-  });
-
-  it("extracts number with static default", () => {
-    const ir = extractSchema(z.number().default(42)) as DefaultIR;
-    expect(ir.type).toBe("default");
-    expect(ir.inner.type).toBe("number");
-    expect(ir.defaultValue).toBe(42);
-  });
-
-  it("extracts object with static default", () => {
-    const ir = extractSchema(z.object({ a: z.string() }).default({ a: "hi" })) as DefaultIR;
-    expect(ir.type).toBe("default");
-    expect(ir.inner.type).toBe("object");
-    expect(ir.defaultValue).toEqual({ a: "hi" });
-  });
-
-  // M5: Date default values should fall back to Zod
-  it("falls back for Date default value", () => {
-    const ir = extractSchema(z.date().default(new Date("2024-01-01")));
-    expect(ir.type).toBe("fallback");
-    expect((ir as FallbackIR).reason).toBe("unsupported");
-  });
-});
-
-// ─── Tier 2: intersection ──────────────────────────────────────────────────
-
-describe("extractSchema — intersection", () => {
-  it("extracts object intersection", () => {
-    const ir = extractSchema(
-      z.intersection(z.object({ a: z.string() }), z.object({ b: z.number() })),
-    ) as IntersectionIR;
-    expect(ir.type).toBe("intersection");
-    expect(ir.left.type).toBe("object");
-    expect(ir.right.type).toBe("object");
-  });
-
-  it("extracts .and() syntax", () => {
-    const ir = extractSchema(
-      z.object({ a: z.string() }).and(z.object({ b: z.number() })),
-    ) as IntersectionIR;
-    expect(ir.type).toBe("intersection");
-  });
-});
-
-// ─── Tier 2: discriminatedUnion ────────────────────────────────────────────
-
-describe("extractSchema — discriminatedUnion", () => {
-  it("extracts discriminatedUnion with mapping", () => {
-    const ir = extractSchema(
-      z.discriminatedUnion("type", [
-        z.object({ type: z.literal("a"), value: z.string() }),
-        z.object({ type: z.literal("b"), count: z.number() }),
-      ]),
-    ) as DiscriminatedUnionIR;
-    expect(ir.type).toBe("discriminatedUnion");
-    expect(ir.discriminator).toBe("type");
-    expect(ir.options).toHaveLength(2);
-    expect(ir.mapping).toEqual({ a: 0, b: 1 });
-  });
-
-  it("extracts discriminatedUnion with 3 options", () => {
-    const ir = extractSchema(
-      z.discriminatedUnion("kind", [
-        z.object({ kind: z.literal("circle"), radius: z.number() }),
-        z.object({ kind: z.literal("square"), size: z.number() }),
-        z.object({ kind: z.literal("rect"), w: z.number(), h: z.number() }),
-      ]),
-    ) as DiscriminatedUnionIR;
-    expect(ir.discriminator).toBe("kind");
-    expect(ir.options).toHaveLength(3);
-    expect(ir.mapping).toEqual({ circle: 0, square: 1, rect: 2 });
-  });
-
-  // M4: All options with literal discriminators should have complete mapping
-  it("mapping covers all literal discriminator values", () => {
-    const ir = extractSchema(
-      z.discriminatedUnion("type", [
-        z.object({ type: z.literal("a"), value: z.string() }),
-        z.object({ type: z.literal("b"), count: z.number() }),
-      ]),
-    ) as DiscriminatedUnionIR;
-    // Every option index should appear in the mapping values
-    const mappedIndices = new Set(Object.values(ir.mapping));
-    for (let i = 0; i < ir.options.length; i++) {
-      expect(mappedIndices.has(i)).toBe(true);
-    }
   });
 });
 

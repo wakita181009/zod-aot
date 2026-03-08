@@ -2,8 +2,8 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { generateValidator } from "#src/core/codegen/index.js";
-import type { FallbackEntry } from "#src/core/extractor.js";
-import { extractSchema } from "#src/core/extractor.js";
+import type { FallbackEntry } from "#src/core/extract/index.js";
+import { extractSchema } from "#src/core/extract/index.js";
 import {
   removeCompileImport,
   rewriteSource,

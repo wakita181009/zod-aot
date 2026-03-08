@@ -3,8 +3,8 @@ import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { generateValidator } from "#src/core/codegen/index.js";
-import type { FallbackEntry } from "#src/core/extractor.js";
-import { extractSchema } from "#src/core/extractor.js";
+import type { FallbackEntry } from "#src/core/extract/index.js";
+import { extractSchema } from "#src/core/extract/index.js";
 
 const require = createRequire(import.meta.url);
 const zodVersion: string = (require("zod/package.json") as { version: string }).version;

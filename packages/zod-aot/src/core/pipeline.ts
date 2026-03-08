@@ -1,7 +1,7 @@
 import type { CodeGenResult } from "./codegen/context.js";
 import { generateValidator } from "./codegen/index.js";
-import type { FallbackEntry } from "./extractor.js";
-import { extractSchema } from "./extractor.js";
+import type { FallbackEntry } from "./extract/index.js";
+import { extractSchema } from "./extract/index.js";
 
 /** Result of compiling a single discovered schema through extract → generate pipeline. */
 export interface CompiledSchemaInfo {
