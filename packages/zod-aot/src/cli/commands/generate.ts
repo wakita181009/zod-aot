@@ -1,9 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
-import { generateValidator } from "#src/core/codegen/index.js";
-import type { FallbackEntry } from "#src/core/extractor.js";
-import { extractSchema } from "#src/core/extractor.js";
+import { compileSchemas } from "#src/core/pipeline.js";
 import type { DiscoveredSchema } from "#src/discovery.js";
 import { discoverSchemas } from "#src/discovery.js";
 import { generateCompiledFileContent, resolveOutputPath, writeCompiledFile } from "../emitter.js";
@@ -107,14 +105,7 @@ export async function generateFile(
     return null;
   }
 
-  const codegenResults = schemas.map((s) => {
-    const fallbackEntries: FallbackEntry[] = [];
-    const ir = extractSchema(s.schema, fallbackEntries);
-    const result = generateValidator(ir, s.exportName, {
-      fallbackCount: fallbackEntries.length,
-    });
-    return { exportName: s.exportName, codegenResult: result, fallbackEntries };
-  });
+  const codegenResults = compileSchemas(schemas);
 
   const outputPath = resolveOutputPath(filePath, outputFlag);
   const sourceRelPath = path.relative(path.dirname(outputPath), filePath);

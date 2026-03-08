@@ -29,7 +29,7 @@ Zod compatibility: v4.0.0, v4.1.0, v4.2.0, v4.3.0, latest
 
 ### Shared Pipeline across CLI / unplugin / Benchmark
 
-All three entry points use the same core pipeline: `extractSchema()` → `generateValidator()`.
+All three entry points use the same core pipeline: `compileSchemas()` (which calls `extractSchema()` → `generateValidator()` internally).
 
 ```
                 CLI (generate)              unplugin                 Benchmark
@@ -38,9 +38,9 @@ Discovery       discoverSchemas()           discoverSchemas()        (direct sch
                   └─ loadSourceFile()          └─ loadSourceFile()
                   └─ isCompiledSchema()        └─ isCompiledSchema()
                          ↓                           ↓                   ↓
-Extract         extractSchema(s.schema)     extractSchema(s.schema)  extractSchema(zodSchema)
-                         ↓                           ↓                   ↓
-CodeGen         generateValidator(ir, name) generateValidator(ir, name) generateValidator(ir, name)
+Compile         compileSchemas(schemas)     compileSchemas(schemas)  extractSchema(zodSchema)
+(extract+codegen) └─ extractSchema()          └─ extractSchema()       └─ generateValidator()
+                   └─ generateValidator()      └─ generateValidator()
                          ↓                           ↓                   ↓
 Output          emitter.ts                  rewriteSource()          new Function()
                 .compiled.ts file           IIFE inline in source    runtime eval
@@ -48,9 +48,10 @@ Output          emitter.ts                  rewriteSource()          new Functio
 
 Key files:
 - `core/compile.ts`: `compile()` is NOT the optimizer — it's a Zod fallback + `COMPILED_MARKER` symbol for discovery
+- `core/pipeline.ts`: `compileSchemas()` — shared extract → generate pipeline, `CompiledSchemaInfo` type
 - `discovery.ts`: `discoverSchemas()` loads file → scans exports with `isCompiledSchema()`
-- `cli/commands/generate.ts`: discovery → extract → generate → `emitter.ts` writes `.compiled.ts`
-- `unplugin/transform.ts`: discovery → extract → generate → `rewriteSource()` replaces `compile()` with IIFE
+- `cli/commands/generate.ts`: discovery → `compileSchemas()` → `emitter.ts` writes `.compiled.ts`
+- `unplugin/transform.ts`: discovery → `compileSchemas()` → `rewriteSource()` replaces `compile()` with IIFE
 - `benchmarks/helpers/compile.ts`: `compileForBench()` directly calls extract → generate → `new Function()`
 
 The generated `safeParse_*` function is identical across all paths. Benchmark results accurately reflect CLI/unplugin output performance.
@@ -110,7 +111,7 @@ Plugin entries: `zod-aot/vite`, `zod-aot/webpack`, `zod-aot/esbuild`, `zod-aot/r
 1. `shouldTransform(id)` — file extension check, skip `node_modules`/`.d.ts`/`.compiled.ts`
 2. Quick bail-out: source must contain both `"zod-aot"` and `"compile"`
 3. `discoverSchemas(id)` — execute file via `loadSourceFile()`, scan exports with `isCompiledSchema()`
-4. `extractSchema()` → `generateValidator()` (shared pipeline)
+4. `compileSchemas()` — shared extract → generate pipeline (`core/pipeline.ts`)
 5. `rewriteSource()` — replace `compile(Schema)` with `/* @__PURE__ */ (() => { ... })()` IIFE
 6. `removeCompileImport()` — remove `compile` from import statement
 
@@ -146,6 +147,7 @@ zod-aot/
 │       │   │   ├── compile.ts    # compile() marker + isCompiledSchema()
 │       │   │   ├── runtime.ts    # Dev-time fallback (createFallback)
 │       │   │   ├── extractor.ts  # extractSchema() — _zod.def → SchemaIR
+│       │   │   ├── pipeline.ts   # compileSchemas() — shared extract→generate pipeline
 │       │   │   └── codegen/
 │       │   │       ├── index.ts  # generateValidator() — SchemaIR → JS code
 │       │   │       ├── context.ts # CodeGenContext, CodeGenResult, utils

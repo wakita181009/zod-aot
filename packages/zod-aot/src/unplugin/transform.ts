@@ -1,17 +1,8 @@
-import type { CodeGenResult } from "#src/core/codegen/context.js";
 import { extractFunctionName } from "#src/core/codegen/context.js";
-import { generateValidator } from "#src/core/codegen/index.js";
-import type { FallbackEntry } from "#src/core/extractor.js";
-import { extractSchema } from "#src/core/extractor.js";
-import type { DiscoveredSchema } from "#src/discovery.js";
+import type { CompiledSchemaInfo } from "#src/core/pipeline.js";
+import { compileSchemas } from "#src/core/pipeline.js";
 import { discoverSchemas } from "#src/discovery.js";
 import type { ZodAotPluginOptions } from "./types.js";
-
-interface CompiledSchemaInfo {
-  exportName: string;
-  codegenResult: CodeGenResult;
-  fallbackEntries: FallbackEntry[];
-}
 
 /**
  * Check if a file should be transformed by the plugin.
@@ -37,7 +28,7 @@ export async function transformCode(code: string, id: string): Promise<string | 
   if (!code.includes("zod-aot") || !code.includes("compile")) return null;
 
   // Discover compiled schemas by executing the file (with cache busting for HMR)
-  let schemas: DiscoveredSchema[];
+  let schemas: { exportName: string; schema: unknown }[];
   try {
     schemas = await discoverSchemas(id, { cacheBust: true });
   } catch (e) {
@@ -47,15 +38,7 @@ export async function transformCode(code: string, id: string): Promise<string | 
   if (schemas.length === 0) return null;
 
   // For each schema, run the compilation pipeline
-  const compiled: CompiledSchemaInfo[] = [];
-  for (const s of schemas) {
-    const fallbackEntries: FallbackEntry[] = [];
-    const ir = extractSchema(s.schema, fallbackEntries);
-    const result = generateValidator(ir, s.exportName, {
-      fallbackCount: fallbackEntries.length,
-    });
-    compiled.push({ exportName: s.exportName, codegenResult: result, fallbackEntries });
-  }
+  const compiled = compileSchemas(schemas);
 
   return rewriteSource(code, compiled);
 }
@@ -63,11 +46,8 @@ export async function transformCode(code: string, id: string): Promise<string | 
 /**
  * Generate an IIFE that replaces a compile() call with inline optimized code.
  */
-function generateInlineReplacement(
-  schemaArgName: string,
-  codegenResult: CodeGenResult,
-  fallbackEntries: FallbackEntry[],
-): string {
+function generateInlineReplacement(schemaArgName: string, schema: CompiledSchemaInfo): string {
+  const { codegenResult, fallbackEntries } = schema;
   const fnName = extractFunctionName(codegenResult.functionName);
 
   // Collect preamble lines (skip empty and marker)
@@ -135,9 +115,7 @@ export function rewriteSource(code: string, schemas: CompiledSchemaInfo[]): stri
     const schemaArgName = result.slice(openParenIndex + 1, closeParenIndex).trim();
     const prefix = match[1] ?? "";
     const fullMatch = result.slice(match.index, closeParenIndex + 1);
-    const replacement =
-      prefix +
-      generateInlineReplacement(schemaArgName, schema.codegenResult, schema.fallbackEntries);
+    const replacement = prefix + generateInlineReplacement(schemaArgName, schema);
     result = result.replace(fullMatch, replacement);
   }
 

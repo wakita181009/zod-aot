@@ -838,15 +838,13 @@ function compileWithFallbacks(schema: z.ZodType, name = "test") {
   const ir = extractSchema(schema, fallbackEntries);
   const result = generateValidator(ir, name, { fallbackCount: fallbackEntries.length });
   const fallbackSchemas = fallbackEntries.map((e) => e.schema);
-  const safeParseFn =
-    fallbackSchemas.length > 0
-      ? (new Function("__fb", `${result.code}\nreturn ${result.functionName};`)(
-          fallbackSchemas,
-        ) as (input: unknown) => SafeParseResult<unknown>)
-      : (new Function(`${result.code}\nreturn ${result.functionName};`)() as (
-          input: unknown,
-        ) => SafeParseResult<unknown>);
-  return safeParseFn;
+  return fallbackSchemas.length > 0
+    ? (new Function("__fb", `${result.code}\nreturn ${result.functionName};`)(fallbackSchemas) as (
+        input: unknown,
+      ) => SafeParseResult<unknown>)
+    : (new Function(`${result.code}\nreturn ${result.functionName};`)() as (
+        input: unknown,
+      ) => SafeParseResult<unknown>);
 }
 
 describe("integration — partial fallback (mixed compilable + non-compilable)", () => {

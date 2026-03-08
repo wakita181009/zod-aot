@@ -1,19 +1,15 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { CodeGenResult } from "#src/core/codegen/context.js";
 import { extractFunctionName } from "#src/core/codegen/context.js";
-import type { FallbackEntry } from "#src/core/extractor.js";
-
-interface EmitSchema {
-  exportName: string;
-  codegenResult: CodeGenResult;
-  fallbackEntries: FallbackEntry[];
-}
+import type { CompiledSchemaInfo } from "#src/core/pipeline.js";
 
 /**
  * Generate the content of a .compiled.ts file from multiple schemas.
  */
-export function generateCompiledFileContent(schemas: EmitSchema[], sourceRelPath: string): string {
+export function generateCompiledFileContent(
+  schemas: CompiledSchemaInfo[],
+  sourceRelPath: string,
+): string {
   const lines: string[] = [];
 
   // Header
