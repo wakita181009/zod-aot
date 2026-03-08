@@ -1,6 +1,7 @@
 import { z } from "zod";
-import type { CompiledSchema, FallbackEntry, SafeParseResult } from "zod-aot";
-import { extractSchema, generateValidator } from "zod-aot";
+import type { CompiledSchema, SafeParseResult } from "zod-aot";
+import type { FallbackEntry } from "zod-aot/internals";
+import { extractSchema, generateValidator } from "zod-aot/internals";
 
 /**
  * Compile a Zod schema into an AOT-optimized validator for benchmarking.
