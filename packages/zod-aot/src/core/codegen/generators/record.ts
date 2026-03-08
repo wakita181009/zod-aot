@@ -1,5 +1,6 @@
 import type { SchemaIR } from "../../types.js";
 import type { CodeGenContext, GenerateValidationFn } from "../context.js";
+import { emit } from "../context.js";
 
 export function generateRecordValidation(
   ir: SchemaIR & { type: "record" },
@@ -9,23 +10,24 @@ export function generateRecordValidation(
   ctx: CodeGenContext,
   generateFn: GenerateValidationFn,
 ): string {
-  let code = `if(typeof ${inputExpr}!=="object"||${inputExpr}===null||Array.isArray(${inputExpr})){${issuesVar}.push({code:"invalid_type",expected:"record",input:${inputExpr},path:${pathExpr}});}else{`;
+  let code = emit`
+    if(typeof ${inputExpr}!=="object"||${inputExpr}===null||Array.isArray(${inputExpr})){
+      ${issuesVar}.push({code:"invalid_type",expected:"record",input:${inputExpr},path:${pathExpr}});
+    }else{`;
 
   const keysVar = `__rk_${ctx.counter++}`;
   const idxVar = `__ri_${ctx.counter++}`;
   const keyVar = `__rkey_${ctx.counter++}`;
-
-  code += `var ${keysVar}=Object.keys(${inputExpr});`;
-  code += `for(var ${idxVar}=0;${idxVar}<${keysVar}.length;${idxVar}++){`;
-  code += `var ${keyVar}=${keysVar}[${idxVar}];`;
-
   const keyPath = `${pathExpr}.concat(${keyVar})`;
-  code += generateFn(ir.keyType, keyVar, keyPath, issuesVar, ctx);
-
   const valExpr = `${inputExpr}[${keyVar}]`;
-  code += generateFn(ir.valueType, valExpr, keyPath, issuesVar, ctx);
 
-  code += `}`;
-  code += `}\n`;
-  return code;
+  code += emit`
+    var ${keysVar}=Object.keys(${inputExpr});
+    for(var ${idxVar}=0;${idxVar}<${keysVar}.length;${idxVar}++){
+      var ${keyVar}=${keysVar}[${idxVar}];
+      ${generateFn(ir.keyType, keyVar, keyPath, issuesVar, ctx)}
+      ${generateFn(ir.valueType, valExpr, keyPath, issuesVar, ctx)}
+    }
+  }`;
+  return `${code}\n`;
 }

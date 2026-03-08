@@ -1,4 +1,4 @@
-# zod-aot
+# Zod AOT
 
 **Compile Zod schemas into zero-overhead validation functions at build time.**
 

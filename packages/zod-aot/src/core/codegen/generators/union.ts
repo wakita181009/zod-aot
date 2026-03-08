@@ -1,5 +1,6 @@
 import type { SchemaIR } from "../../types.js";
 import type { CodeGenContext, GenerateValidationFn } from "../context.js";
+import { emit } from "../context.js";
 
 export function generateUnionValidation(
   ir: SchemaIR & { type: "union" },
@@ -15,15 +16,29 @@ export function generateUnionValidation(
 
   for (const option of ir.options) {
     const tmpIssues = `__ui_${ctx.counter++}`;
-    code += `if(!${resultVar}){var ${tmpIssues}=[];`;
-    code += generateFn(option, inputExpr, pathExpr, tmpIssues, ctx);
-    code += `if(${tmpIssues}.length===0){${resultVar}=true;}else{`;
     // Apply __msg to inner branch issues so they have messages when included in union errors
     const innerIdx = `__ufi_${ctx.counter++}`;
-    code += `if(typeof __msg==="function"){for(var ${innerIdx}=0;${innerIdx}<${tmpIssues}.length;${innerIdx}++){${tmpIssues}[${innerIdx}].message=__msg(${tmpIssues}[${innerIdx}]);delete ${tmpIssues}[${innerIdx}].input;}}`;
-    code += `${errorsVar}.push(${tmpIssues});}}`;
+    code += emit`
+      if(!${resultVar}){
+        var ${tmpIssues}=[];
+        ${generateFn(option, inputExpr, pathExpr, tmpIssues, ctx)}
+        if(${tmpIssues}.length===0){
+          ${resultVar}=true;
+        }else{
+          if(typeof __msg==="function"){
+            for(var ${innerIdx}=0;${innerIdx}<${tmpIssues}.length;${innerIdx}++){
+              ${tmpIssues}[${innerIdx}].message=__msg(${tmpIssues}[${innerIdx}]);
+              delete ${tmpIssues}[${innerIdx}].input;
+            }
+          }
+          ${errorsVar}.push(${tmpIssues});
+        }
+      }`;
   }
 
-  code += `if(!${resultVar}){${issuesVar}.push({code:"invalid_union",errors:${errorsVar},input:${inputExpr},path:${pathExpr}});}\n`;
-  return code;
+  code += emit`
+    if(!${resultVar}){
+      ${issuesVar}.push({code:"invalid_union",errors:${errorsVar},input:${inputExpr},path:${pathExpr}});
+    }`;
+  return `${code}\n`;
 }

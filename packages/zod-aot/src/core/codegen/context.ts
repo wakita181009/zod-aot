@@ -27,6 +27,22 @@ export const EMAIL_REGEX_SOURCE = String.raw`^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.
 export const UUID_REGEX_SOURCE =
   "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$";
 
+/**
+ * Tagged template literal that strips newlines and leading whitespace.
+ * Allows writing generated code with readable indentation while producing minified output.
+ */
+export function emit(
+  strings: TemplateStringsArray,
+  ...values: (string | number | bigint | boolean)[]
+): string {
+  let result = "";
+  for (let i = 0; i < strings.length; i++) {
+    result += (strings[i] ?? "").replace(/\n\s*/g, "");
+    if (i < values.length) result += String(values[i]);
+  }
+  return result;
+}
+
 export function escapeString(s: string): string {
   return JSON.stringify(s);
 }

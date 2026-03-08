@@ -1,5 +1,6 @@
 import type { SchemaIR } from "../../types.js";
 import type { CodeGenContext } from "../context.js";
+import { emit } from "../context.js";
 
 export function generateEnumValidation(
   ir: SchemaIR & { type: "enum" },
@@ -10,5 +11,9 @@ export function generateEnumValidation(
 ): string {
   const setVar = `__enumSet_${ctx.counter++}`;
   ctx.preamble.push(`var ${setVar}=new Set(${JSON.stringify(ir.values)});`);
-  return `if(!${setVar}.has(${inputExpr})){${issuesVar}.push({code:"invalid_value",values:${JSON.stringify(ir.values)},input:${inputExpr},path:${pathExpr}});}\n`;
+  return `${emit`
+    if(!${setVar}.has(${inputExpr})){
+      ${issuesVar}.push({code:"invalid_value",values:${JSON.stringify(ir.values)},input:${inputExpr},path:${pathExpr}});
+    }
+  `}\n`;
 }

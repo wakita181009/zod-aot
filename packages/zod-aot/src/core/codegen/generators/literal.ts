@@ -1,5 +1,5 @@
 import type { SchemaIR } from "../../types.js";
-import { escapeString } from "../context.js";
+import { emit, escapeString } from "../context.js";
 
 export function generateLiteralValidation(
   ir: SchemaIR & { type: "literal" },
@@ -17,7 +17,11 @@ export function generateLiteralValidation(
     } else {
       cond = `${inputExpr}!==${String(v)}`;
     }
-    return `if(${cond}){${issuesVar}.push({code:"invalid_value",values:${JSON.stringify([v])},input:${inputExpr},path:${pathExpr}});}\n`;
+    return `${emit`
+      if(${cond}){
+        ${issuesVar}.push({code:"invalid_value",values:${JSON.stringify([v])},input:${inputExpr},path:${pathExpr}});
+      }
+    `}\n`;
   }
 
   const valueChecks = ir.values
@@ -28,5 +32,9 @@ export function generateLiteralValidation(
     })
     .join("||");
 
-  return `if(!(${valueChecks})){${issuesVar}.push({code:"invalid_value",values:${JSON.stringify(ir.values)},input:${inputExpr},path:${pathExpr}});}\n`;
+  return `${emit`
+    if(!(${valueChecks})){
+      ${issuesVar}.push({code:"invalid_value",values:${JSON.stringify(ir.values)},input:${inputExpr},path:${pathExpr}});
+    }
+  `}\n`;
 }

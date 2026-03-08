@@ -1,6 +1,6 @@
 import type { SchemaIR } from "../../types.js";
 import type { CodeGenContext, GenerateValidationFn } from "../context.js";
-import { escapeString } from "../context.js";
+import { emit, escapeString } from "../context.js";
 
 export function generateObjectValidation(
   ir: SchemaIR & { type: "object" },
@@ -10,7 +10,10 @@ export function generateObjectValidation(
   ctx: CodeGenContext,
   generateFn: GenerateValidationFn,
 ): string {
-  let code = `if(typeof ${inputExpr}!=="object"||${inputExpr}===null||Array.isArray(${inputExpr})){${issuesVar}.push({code:"invalid_type",expected:"object",input:${inputExpr},path:${pathExpr}});}else{`;
+  let code = emit`
+    if(typeof ${inputExpr}!=="object"||${inputExpr}===null||Array.isArray(${inputExpr})){
+      ${issuesVar}.push({code:"invalid_type",expected:"object",input:${inputExpr},path:${pathExpr}});
+    }else{`;
 
   const objVar = `__o_${ctx.counter++}`;
   code += `var ${objVar}=${inputExpr};`;

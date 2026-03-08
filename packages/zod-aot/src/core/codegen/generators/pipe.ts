@@ -10,7 +10,5 @@ export function generatePipeValidation(
   generateFn: GenerateValidationFn,
 ): string {
   // Validate input schema first, then output schema sequentially
-  let code = generateFn(ir.in, inputExpr, pathExpr, issuesVar, ctx);
-  code += generateFn(ir.out, inputExpr, pathExpr, issuesVar, ctx);
-  return code;
+  return `${generateFn(ir.in, inputExpr, pathExpr, issuesVar, ctx)}${generateFn(ir.out, inputExpr, pathExpr, issuesVar, ctx)}`;
 }

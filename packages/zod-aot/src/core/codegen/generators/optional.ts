@@ -1,5 +1,6 @@
 import type { SchemaIR } from "../../types.js";
 import type { CodeGenContext, GenerateValidationFn } from "../context.js";
+import { emit } from "../context.js";
 
 export function generateOptionalValidation(
   ir: SchemaIR & { type: "optional" },
@@ -9,8 +10,9 @@ export function generateOptionalValidation(
   ctx: CodeGenContext,
   generateFn: GenerateValidationFn,
 ): string {
-  let code = `if(${inputExpr}!==undefined){`;
-  code += generateFn(ir.inner, inputExpr, pathExpr, issuesVar, ctx);
-  code += `}\n`;
-  return code;
+  return `${emit`
+    if(${inputExpr}!==undefined){
+      ${generateFn(ir.inner, inputExpr, pathExpr, issuesVar, ctx)}
+    }
+  `}\n`;
 }

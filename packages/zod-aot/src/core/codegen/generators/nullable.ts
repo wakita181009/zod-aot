@@ -1,5 +1,6 @@
 import type { SchemaIR } from "../../types.js";
 import type { CodeGenContext, GenerateValidationFn } from "../context.js";
+import { emit } from "../context.js";
 
 export function generateNullableValidation(
   ir: SchemaIR & { type: "nullable" },
@@ -9,8 +10,9 @@ export function generateNullableValidation(
   ctx: CodeGenContext,
   generateFn: GenerateValidationFn,
 ): string {
-  let code = `if(${inputExpr}!==null){`;
-  code += generateFn(ir.inner, inputExpr, pathExpr, issuesVar, ctx);
-  code += `}\n`;
-  return code;
+  return emit`
+    if(${inputExpr}!==null){
+      ${generateFn(ir.inner, inputExpr, pathExpr, issuesVar, ctx)}
+    }\n
+  `;
 }

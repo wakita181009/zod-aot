@@ -1,6 +1,6 @@
 import type { SchemaIR } from "../../types.js";
 import type { CodeGenContext } from "../context.js";
-import { EMAIL_REGEX_SOURCE, escapeString, UUID_REGEX_SOURCE } from "../context.js";
+import { EMAIL_REGEX_SOURCE, emit, escapeString, UUID_REGEX_SOURCE } from "../context.js";
 
 export function generateStringValidation(
   ir: SchemaIR & { type: "string" },
@@ -9,20 +9,34 @@ export function generateStringValidation(
   issuesVar: string,
   ctx: CodeGenContext,
 ): string {
-  let code = `if(typeof ${inputExpr}!=="string"){${issuesVar}.push({code:"invalid_type",expected:"string",input:${inputExpr},path:${pathExpr}});}`;
+  let code = emit`
+    if(typeof ${inputExpr}!=="string"){
+      ${issuesVar}.push({code:"invalid_type",expected:"string",input:${inputExpr},path:${pathExpr}});
+    }`;
 
   if (ir.checks.length > 0) {
     code += `else{`;
     for (const check of ir.checks) {
       switch (check.kind) {
         case "min_length":
-          code += `if(${inputExpr}.length<${check.minimum}){${issuesVar}.push({code:"too_small",minimum:${check.minimum},origin:"string",inclusive:true,input:${inputExpr},path:${pathExpr}});}`;
+          code += emit`
+            if(${inputExpr}.length<${check.minimum}){
+              ${issuesVar}.push({code:"too_small",minimum:${check.minimum},origin:"string",inclusive:true,input:${inputExpr},path:${pathExpr}});
+            }`;
           break;
         case "max_length":
-          code += `if(${inputExpr}.length>${check.maximum}){${issuesVar}.push({code:"too_big",maximum:${check.maximum},origin:"string",inclusive:true,input:${inputExpr},path:${pathExpr}});}`;
+          code += emit`
+            if(${inputExpr}.length>${check.maximum}){
+              ${issuesVar}.push({code:"too_big",maximum:${check.maximum},origin:"string",inclusive:true,input:${inputExpr},path:${pathExpr}});
+            }`;
           break;
         case "length_equals":
-          code += `if(${inputExpr}.length<${check.length}){${issuesVar}.push({code:"too_small",minimum:${check.length},origin:"string",inclusive:true,exact:true,input:${inputExpr},path:${pathExpr}});}else if(${inputExpr}.length>${check.length}){${issuesVar}.push({code:"too_big",maximum:${check.length},origin:"string",inclusive:true,exact:true,input:${inputExpr},path:${pathExpr}});}`;
+          code += emit`
+            if(${inputExpr}.length<${check.length}){
+              ${issuesVar}.push({code:"too_small",minimum:${check.length},origin:"string",inclusive:true,exact:true,input:${inputExpr},path:${pathExpr}});
+            }else if(${inputExpr}.length>${check.length}){
+              ${issuesVar}.push({code:"too_big",maximum:${check.length},origin:"string",inclusive:true,exact:true,input:${inputExpr},path:${pathExpr}});
+            }`;
           break;
         case "string_format": {
           let regexVar: string;
@@ -33,7 +47,10 @@ export function generateStringValidation(
             regexVar = `__re_${ctx.counter++}`;
             ctx.preamble.push(`var ${regexVar}=new RegExp(${escapeString(check.pattern)});`);
           } else if (check.format === "url") {
-            code += `if(!(function(s){try{new URL(s);return true;}catch(e){return false;}})(${inputExpr})){${issuesVar}.push({code:"invalid_format",format:"url",input:${inputExpr},path:${pathExpr}});}`;
+            code += emit`
+              if(!(function(s){try{new URL(s);return true;}catch(e){return false;}})(${inputExpr})){
+                ${issuesVar}.push({code:"invalid_format",format:"url",input:${inputExpr},path:${pathExpr}});
+              }`;
             continue;
           } else if (check.format === "uuid") {
             regexVar = `__re_uuid_${ctx.counter++}`;
@@ -47,7 +64,10 @@ export function generateStringValidation(
               continue;
             }
           }
-          code += `if(!${regexVar}.test(${inputExpr})){${issuesVar}.push({code:"invalid_format",format:${escapeString(check.format)},pattern:${regexVar}.toString(),origin:"string",input:${inputExpr},path:${pathExpr}});}`;
+          code += emit`
+            if(!${regexVar}.test(${inputExpr})){
+              ${issuesVar}.push({code:"invalid_format",format:${escapeString(check.format)},pattern:${regexVar}.toString(),origin:"string",input:${inputExpr},path:${pathExpr}});
+            }`;
           break;
         }
       }

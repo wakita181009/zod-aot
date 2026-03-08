@@ -9,7 +9,5 @@ export function generateIntersectionValidation(
   ctx: CodeGenContext,
   generateFn: GenerateValidationFn,
 ): string {
-  let code = generateFn(ir.left, inputExpr, pathExpr, issuesVar, ctx);
-  code += generateFn(ir.right, inputExpr, pathExpr, issuesVar, ctx);
-  return code;
+  return `${generateFn(ir.left, inputExpr, pathExpr, issuesVar, ctx)}${generateFn(ir.right, inputExpr, pathExpr, issuesVar, ctx)}`;
 }
