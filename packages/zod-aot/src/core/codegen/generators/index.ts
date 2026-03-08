@@ -6,6 +6,7 @@ export { generateDateValidation } from "./date.js";
 export { generateDefaultValidation } from "./default.js";
 export { generateDiscriminatedUnionValidation } from "./discriminated-union.js";
 export { generateEnumValidation } from "./enum.js";
+export { generateFallbackValidation } from "./fallback.js";
 export { generateIntersectionValidation } from "./intersection.js";
 export { generateLiteralValidation } from "./literal.js";
 export { generateMapValidation } from "./map.js";

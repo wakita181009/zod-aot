@@ -12,6 +12,7 @@ import {
   generateDefaultValidation,
   generateDiscriminatedUnionValidation,
   generateEnumValidation,
+  generateFallbackValidation,
   generateIntersectionValidation,
   generateLiteralValidation,
   generateMapValidation,
@@ -78,22 +79,7 @@ function generateValidation(
         generateValidation,
       );
     case "fallback":
-      if (ir.fallbackIndex !== undefined) {
-        const idx = ir.fallbackIndex;
-        const rVar = `__fb_r${idx}`;
-        const iVar = `__fb_i${idx}`;
-        const jVar = `__fb_j${idx}`;
-        let fbCode = `var ${rVar}=__fb[${idx}].safeParse(${inputExpr});\n`;
-        fbCode += `if(!${rVar}.success){`;
-        fbCode += `var ${iVar}=${rVar}.error.issues;`;
-        fbCode += `for(var ${jVar}=0;${jVar}<${iVar}.length;${jVar}++){`;
-        fbCode += `${issuesVar}.push(Object.assign({},${iVar}[${jVar}],`;
-        fbCode += `{path:${pathExpr}.concat(${iVar}[${jVar}].path)}));`;
-        fbCode += `}}`;
-        fbCode += `else{${inputExpr}=${rVar}.data;}\n`;
-        return fbCode;
-      }
-      return `${issuesVar}.push({code:"custom",path:${pathExpr},message:"Fallback schema: ${ir.reason}"});\n`;
+      return generateFallbackValidation(ir, inputExpr, pathExpr, issuesVar);
     case "any":
       return generateAnyValidation();
     case "unknown":
