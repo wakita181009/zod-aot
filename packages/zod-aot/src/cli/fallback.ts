@@ -1,4 +1,4 @@
-import type { SchemaIR } from "./types.js";
+import type { SchemaIR } from "#src/core/types.js";
 
 /**
  * Recursively check if a SchemaIR contains a fallback node.

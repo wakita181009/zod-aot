@@ -2,10 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { extractSchema } from "#src/core/extractor.js";
-import { hasFallback } from "#src/core/fallback.js";
 import type { DiscoveredSchema } from "#src/discovery.js";
 import { discoverSchemas } from "#src/discovery.js";
 import { getErrorMessage } from "../errors.js";
+import { hasFallback } from "../fallback.js";
 import { logger } from "../logger.js";
 
 interface CheckOptions {
