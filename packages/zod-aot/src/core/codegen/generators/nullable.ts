@@ -10,9 +10,9 @@ export function generateNullableValidation(
   ctx: CodeGenContext,
   generateFn: GenerateValidationFn,
 ): string {
-  return emit`
+  return `${emit`
     if(${inputExpr}!==null){
       ${generateFn(ir.inner, inputExpr, pathExpr, issuesVar, ctx)}
-    }\n
-  `;
+    }
+  `}\n`;
 }
