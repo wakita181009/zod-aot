@@ -185,6 +185,22 @@ describe("rewriteSource()", () => {
     expect(result).not.toContain("compile<z.infer");
   });
 
+  it("IIFE includes __msg from zod config import", () => {
+    const code = [
+      `import { z } from "zod";`,
+      `import { compile } from "zod-aot";`,
+      `export const validateUser = compile(UserSchema);`,
+    ].join("\n");
+
+    const schemas = [makeCompiledInfo("validateUser", simpleSchema)];
+    const result = rewriteSource(code, schemas);
+
+    // Should add zod config import
+    expect(result).toContain('import { config as __zodAotConfig } from "zod"');
+    // IIFE should declare __msg
+    expect(result).toContain("var __msg=__zodAotConfig().localeError;");
+  });
+
   it("preserves schema variable reference in generated code", () => {
     const code = [
       `import { compile } from "zod-aot";`,
@@ -325,9 +341,9 @@ describe("generated IIFE runtime execution", () => {
 
     // Execute the IIFE using Function constructor.
     // The IIFE references `Schema` (the original schema variable) in its `schema:` property,
-    // so we inject a dummy value for it.
-    const fn = new Function("Schema", `return ${iifeMatch?.[0]};`);
-    return fn({}) as {
+    // and `__zodAotConfig` for localeError message generation.
+    const fn = new Function("Schema", "__zodAotConfig", `return ${iifeMatch?.[0]};`);
+    return fn({}, z.config) as {
       parse: (input: unknown) => unknown;
       safeParse: (input: unknown) => { success: boolean; data?: unknown; error?: unknown };
       is: (input: unknown) => boolean;
@@ -366,6 +382,31 @@ describe("generated IIFE runtime execution", () => {
 
     expect(() => validator.parse({ name: 123 })).toThrow("Validation failed");
     expect(validator.parse({ name: "Alice", age: 30 })).toEqual({ name: "Alice", age: 30 });
+  });
+
+  it("generated validator produces error messages when __msg is provided", () => {
+    const schemas = [makeCompiledInfo("validateUser", userSchema)];
+    const code = [
+      `import { compile } from "zod-aot";`,
+      ...schemas.map((s) => `export const ${s.exportName} = compile(Schema);`),
+    ].join("\n");
+
+    const transformed = rewriteSource(code, schemas);
+    const iifeMatch = /\/\* @__PURE__ \*\/ \(\(\) => \{[\s\S]*?\}\)\(\)/.exec(transformed);
+    expect(iifeMatch).not.toBeNull();
+
+    // Simulate __zodAotConfig being available (as the import would provide)
+    const __zodAotConfig = z.config;
+    const fn = new Function("Schema", "__zodAotConfig", `return ${iifeMatch?.[0]};`);
+    const validator = fn({}, __zodAotConfig) as {
+      safeParse: (input: unknown) => { success: boolean; error?: { issues: unknown[] } };
+    };
+
+    const result = validator.safeParse("not an object");
+    expect(result.success).toBe(false);
+    const issues = result.error?.issues as Record<string, unknown>[];
+    expect(issues?.[0]).toHaveProperty("message");
+    expect(typeof issues?.[0]?.["message"]).toBe("string");
   });
 
   it("generated validator matches Zod behavior", () => {

@@ -157,7 +157,7 @@ describe("generateCompiledFileContent()", () => {
     ).toThrow("Failed to inject __fb binding");
   });
 
-  it("does not generate import when no schemas have fallbacks", () => {
+  it("includes zod config import and __msg declaration for localeError", () => {
     const result: CodeGenResult = {
       code: "/* zod-aot */",
       functionName: "function safeParse_test(input){\nreturn{success:true,data:input};\n}",
@@ -169,7 +169,23 @@ describe("generateCompiledFileContent()", () => {
       "./test.ts",
     );
 
-    expect(content).not.toContain("import {");
+    expect(content).toContain('import { config as __zodAotConfig } from "zod"');
+    expect(content).toContain("const __msg = __zodAotConfig().localeError;");
+  });
+
+  it("does not generate fallback import when no schemas have fallbacks", () => {
+    const result: CodeGenResult = {
+      code: "/* zod-aot */",
+      functionName: "function safeParse_test(input){\nreturn{success:true,data:input};\n}",
+      fallbackCount: 0,
+    };
+
+    const content = generateCompiledFileContent(
+      [{ exportName: "validateTest", codegenResult: result, fallbackEntries: [] }],
+      "./test.ts",
+    );
+
+    expect(content).not.toContain("__src_");
     expect(content).not.toContain("__fb");
   });
 });

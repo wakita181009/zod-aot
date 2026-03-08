@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { CompiledSchema, FallbackEntry, SafeParseResult } from "zod-aot";
 import { extractSchema, generateValidator } from "zod-aot";
 
@@ -11,12 +12,14 @@ export function compileForBench<T>(zodSchema: unknown, name: string): CompiledSc
   const result = generateValidator(ir, name, { fallbackCount: fallbackEntries.length });
 
   const fallbackSchemas = fallbackEntries.map((e) => e.schema);
+  const __msg = z.config().localeError;
   const safeParseFn =
     fallbackSchemas.length > 0
-      ? (new Function("__fb", `${result.code}\nreturn ${result.functionName};`)(
+      ? (new Function("__msg", "__fb", `${result.code}\nreturn ${result.functionName};`)(
+          __msg,
           fallbackSchemas,
         ) as (input: unknown) => SafeParseResult<T>)
-      : (new Function(`${result.code}\nreturn ${result.functionName};`)() as (
+      : (new Function("__msg", `${result.code}\nreturn ${result.functionName};`)(__msg) as (
           input: unknown,
         ) => SafeParseResult<T>);
 

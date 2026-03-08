@@ -17,6 +17,11 @@ export function generateCompiledFileContent(
   lines.push(`// Source: ${sourceRelPath}`);
   lines.push("");
 
+  // Import Zod config for locale-aware error messages
+  lines.push('import { config as __zodAotConfig } from "zod";');
+  lines.push("const __msg = __zodAotConfig().localeError;");
+  lines.push("");
+
   // Import original schemas for partial fallback (if any schema has fallbacks)
   const schemasWithFallbacks = schemas.filter((s) => s.fallbackEntries.length > 0);
   if (schemasWithFallbacks.length > 0) {

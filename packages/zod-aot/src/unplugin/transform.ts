@@ -63,9 +63,12 @@ function generateInlineReplacement(schemaArgName: string, schema: CompiledSchema
     fbDecl = `var __fb=[${exprs.join(",")}];\n`;
   }
 
+  // Capture Zod's localeError for message generation inside the IIFE
+  const msgDecl = "var __msg=__zodAotConfig().localeError;\n";
+
   return [
     "/* @__PURE__ */ (() => {",
-    fbDecl + preambleStr + codegenResult.functionName,
+    msgDecl + fbDecl + preambleStr + codegenResult.functionName,
     "return {",
     `parse(input){const r=${fnName}(input);if(r.success)return r.data;throw Object.assign(new Error("Validation failed"),r.error);},`,
     `safeParse:${fnName},`,
@@ -120,6 +123,11 @@ export function rewriteSource(code: string, schemas: CompiledSchemaInfo[]): stri
   }
 
   result = removeCompileImport(result);
+
+  // Add zod config import for __msg (localeError) used in IIFEs
+  if (!result.includes("__zodAotConfig")) return result;
+  result = `import { config as __zodAotConfig } from "zod";\n${result}`;
+
   return result;
 }
 
