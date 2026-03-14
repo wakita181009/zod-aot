@@ -15,6 +15,13 @@ export default defineConfig({
   },
   test: {
     include: ["packages/*/tests/**/*.test.ts"],
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "lcov"],
+      reportsDirectory: "./coverage",
+      include: ["packages/zod-aot/src/**/*.ts"],
+      exclude: ["packages/zod-aot/src/cli/index.ts"],
+    },
     benchmark: {
       include: ["benchmarks/**/*.bench.ts"],
     },
