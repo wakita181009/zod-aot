@@ -58,6 +58,11 @@
       "import": "./dist/unplugin/rollup.js",
       "default": "./dist/unplugin/rollup.js"
     },
+    "./rolldown": {
+      "types": "./dist/unplugin/rolldown.d.ts",
+      "import": "./dist/unplugin/rolldown.js",
+      "default": "./dist/unplugin/rolldown.js"
+    },
     "./bun": {
       "types": "./dist/unplugin/bun.d.ts",
       "import": "./dist/unplugin/bun.js",
