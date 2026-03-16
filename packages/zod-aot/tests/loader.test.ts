@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { loadSourceFile } from "#src/loader.js";
 
 const fixturesDir = path.resolve(import.meta.dirname, "fixtures");
+const isNodeRuntime = !("Bun" in globalThis) && !("Deno" in globalThis);
 
 describe("loadSourceFile", () => {
   it("loads TypeScript files on Node.js (via tsx)", async () => {
@@ -45,7 +46,8 @@ describe("loadSourceFile", () => {
   });
 });
 
-describe("loadSourceFile — tsx unavailable", () => {
+// tsx path is Node.js-only; Bun/Deno use native TS imports
+describe.skipIf(!isNodeRuntime)("loadSourceFile — tsx unavailable", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.resetModules();
