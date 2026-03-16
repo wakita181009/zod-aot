@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.0](https://github.com/wakita181009/zod-aot/compare/v0.0.19...v0.1.0) (2026-03-16)
+
+
+### Features
+
+* add Bun build plugin support (zod-aot/bun) ([#22](https://github.com/wakita181009/zod-aot/issues/22)) ([aa6b3e0](https://github.com/wakita181009/zod-aot/commit/aa6b3e0463d29bc938f1eb458c96afcd6fe80cdc))
+
 ## [0.0.19](https://github.com/wakita181009/zod-aot/compare/zod-aot-v0.0.18...zod-aot-v0.0.19) (2026-03-16)
 
 
