@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { WatchDeps } from "#src/cli/commands/watch.js";
 import { debounce, isWatchTarget, resolveWatchDirs, runWatch } from "#src/cli/commands/watch.js";
 import { resolveOutputPath } from "#src/cli/emitter.js";
 
@@ -55,9 +56,7 @@ describe("isWatchTarget", () => {
     expect(isWatchTarget("node_modules/zod/index.ts")).toBe(false);
   });
 
-  // M3: node_modules check should not false-positive on similar directory names
   it("accepts paths with 'node_modules' as substring in directory name", () => {
-    // A directory named "node_modules_backup" should NOT be excluded
     expect(isWatchTarget("/home/user/node_modules_backup/schema.ts")).toBe(true);
   });
 
@@ -160,130 +159,128 @@ describe("debounce", () => {
 });
 
 describe("runWatch", () => {
-  it("performs initial generation and starts watching", async () => {
+  let logSpy: ReturnType<typeof vi.spyOn>;
+  let mockLogger: {
+    info: ReturnType<typeof vi.fn>;
+    success: ReturnType<typeof vi.fn>;
+    warn: ReturnType<typeof vi.fn>;
+    error: ReturnType<typeof vi.fn>;
+    dim: ReturnType<typeof vi.fn>;
+  };
+
+  beforeEach(async () => {
     const loggerMod = await import("#src/cli/logger.js");
-    const logSpy = vi.spyOn(loggerMod, "logger", "get");
-    const mockLogger = {
+    mockLogger = {
       info: vi.fn(),
       success: vi.fn(),
       warn: vi.fn(),
       error: vi.fn(),
       dim: vi.fn(),
     };
-    logSpy.mockReturnValue(mockLogger);
+    logSpy = vi.spyOn(loggerMod, "logger", "get").mockReturnValue(mockLogger);
+  });
 
-    const filePath = path.join(fixturesDir, "simple-schema.ts");
-    outputFiles.push(resolveOutputPath(filePath, undefined));
-
-    // runWatch blocks forever, so we abort after initial generation settles
-    const watchPromise = runWatch({ inputs: [filePath], output: undefined });
-
-    // Give time for initial generation + watcher setup, then abort
-    await new Promise((r) => setTimeout(r, 500));
-    process.emit("SIGINT", "SIGINT");
-
-    await watchPromise;
-
-    expect(mockLogger.success).toHaveBeenCalledWith(expect.stringContaining("validateUser"));
-    expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining("Generated 1 schema"));
-    expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining("Watching"));
-    expect(mockLogger.dim).toHaveBeenCalledWith(expect.stringContaining("Stopping"));
-
+  afterEach(() => {
     logSpy.mockRestore();
   });
 
-  it("exits when input path does not exist", async () => {
-    const loggerMod = await import("#src/cli/logger.js");
-    const logSpy = vi.spyOn(loggerMod, "logger", "get");
-    const mockLogger = {
-      info: vi.fn(),
-      success: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-      dim: vi.fn(),
+  function createMockDeps(): {
+    deps: WatchDeps;
+    callbacks: Array<(event: string, filename: string | null) => void>;
+  } {
+    const callbacks: Array<(event: string, filename: string | null) => void> = [];
+    const deps: WatchDeps = {
+      createWatcher: (_dir, _opts, cb) => {
+        callbacks.push(cb);
+        return { close: vi.fn() } as unknown as fs.FSWatcher;
+      },
     };
-    logSpy.mockReturnValue(mockLogger);
+    return { deps, callbacks };
+  }
 
+  it("performs initial generation and starts watching", async () => {
+    const { deps } = createMockDeps();
+    const filePath = path.join(fixturesDir, "simple-schema.ts");
+    outputFiles.push(resolveOutputPath(filePath, undefined));
+
+    const watchPromise = runWatch({ inputs: [filePath], output: undefined }, deps);
+
+    try {
+      await vi.waitFor(() => {
+        expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining("Watching"));
+      });
+
+      expect(mockLogger.success).toHaveBeenCalledWith(expect.stringContaining("validateUser"));
+      expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining("Generated 1 schema"));
+    } finally {
+      process.emit("SIGINT", "SIGINT");
+      await watchPromise;
+    }
+
+    expect(mockLogger.dim).toHaveBeenCalledWith(expect.stringContaining("Stopping"));
+  });
+
+  it("exits when input path does not exist", async () => {
+    const { deps } = createMockDeps();
     const mockExit = vi.spyOn(process, "exit").mockImplementation(() => {
       throw new Error("process.exit");
     });
 
     try {
       await expect(
-        runWatch({ inputs: ["/nonexistent/path.ts"], output: undefined }),
+        runWatch({ inputs: ["/nonexistent/path.ts"], output: undefined }, deps),
       ).rejects.toThrow("process.exit");
       expect(mockExit).toHaveBeenCalledWith(1);
     } finally {
       mockExit.mockRestore();
-      logSpy.mockRestore();
     }
   });
 
   it("warns when no compile() calls found in files", async () => {
-    const loggerMod = await import("#src/cli/logger.js");
-    const logSpy = vi.spyOn(loggerMod, "logger", "get");
-    const mockLogger = {
-      info: vi.fn(),
-      success: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-      dim: vi.fn(),
-    };
-    logSpy.mockReturnValue(mockLogger);
-
+    const { deps } = createMockDeps();
     const filePath = path.join(fixturesDir, "no-compile.ts");
 
-    const watchPromise = runWatch({ inputs: [filePath], output: undefined });
+    const watchPromise = runWatch({ inputs: [filePath], output: undefined }, deps);
 
-    await new Promise((r) => setTimeout(r, 500));
-    process.emit("SIGINT", "SIGINT");
+    try {
+      await vi.waitFor(() => {
+        expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining("Watching"));
+      });
 
-    await watchPromise;
-
-    expect(mockLogger.warn).toHaveBeenCalledWith("No compile() calls found in any source file.");
-
-    logSpy.mockRestore();
+      expect(mockLogger.warn).toHaveBeenCalledWith("No compile() calls found in any source file.");
+    } finally {
+      process.emit("SIGINT", "SIGINT");
+      await watchPromise;
+    }
   });
 
-  it("regenerates on file change", async () => {
-    const loggerMod = await import("#src/cli/logger.js");
-    const logSpy = vi.spyOn(loggerMod, "logger", "get");
-    const mockLogger = {
-      info: vi.fn(),
-      success: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-      dim: vi.fn(),
-    };
-    logSpy.mockReturnValue(mockLogger);
-
+  it("regenerates on watcher callback", async () => {
+    const { deps, callbacks } = createMockDeps();
     const filePath = path.join(fixturesDir, "simple-schema.ts");
     outputFiles.push(resolveOutputPath(filePath, undefined));
 
-    const watchPromise = runWatch({ inputs: [fixturesDir], output: undefined });
+    const watchPromise = runWatch({ inputs: [filePath], output: undefined }, deps);
 
-    // Wait for initial generation + watcher setup
-    await new Promise((r) => setTimeout(r, 500));
-    mockLogger.success.mockClear();
+    try {
+      // Wait for initial generation to complete and watcher to start
+      await vi.waitFor(() => {
+        expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining("Watching"));
+      });
+      mockLogger.success.mockClear();
 
-    // Touch the schema file to trigger a change event
-    const original = await fs.promises.readFile(filePath, "utf-8");
-    await fs.promises.writeFile(filePath, original, "utf-8");
+      // Fire watcher callback directly — no real fs.watch event needed
+      callbacks[0]?.("change", "simple-schema.ts");
 
-    // Wait for debounce (150ms) + regeneration
-    await new Promise((r) => setTimeout(r, 800));
-
-    process.emit("SIGINT", "SIGINT");
-    await watchPromise;
-
-    // The file change should have triggered regeneration
-    expect(mockLogger.success).toHaveBeenCalled();
-
-    logSpy.mockRestore();
-
-    // Clean up any other generated files
-    for (const fixture of ["multi-schema", "with-fallback"]) {
-      outputFiles.push(resolveOutputPath(path.join(fixturesDir, `${fixture}.ts`), undefined));
+      // Wait for debounced regeneration (150ms debounce + async file processing)
+      await vi.waitFor(
+        () => {
+          expect(mockLogger.success).toHaveBeenCalled();
+        },
+        { timeout: 2000 },
+      );
+    } finally {
+      process.emit("SIGINT", "SIGINT");
+      await watchPromise;
     }
   });
 });
