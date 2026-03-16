@@ -95,7 +95,7 @@ const isUser = validateUser.is(data);           // type guard (boolean)
 
 Choose one of these approaches:
 
-**Option A: Build plugin (Vite / webpack / esbuild / Rollup)**
+**Option A: Build plugin (Vite / webpack / esbuild / Rollup / Rolldown)**
 
 ```typescript
 // vite.config.ts
@@ -106,7 +106,7 @@ export default defineConfig({
 });
 ```
 
-Also available: `zod-aot/webpack`, `zod-aot/esbuild`, `zod-aot/rollup`, `zod-aot/bun`
+Also available: `zod-aot/webpack`, `zod-aot/esbuild`, `zod-aot/rollup`, `zod-aot/rolldown`, `zod-aot/bun`
 
 **Option B: CLI**
 
@@ -346,7 +346,7 @@ zod-aot/
 │   │   │   ├── extract/      # _zod.def → SchemaIR (extractors per type)
 │   │   │   └── codegen/      # SchemaIR → optimized JS
 │   │   ├── cli/              # CLI commands (generate, check, watch)
-│   │   └── unplugin/         # Build plugin (Vite/webpack/esbuild/Rollup/Bun)
+│   │   └── unplugin/         # Build plugin (Vite/webpack/esbuild/Rollup/Rolldown/Bun)
 │   └── tests/
 ├── benchmarks/               # vitest bench + standalone scripts
 └── .github/workflows/        # CI + release automation

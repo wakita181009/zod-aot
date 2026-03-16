@@ -107,7 +107,7 @@ npx zod-aot generate src/ --watch   # watch for changes and regenerate
 npx zod-aot check src/schemas.ts    # check if compilable
 ```
 
-### unplugin (Vite / webpack / esbuild / Rollup)
+### unplugin (Vite / webpack / esbuild / Rollup / Rolldown)
 
 Build-time plugin that replaces `compile()` calls with optimized inline validators.
 
@@ -117,7 +117,7 @@ import zodAot from "zod-aot/unplugin/vite";
 export default { plugins: [zodAot()] };
 ```
 
-Plugin entries: `zod-aot/vite`, `zod-aot/webpack`, `zod-aot/esbuild`, `zod-aot/rollup`, `zod-aot/bun`
+Plugin entries: `zod-aot/vite`, `zod-aot/webpack`, `zod-aot/esbuild`, `zod-aot/rollup`, `zod-aot/rolldown`, `zod-aot/bun`
 
 **Transform flow:**
 1. `shouldTransform(id)` — file extension check, skip `node_modules`/`.d.ts`/`.compiled.ts`
@@ -184,7 +184,7 @@ zod-aot/
 │       │       ├── index.ts      # createUnplugin() factory
 │       │       ├── transform.ts  # shouldTransform, transformCode, rewriteSource
 │       │       ├── types.ts      # ZodAotPluginOptions
-│       │       └── vite.ts, webpack.ts, esbuild.ts, rollup.ts, bun.ts
+│       │       └── vite.ts, webpack.ts, esbuild.ts, rollup.ts, rolldown.ts, bun.ts
 │       ├── tests/                # Mirrors src/ structure
 │       │   ├── integration.test.ts
 │       │   ├── compat.test.ts
