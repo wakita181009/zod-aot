@@ -9,7 +9,8 @@
     "bench": "vitest bench",
     "lint": "biome check .",
     "lint:fix": "biome check --fix .",
-    "format": "biome format --write ."
+    "format": "biome format --write .",
+    "typecheck": "pnpm -r typecheck"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.7",

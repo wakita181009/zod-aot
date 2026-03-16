@@ -117,7 +117,7 @@ import zodAot from "zod-aot/unplugin/vite";
 export default { plugins: [zodAot()] };
 ```
 
-Plugin entries: `zod-aot/vite`, `zod-aot/webpack`, `zod-aot/esbuild`, `zod-aot/rollup`
+Plugin entries: `zod-aot/vite`, `zod-aot/webpack`, `zod-aot/esbuild`, `zod-aot/rollup`, `zod-aot/bun`
 
 **Transform flow:**
 1. `shouldTransform(id)` — file extension check, skip `node_modules`/`.d.ts`/`.compiled.ts`
@@ -159,8 +159,13 @@ zod-aot/
 │       │   │   ├── types.ts      # SchemaIR, CompiledSchema, CheckIR
 │       │   │   ├── compile.ts    # compile() marker + isCompiledSchema()
 │       │   │   ├── runtime.ts    # Dev-time fallback (createFallback)
-│       │   │   ├── extractor.ts  # extractSchema() — _zod.def → SchemaIR
 │       │   │   ├── pipeline.ts   # compileSchemas() — shared extract→generate pipeline
+│       │   │   ├── extract/      # extractSchema() — _zod.def → SchemaIR
+│       │   │   │   ├── index.ts  # extractSchema() main entry
+│       │   │   │   ├── checks.ts # Check extraction (string/number/bigint/date)
+│       │   │   │   ├── fallback.ts # FallbackEntry tracking
+│       │   │   │   ├── types.ts  # Extractor types
+│       │   │   │   └── extractors/ # Per-type extractors (bigint, date, default, lazy, number, pipe, set, string, union)
 │       │   │   └── codegen/
 │       │   │       ├── index.ts  # generateValidator() — SchemaIR → JS code
 │       │   │       ├── context.ts # CodeGenContext, CodeGenResult, utils
@@ -169,6 +174,8 @@ zod-aot/
 │       │   │   ├── index.ts      # CLI entry point (command parser)
 │       │   │   ├── logger.ts     # Logging utility
 │       │   │   ├── emitter.ts    # .compiled.ts file generation
+│       │   │   ├── errors.ts     # Error message utility
+│       │   │   ├── fallback.ts   # hasFallback() — recursive fallback detection
 │       │   │   └── commands/
 │       │   │       ├── generate.ts
 │       │   │       ├── watch.ts
@@ -177,22 +184,27 @@ zod-aot/
 │       │       ├── index.ts      # createUnplugin() factory
 │       │       ├── transform.ts  # shouldTransform, transformCode, rewriteSource
 │       │       ├── types.ts      # ZodAotPluginOptions
-│       │       └── vite.ts, webpack.ts, esbuild.ts, rollup.ts
+│       │       └── vite.ts, webpack.ts, esbuild.ts, rollup.ts, bun.ts
 │       ├── tests/                # Mirrors src/ structure
 │       │   ├── integration.test.ts
+│       │   ├── compat.test.ts
 │       │   ├── discovery.test.ts
+│       │   ├── fixtures/         # Shared test fixtures (simple-schema, multi-schema, etc.)
 │       │   ├── core/
 │       │   │   ├── types.test.ts, compile.test.ts, runtime.test.ts
-│       │   │   ├── extractor.test.ts
+│       │   │   ├── extract/
+│       │   │   │   ├── index.test.ts
+│       │   │   │   └── extractors/*.test.ts
 │       │   │   └── codegen/
 │       │   │       ├── index.test.ts, helpers.ts
 │       │   │       └── generators/*.test.ts
 │       │   ├── cli/
-│       │   │   ├── check.test.ts, emitter.test.ts, generate.test.ts
-│       │   │   └── fixtures/
+│       │   │   ├── emitter.test.ts, fallback.test.ts, logger.test.ts
+│       │   │   └── commands/
+│       │   │       └── check.test.ts, generate.test.ts, watch.test.ts
 │       │   └── unplugin/
 │       │       ├── transform.test.ts
-│       │       └── fixtures/
+│       │       └── index.test.ts
 │       ├── package.json
 │       └── tsconfig.json
 ├── benchmarks/                   # Workspace package (@zod-aot/benchmarks)
@@ -255,7 +267,7 @@ pnpm -r build       # tsc
 
 ### Biome (Linter & Formatter)
 
-Config: `biome.json` (v2.4.5)
+Config: `biome.json` (v2.4.7+)
 
 Key rules:
 - `noUnusedVariables`, `noUnusedImports`, `noUndeclaredVariables`: error
