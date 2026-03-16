@@ -80,6 +80,7 @@
         "packages/*/src/loader.ts",
         "packages/*/tests/cli/**",
         "packages/*/tests/discovery.test.ts",
+        "packages/*/tests/loader.test.ts",
         "packages/*/src/unplugin/**",
         "packages/*/tests/unplugin/**"
       ],

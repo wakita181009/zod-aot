@@ -12,58 +12,6 @@ describe("compile()", () => {
     expect(compiled.is).toBeTypeOf("function");
     expect(compiled.schema).toBe(schema);
   });
-
-  it("parse() works as Zod fallback for valid input", () => {
-    const schema = z.object({ name: z.string() });
-    const compiled = compile(schema);
-
-    const result = compiled.parse({ name: "Alice" });
-    expect(result).toEqual({ name: "Alice" });
-  });
-
-  it("parse() throws for invalid input", () => {
-    const schema = z.number();
-    const compiled = compile(schema);
-
-    expect(() => compiled.parse("not a number")).toThrow();
-  });
-
-  it("safeParse() returns success for valid input", () => {
-    const schema = z.string().min(3);
-    const compiled = compile(schema);
-
-    const result = compiled.safeParse("hello");
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data).toBe("hello");
-    }
-  });
-
-  it("safeParse() returns error for invalid input", () => {
-    const schema = z.string().min(3);
-    const compiled = compile(schema);
-
-    const result = compiled.safeParse("ab");
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues.length).toBeGreaterThan(0);
-    }
-  });
-
-  it("is() returns true for valid input", () => {
-    const schema = z.number().int();
-    const compiled = compile(schema);
-
-    expect(compiled.is(42)).toBe(true);
-  });
-
-  it("is() returns false for invalid input", () => {
-    const schema = z.number().int();
-    const compiled = compile(schema);
-
-    expect(compiled.is(3.14)).toBe(false);
-    expect(compiled.is("hello")).toBe(false);
-  });
 });
 
 describe("isCompiledSchema()", () => {

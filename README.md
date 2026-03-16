@@ -62,6 +62,7 @@ Available plugins:
 | webpack | `import zodAot from "zod-aot/webpack"` |
 | esbuild | `import zodAot from "zod-aot/esbuild"` |
 | Rollup | `import zodAot from "zod-aot/rollup"` |
+| Bun | `import zodAot from "zod-aot/bun"` |
 
 ### CLI (Alternative)
 

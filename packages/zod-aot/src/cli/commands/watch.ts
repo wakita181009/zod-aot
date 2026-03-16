@@ -15,6 +15,19 @@ interface WatchOptions {
   output: string | undefined;
 }
 
+/** Dependencies for runWatch, injectable for testing. */
+export interface WatchDeps {
+  createWatcher: (
+    dir: string,
+    options: { recursive: boolean; signal: AbortSignal },
+    callback: (event: string, filename: string | null) => void,
+  ) => fs.FSWatcher;
+}
+
+const defaultWatchDeps: WatchDeps = {
+  createWatcher: (dir, options, callback) => fs.watch(dir, options, callback),
+};
+
 /**
  * Check if a file path should trigger regeneration.
  */
@@ -70,7 +83,10 @@ export function debounce<T extends (...args: never[]) => void>(fn: T, delayMs: n
 /**
  * Run the watch mode: initial generate + fs.watch for changes.
  */
-export async function runWatch(options: WatchOptions): Promise<void> {
+export async function runWatch(
+  options: WatchOptions,
+  deps: WatchDeps = defaultWatchDeps,
+): Promise<void> {
   const files = await resolveInputFiles(options.inputs);
 
   if (files.length === 0) {
@@ -129,14 +145,18 @@ export async function runWatch(options: WatchOptions): Promise<void> {
 
   for (const dir of watchDirs) {
     try {
-      const watcher = fs.watch(dir, { recursive: true, signal: ac.signal }, (_event, filename) => {
-        if (!filename) return;
-        const fullPath = path.resolve(dir, filename);
-        if (isWatchTarget(fullPath)) {
-          pendingFiles.add(fullPath);
-          void flush();
-        }
-      });
+      const watcher = deps.createWatcher(
+        dir,
+        { recursive: true, signal: ac.signal },
+        (_event, filename) => {
+          if (!filename) return;
+          const fullPath = path.resolve(dir, filename);
+          if (isWatchTarget(fullPath)) {
+            pendingFiles.add(fullPath);
+            void flush();
+          }
+        },
+      );
       watchers.push(watcher);
     } catch (err) {
       logger.error(`Failed to watch ${dir}: ${getErrorMessage(err)}`);

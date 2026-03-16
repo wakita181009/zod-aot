@@ -106,7 +106,7 @@ export default defineConfig({
 });
 ```
 
-Also available: `zod-aot/webpack`, `zod-aot/esbuild`, `zod-aot/rollup`
+Also available: `zod-aot/webpack`, `zod-aot/esbuild`, `zod-aot/rollup`, `zod-aot/bun`
 
 **Option B: CLI**
 
@@ -343,10 +343,10 @@ zod-aot/
 │   │   │   ├── types.ts      # SchemaIR, CompiledSchema, CheckIR
 │   │   │   ├── compile.ts    # compile() marker + isCompiledSchema()
 │   │   │   ├── runtime.ts    # createFallback (dev-time)
-│   │   │   ├── extractor.ts  # _zod.def → SchemaIR
+│   │   │   ├── extract/      # _zod.def → SchemaIR (extractors per type)
 │   │   │   └── codegen/      # SchemaIR → optimized JS
 │   │   ├── cli/              # CLI commands (generate, check, watch)
-│   │   └── unplugin/         # Build plugin (Vite/webpack/esbuild/Rollup)
+│   │   └── unplugin/         # Build plugin (Vite/webpack/esbuild/Rollup/Bun)
 │   └── tests/
 ├── benchmarks/               # vitest bench + standalone scripts
 └── .github/workflows/        # CI + release automation
