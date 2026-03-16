@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/wakita181009/zod-aot/compare/v0.1.0...v0.2.0) (2026-03-16)
+
+
+### Features
+
+* add Rolldown unplugin support  ([#26](https://github.com/wakita181009/zod-aot/issues/26)) ([48a3060](https://github.com/wakita181009/zod-aot/commit/48a30605c63ca431aa2e02511be5058b9fd204c7))
+
 ## [0.1.0](https://github.com/wakita181009/zod-aot/compare/v0.0.19...v0.1.0) (2026-03-16)
 
 
