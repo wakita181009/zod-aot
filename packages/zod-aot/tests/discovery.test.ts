@@ -1,10 +1,69 @@
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { discoverSchemas } from "#src/discovery.js";
 
 const fixturesDir = path.resolve(import.meta.dirname, "fixtures");
 
 describe("discoverSchemas()", () => {
+  it("discovers schemas nested under default export (ESM/CJS interop)", async () => {
+    const { compile } = await import("#src/core/compile.js");
+    const { z } = await import("zod");
+
+    const schema = z.object({ name: z.string() });
+    const compiled = compile(schema);
+
+    // Mock loadSourceFile to return a module with exports nested under default
+    vi.spyOn(await import("#src/loader.js"), "loadSourceFile").mockResolvedValueOnce({
+      default: { validateUser: compiled },
+    });
+
+    const schemas = await discoverSchemas("fake-path.ts");
+    expect(schemas).toHaveLength(1);
+    expect(schemas[0]?.exportName).toBe("validateUser");
+
+    vi.restoreAllMocks();
+  });
+
+  it("discovers schemas from both top-level and default exports", async () => {
+    const { compile } = await import("#src/core/compile.js");
+    const { z } = await import("zod");
+
+    const schema1 = z.object({ name: z.string() });
+    const schema2 = z.object({ age: z.number() });
+    const compiled1 = compile(schema1);
+    const compiled2 = compile(schema2);
+
+    vi.spyOn(await import("#src/loader.js"), "loadSourceFile").mockResolvedValueOnce({
+      validateName: compiled1,
+      default: { validateAge: compiled2 },
+    });
+
+    const schemas = await discoverSchemas("fake-path.ts");
+    expect(schemas).toHaveLength(2);
+    const names = schemas.map((s) => s.exportName).sort();
+    expect(names).toEqual(["validateAge", "validateName"]);
+
+    vi.restoreAllMocks();
+  });
+
+  it("does not unwrap default export that is itself a CompiledSchema", async () => {
+    const { compile } = await import("#src/core/compile.js");
+    const { z } = await import("zod");
+
+    const schema = z.object({ name: z.string() });
+    const compiled = compile(schema);
+
+    vi.spyOn(await import("#src/loader.js"), "loadSourceFile").mockResolvedValueOnce({
+      default: compiled,
+    });
+
+    const schemas = await discoverSchemas("fake-path.ts");
+    expect(schemas).toHaveLength(1);
+    expect(schemas[0]?.exportName).toBe("default");
+
+    vi.restoreAllMocks();
+  });
+
   it("discovers compile() calls in a simple schema file", async () => {
     const schemas = await discoverSchemas(path.join(fixturesDir, "simple-schema.ts"));
 

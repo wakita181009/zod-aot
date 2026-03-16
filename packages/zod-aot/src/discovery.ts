@@ -17,8 +17,17 @@ export async function discoverSchemas(
 ): Promise<DiscoveredSchema[]> {
   const mod = await loadSourceFile(filePath, options);
   const schemas: DiscoveredSchema[] = [];
+  const targets: Record<string, unknown> = { ...mod };
+  const defaultExport = mod["default"];
+  if (
+    defaultExport != null &&
+    typeof defaultExport === "object" &&
+    !isCompiledSchema(defaultExport)
+  ) {
+    Object.assign(targets, defaultExport as Record<string, unknown>);
+  }
 
-  for (const [exportName, value] of Object.entries(mod)) {
+  for (const [exportName, value] of Object.entries(targets)) {
     if (isCompiledSchema(value)) {
       schemas.push({ exportName, schema: value.schema });
     }

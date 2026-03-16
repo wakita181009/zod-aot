@@ -1,0 +1,27 @@
+{
+  "name": "@zod-aot/nextjs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --webpack",
+    "build": "next build --webpack",
+    "start": "next start",
+    "test": "vitest run",
+    "test:e2e": "node --import tsx tests/e2e.ts"
+  },
+  "dependencies": {
+    "next": "^16.1.6",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "zod": "^4.0.0",
+    "zod-aot": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.0",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "tsx": "^4.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  }
+}
