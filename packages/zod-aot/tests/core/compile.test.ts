@@ -12,6 +12,24 @@ describe("compile()", () => {
     expect(compiled.is).toBeTypeOf("function");
     expect(compiled.schema).toBe(schema);
   });
+
+  it("preserves Zod properties via Object.create prototype", () => {
+    const schema = z.object({ name: z.string() });
+    const compiled = compile(schema);
+
+    expect("_zod" in compiled).toBe(true);
+    expect((compiled as Record<string, unknown>).shape).toBe(schema.shape);
+  });
+
+  it("supports safeParseAsync via Zod prototype", async () => {
+    const schema = z.object({ name: z.string() });
+    const compiled = compile(schema);
+
+    const result = await (
+      compiled as Record<string, (...args: unknown[]) => unknown>
+    ).safeParseAsync({ name: "Alice" });
+    expect(result).toHaveProperty("success", true);
+  });
 });
 
 describe("isCompiledSchema()", () => {

@@ -1,29 +1,70 @@
 import { serve } from "@hono/node-server";
+import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
-import { compile } from "zod-aot";
-import { CreateUserSchema } from "./schemas.js";
+import {
+  ApiHeaderSchema,
+  CompiledApiHeaderSchema,
+  CompiledCreateUserSchema,
+  CompiledListUsersQuerySchema,
+  CompiledUserParamSchema,
+  CreateUserSchema,
+  ListUsersQuerySchema,
+  UserParamSchema,
+} from "./schemas.js";
 
 export const app = new Hono();
 
-// POST /zod — Zod native validation
-app.post("/zod", async (c) => {
-  const body = await c.req.json();
-  const result = CreateUserSchema.safeParse(body);
-  if (!result.success) {
-    return c.json({ error: "Validation failed", issues: result.error.issues }, 400);
-  }
-  return c.json({ validator: "zod", data: result.data });
+// ============================================================
+// Zod native routes (baseline)
+// ============================================================
+
+app.post("/zod/users", zValidator("json", CreateUserSchema), (c) => {
+  const data = c.req.valid("json");
+  return c.json({ validator: "zod", data });
 });
 
-// POST /zod-aot — zod-aot compiled validation
-app.post("/zod-aot", async (c) => {
-  const body = await c.req.json();
-  const result = compile(CreateUserSchema).safeParse(body);
-  if (!result.success) {
-    return c.json({ error: "Validation failed", issues: result.error.issues }, 400);
-  }
-  return c.json({ validator: "zod-aot", data: result.data });
+app.get("/zod/users", zValidator("query", ListUsersQuerySchema), (c) => {
+  const query = c.req.valid("query");
+  return c.json({ validator: "zod", query });
 });
+
+app.get("/zod/users/:id", zValidator("param", UserParamSchema), (c) => {
+  const param = c.req.valid("param");
+  return c.json({ validator: "zod", param });
+});
+
+app.get("/zod/protected", zValidator("header", ApiHeaderSchema), (c) => {
+  return c.json({ validator: "zod", ok: true });
+});
+
+// ============================================================
+// zod-aot compiled routes (zodCompat=true)
+// compile() returns T & CompiledSchema<output<T>>, so it's
+// directly usable with @hono/zod-validator without casting.
+// ============================================================
+
+app.post("/aot/users", zValidator("json", CompiledCreateUserSchema), (c) => {
+  const data = c.req.valid("json");
+  return c.json({ validator: "zod-aot", data });
+});
+
+app.get("/aot/users", zValidator("query", CompiledListUsersQuerySchema), (c) => {
+  const query = c.req.valid("query");
+  return c.json({ validator: "zod-aot", query });
+});
+
+app.get("/aot/users/:id", zValidator("param", CompiledUserParamSchema), (c) => {
+  const param = c.req.valid("param");
+  return c.json({ validator: "zod-aot", param });
+});
+
+app.get("/aot/protected", zValidator("header", CompiledApiHeaderSchema), (c) => {
+  return c.json({ validator: "zod-aot", ok: true });
+});
+
+// ============================================================
+// Server
+// ============================================================
 
 if (!process.env["VITEST"]) {
   const port = 3000;

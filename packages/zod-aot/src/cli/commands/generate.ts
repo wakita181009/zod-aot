@@ -11,6 +11,7 @@ import { logger } from "../logger.js";
 export interface GenerateOptions {
   inputs: string[];
   output: string | undefined;
+  zodCompat?: boolean | undefined;
 }
 
 export interface GenerateFileResult {
@@ -90,7 +91,7 @@ export async function findSchemaFiles(dir: string): Promise<string[]> {
 export async function generateFile(
   filePath: string,
   outputFlag: string | undefined,
-  options?: { cacheBust?: boolean },
+  options?: { cacheBust?: boolean | undefined; zodCompat?: boolean | undefined },
 ): Promise<GenerateFileResult | null> {
   const relPath = path.relative(process.cwd(), filePath);
 
@@ -109,7 +110,9 @@ export async function generateFile(
 
   const outputPath = resolveOutputPath(filePath, outputFlag);
   const sourceRelPath = path.relative(path.dirname(outputPath), filePath);
-  const content = generateCompiledFileContent(codegenResults, sourceRelPath);
+  const content = generateCompiledFileContent(codegenResults, sourceRelPath, {
+    zodCompat: options?.zodCompat,
+  });
 
   await writeCompiledFile(outputPath, content);
 
@@ -135,7 +138,7 @@ export async function runGenerate(options: GenerateOptions): Promise<void> {
   for (const filePath of files) {
     let result: GenerateFileResult | null;
     try {
-      result = await generateFile(filePath, options.output);
+      result = await generateFile(filePath, options.output, { zodCompat: options.zodCompat });
     } catch (err) {
       logger.error(getErrorMessage(err));
       process.exit(1);

@@ -6,9 +6,18 @@ import type { CompiledSchemaInfo } from "#src/core/pipeline.js";
 /**
  * Generate the content of a .compiled.ts file from multiple schemas.
  */
+export interface EmitterOptions {
+  /**
+   * When true (default), uses Object.create for Zod-compatible output.
+   * When false, produces a minimal plain object (smaller bundle).
+   */
+  zodCompat?: boolean | undefined;
+}
+
 export function generateCompiledFileContent(
   schemas: CompiledSchemaInfo[],
   sourceRelPath: string,
+  options?: EmitterOptions,
 ): string {
   const lines: string[] = [];
 
@@ -22,18 +31,23 @@ export function generateCompiledFileContent(
   lines.push("const __msg = __zodAotConfig().localeError;");
   lines.push("");
 
-  // Import original schemas for partial fallback (if any schema has fallbacks)
+  const zodCompat = options?.zodCompat !== false;
+  const importPath = sourceRelPath.replace(/\.[cm]?[jt]sx?$/, "");
   const schemasWithFallbacks = schemas.filter((s) => s.fallbackEntries.length > 0);
-  if (schemasWithFallbacks.length > 0) {
-    const importPath = sourceRelPath.replace(/\.[cm]?[jt]sx?$/, "");
+
+  if (zodCompat) {
+    // Import all original schemas for Object.create (Zod compatibility)
+    const importNames = schemas.map((s) => `${s.exportName} as __src_${s.exportName}`).join(", ");
+    lines.push(`import { ${importNames} } from "${importPath}";`);
+    lines.push("");
+  } else if (schemasWithFallbacks.length > 0) {
+    // Only import schemas that have partial fallbacks
     const importNames = schemasWithFallbacks
       .map((s) => `${s.exportName} as __src_${s.exportName}`)
       .join(", ");
     lines.push(`import { ${importNames} } from "${importPath}";`);
     lines.push("");
   }
-
-  // Fallback schema arrays
   for (const schema of schemasWithFallbacks) {
     const fbExprs = schema.fallbackEntries.map(
       (fb) => `(__src_${schema.exportName} as any).schema${fb.accessPath}`,
@@ -85,17 +99,59 @@ export function generateCompiledFileContent(
   // Export wrappers
   for (const schema of schemas) {
     const fnName = extractFunctionName(schema.codegenResult.functionName);
-    lines.push(`export const ${schema.exportName} = {`);
-    lines.push("  parse(input: unknown) {");
-    lines.push(`    const r = ${fnName}(input);`);
-    lines.push("    if (r.success) return r.data;");
-    lines.push('    throw Object.assign(new Error("Validation failed"), r.error);');
-    lines.push("  },");
-    lines.push(`  safeParse: ${fnName},`);
-    lines.push("  is(input: unknown): boolean {");
-    lines.push(`    return ${fnName}(input).success;`);
-    lines.push("  },");
-    lines.push("};");
+
+    if (zodCompat) {
+      // Object.create wrapper for Zod compatibility
+      const srcRef = `__src_${schema.exportName}`;
+      lines.push(`export const ${schema.exportName} = /* @__PURE__ */ (() => {`);
+      lines.push(`  const __s = (${srcRef} as any).schema;`);
+      lines.push("  const __w = Object.create(__s);");
+      lines.push("  __w.parse = function (input: unknown) {");
+      lines.push(`    const r = ${fnName}(input);`);
+      lines.push("    if (r.success) return r.data;");
+      lines.push('    throw Object.assign(new Error("Validation failed"), r.error);');
+      lines.push("  };");
+      lines.push(`  __w.safeParse = ${fnName};`);
+      lines.push("  __w.safeParseAsync = function (input: unknown) {");
+      lines.push(`    return Promise.resolve(${fnName}(input));`);
+      lines.push("  };");
+      lines.push("  __w.parseAsync = function (input: unknown) {");
+      lines.push(`    const r = ${fnName}(input);`);
+      lines.push("    if (r.success) return Promise.resolve(r.data);");
+      lines.push(
+        '    return Promise.reject(Object.assign(new Error("Validation failed"), r.error));',
+      );
+      lines.push("  };");
+      lines.push("  __w.is = function (input: unknown): boolean {");
+      lines.push(`    return ${fnName}(input).success;`);
+      lines.push("  };");
+      lines.push("  __w.schema = __s;");
+      lines.push("  return __w;");
+      lines.push("})();");
+    } else {
+      // Minimal plain object (smaller bundle)
+      lines.push(`export const ${schema.exportName} = {`);
+      lines.push("  parse(input: unknown) {");
+      lines.push(`    const r = ${fnName}(input);`);
+      lines.push("    if (r.success) return r.data;");
+      lines.push('    throw Object.assign(new Error("Validation failed"), r.error);');
+      lines.push("  },");
+      lines.push(`  safeParse: ${fnName},`);
+      lines.push("  safeParseAsync(input: unknown) {");
+      lines.push(`    return Promise.resolve(${fnName}(input));`);
+      lines.push("  },");
+      lines.push("  parseAsync(input: unknown) {");
+      lines.push(`    const r = ${fnName}(input);`);
+      lines.push("    if (r.success) return Promise.resolve(r.data);");
+      lines.push(
+        '    return Promise.reject(Object.assign(new Error("Validation failed"), r.error));',
+      );
+      lines.push("  },");
+      lines.push("  is(input: unknown): boolean {");
+      lines.push(`    return ${fnName}(input).success;`);
+      lines.push("  },");
+      lines.push("};");
+    }
     lines.push("");
   }
 

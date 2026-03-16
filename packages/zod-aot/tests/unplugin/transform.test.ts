@@ -119,7 +119,7 @@ describe("rewriteSource()", () => {
     return { exportName, codegenResult, fallbackEntries: [] };
   }
 
-  it("replaces a single compile() call with IIFE", () => {
+  it("replaces a single compile() call with IIFE using Object.create", () => {
     const code = [
       `import { z } from "zod";`,
       `import { compile } from "zod-aot";`,
@@ -133,7 +133,8 @@ describe("rewriteSource()", () => {
     expect(result).toContain("/* @__PURE__ */");
     expect(result).toContain("(() => {");
     expect(result).toContain("safeParse_validateUser");
-    expect(result).toContain("schema:UserSchema,");
+    expect(result).toContain("Object.create(UserSchema)");
+    expect(result).toContain("__w.schema=UserSchema;");
     expect(result).not.toContain("compile(UserSchema)");
     // compile import should be removed
     expect(result).not.toContain(`import { compile } from "zod-aot"`);
@@ -210,7 +211,7 @@ describe("rewriteSource()", () => {
     const schemas = [makeCompiledInfo("validateUser", simpleSchema)];
     const result = rewriteSource(code, schemas);
 
-    expect(result).toContain("schema:MyUserSchema,");
+    expect(result).toContain("__w.schema=MyUserSchema;");
   });
 
   it("handles inline schema expressions with nested parentheses", () => {
@@ -225,7 +226,7 @@ describe("rewriteSource()", () => {
     expect(result).toContain("safeParse_validateUser");
     expect(result).not.toContain("compile(z.object");
     // The schema arg should capture the full expression
-    expect(result).toContain("schema:z.object({ name: z.string() }),");
+    expect(result).toContain("__w.schema=z.object({ name: z.string() });");
   });
 
   // C1 (from review): findMatchingParen should handle parens inside string literals
@@ -258,6 +259,20 @@ describe("rewriteSource()", () => {
     expect(result).toContain("safeParse_validateUser");
     // "revalidateUser" should NOT be replaced (still has compile())
     expect(result).toContain("revalidateUser = compile(OtherSchema)");
+  });
+
+  it("IIFE includes safeParseAsync and parseAsync", () => {
+    const code = [
+      `import { compile } from "zod-aot";`,
+      `export const validateUser = compile(UserSchema);`,
+    ].join("\n");
+
+    const schemas = [makeCompiledInfo("validateUser", simpleSchema)];
+    const result = rewriteSource(code, schemas);
+
+    expect(result).toContain("__w.safeParseAsync=function");
+    expect(result).toContain("__w.parseAsync=function");
+    expect(result).toContain("Promise.resolve");
   });
 });
 
@@ -340,12 +355,17 @@ describe("generated IIFE runtime execution", () => {
     expect(iifeMatch).not.toBeNull();
 
     // Execute the IIFE using Function constructor.
-    // The IIFE references `Schema` (the original schema variable) in its `schema:` property,
+    // The IIFE references `Schema` (the original schema variable) via Object.create,
     // and `__zodAotConfig` for localeError message generation.
+    // We pass a mock schema object for Object.create prototype.
     const fn = new Function("Schema", "__zodAotConfig", `return ${iifeMatch?.[0]};`);
     return fn({}, z.config) as {
       parse: (input: unknown) => unknown;
       safeParse: (input: unknown) => { success: boolean; data?: unknown; error?: unknown };
+      safeParseAsync: (
+        input: unknown,
+      ) => Promise<{ success: boolean; data?: unknown; error?: unknown }>;
+      parseAsync: (input: unknown) => Promise<unknown>;
       is: (input: unknown) => boolean;
     };
   }
@@ -382,6 +402,30 @@ describe("generated IIFE runtime execution", () => {
 
     expect(() => validator.parse({ name: 123 })).toThrow("Validation failed");
     expect(validator.parse({ name: "Alice", age: 30 })).toEqual({ name: "Alice", age: 30 });
+  });
+
+  it("generated safeParseAsync returns Promise", async () => {
+    const schemas = [makeCompiledInfo("validateUser", userSchema)];
+    const validator = executeGeneratedValidator(schemas);
+    const result = await validator.safeParseAsync({ name: "Alice", age: 30 });
+
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual({ name: "Alice", age: 30 });
+  });
+
+  it("generated parseAsync resolves for valid input", async () => {
+    const schemas = [makeCompiledInfo("validateUser", userSchema)];
+    const validator = executeGeneratedValidator(schemas);
+    const data = await validator.parseAsync({ name: "Alice", age: 30 });
+
+    expect(data).toEqual({ name: "Alice", age: 30 });
+  });
+
+  it("generated parseAsync rejects for invalid input", async () => {
+    const schemas = [makeCompiledInfo("validateUser", userSchema)];
+    const validator = executeGeneratedValidator(schemas);
+
+    await expect(validator.parseAsync({ name: 123 })).rejects.toThrow("Validation failed");
   });
 
   it("generated validator produces error messages when __msg is provided", () => {
@@ -472,5 +516,58 @@ describe("rewriteSource() — partial fallback", () => {
     ]);
 
     expect(result).not.toContain("__fb");
+  });
+});
+
+describe("rewriteSource() — zodCompat: false", () => {
+  const simpleSchema = z.object({
+    name: z.string().min(1),
+    age: z.number().int().positive(),
+  });
+
+  function makeCompiledInfo(exportName: string, schema: z.ZodType) {
+    const ir = extractSchema(schema);
+    const codegenResult = generateValidator(ir, exportName);
+    return { exportName, codegenResult, fallbackEntries: [] };
+  }
+
+  it("produces plain object IIFE without Object.create", () => {
+    const code = [
+      `import { compile } from "zod-aot";`,
+      `export const validateUser = compile(UserSchema);`,
+    ].join("\n");
+
+    const schemas = [makeCompiledInfo("validateUser", simpleSchema)];
+    const result = rewriteSource(code, schemas, { zodCompat: false });
+
+    expect(result).toContain("/* @__PURE__ */");
+    expect(result).toContain("safeParse_validateUser");
+    expect(result).not.toContain("Object.create");
+    expect(result).toContain("schema:UserSchema,");
+    expect(result).toContain("safeParseAsync");
+    expect(result).toContain("parseAsync");
+  });
+
+  it("generated minimal IIFE produces working validation", () => {
+    const code = [
+      `import { compile } from "zod-aot";`,
+      `export const validateUser = compile(Schema);`,
+    ].join("\n");
+
+    const schemas = [makeCompiledInfo("validateUser", simpleSchema)];
+    const transformed = rewriteSource(code, schemas, { zodCompat: false });
+
+    const iifeMatch = /\/\* @__PURE__ \*\/ \(\(\) => \{[\s\S]*?\}\)\(\)/.exec(transformed);
+    expect(iifeMatch).not.toBeNull();
+
+    const fn = new Function("Schema", "__zodAotConfig", `return ${iifeMatch?.[0]};`);
+    const validator = fn({}, z.config) as {
+      safeParse: (input: unknown) => { success: boolean; data?: unknown; error?: unknown };
+      is: (input: unknown) => boolean;
+    };
+
+    expect(validator.safeParse({ name: "Alice", age: 30 }).success).toBe(true);
+    expect(validator.safeParse({ name: "", age: -1 }).success).toBe(false);
+    expect(validator.is({ name: "Alice", age: 30 })).toBe(true);
   });
 });

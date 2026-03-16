@@ -38,6 +38,7 @@ Commands:
 Options:
   -o, --output <path>   Output file or directory
   -w, --watch           Watch for changes and regenerate
+  --no-zod-compat       Minimal output without Zod compatibility (smaller bundle)
   -h, --help            Show this help message
   -v, --version         Show version number
 
@@ -68,6 +69,7 @@ function parseArgs(argv: string[]): Command {
     const inputs: string[] = [];
     let output: string | undefined;
     let watch = false;
+    let zodCompat: boolean | undefined;
 
     for (let i = 0; i < rest.length; i++) {
       const arg = rest[i] as string;
@@ -81,6 +83,8 @@ function parseArgs(argv: string[]): Command {
         output = val;
       } else if (arg === "-w" || arg === "--watch") {
         watch = true;
+      } else if (arg === "--no-zod-compat") {
+        zodCompat = false;
       } else if (arg.startsWith("-")) {
         logger.error(`Unknown option: ${arg}`);
         process.exit(1);
@@ -94,7 +98,15 @@ function parseArgs(argv: string[]): Command {
       process.exit(1);
     }
 
-    return { kind: "generate", options: { inputs, output, watch } };
+    return {
+      kind: "generate",
+      options: {
+        inputs,
+        output,
+        watch,
+        zodCompat,
+      },
+    };
   }
 
   if (command === "check") {

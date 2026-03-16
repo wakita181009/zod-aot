@@ -312,7 +312,9 @@ export interface ZodErrorLike {
 
 export interface CompiledSchema<T> {
   parse(input: unknown): T;
+  parseAsync(input: unknown): Promise<T>;
   safeParse(input: unknown): SafeParseResult<T>;
+  safeParseAsync(input: unknown): Promise<SafeParseResult<T>>;
   is(input: unknown): input is T;
   schema: unknown;
 }

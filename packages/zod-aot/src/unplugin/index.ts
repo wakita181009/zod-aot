@@ -14,7 +14,7 @@ export const unplugin = createUnplugin((options?: ZodAotPluginOptions) => ({
     // Quick bail-out before doing any work
     if (!code.includes("zod-aot") || !code.includes("compile")) return;
 
-    const result = await transformCode(code, id);
+    const result = await transformCode(code, id, { zodCompat: options?.zodCompat });
     if (!result) return;
     return { code: result, map: null };
   },

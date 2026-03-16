@@ -14,7 +14,7 @@ const UserSchema = z.object({
   bio: z.nullable(z.string()),
 });
 
-export const validateUser = compile<z.infer<typeof UserSchema>>(UserSchema);
+export const validateUser = compile(UserSchema);
 
 // --- Tier 2 types ---
 
@@ -24,14 +24,14 @@ const AddressSchema = z.object({
   zip: z.string().regex(/^\d{3}-?\d{4}$/),
 });
 
-export const validateAddress = compile<z.infer<typeof AddressSchema>>(AddressSchema);
+export const validateAddress = compile(AddressSchema);
 
 const ContactSchema = z.intersection(
   z.object({ name: z.string() }),
   z.object({ phone: z.string() }),
 );
 
-export const validateContact = compile<z.infer<typeof ContactSchema>>(ContactSchema);
+export const validateContact = compile(ContactSchema);
 
 const EventSchema = z.object({
   title: z.string(),
@@ -42,7 +42,7 @@ const EventSchema = z.object({
   priority: z.number().default(0),
 });
 
-export const validateEvent = compile<z.infer<typeof EventSchema>>(EventSchema);
+export const validateEvent = compile(EventSchema);
 
 const NotificationSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("email"), to: z.email(), subject: z.string() }),
@@ -50,7 +50,7 @@ const NotificationSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("push"), deviceId: z.string(), title: z.string() }),
 ]);
 
-export const validateNotification = compile<z.infer<typeof NotificationSchema>>(NotificationSchema);
+export const validateNotification = compile(NotificationSchema);
 
 // --- Partial fallback (transform) ---
 
@@ -62,7 +62,7 @@ const OrderSchema = z.object({
   createdAt: z.date(),
 });
 
-export const validateOrder = compile<z.infer<typeof OrderSchema>>(OrderSchema);
+export const validateOrder = compile(OrderSchema);
 
 // --- Tier 3 types ---
 
@@ -71,19 +71,19 @@ const WalletSchema = z.object({
   limit: z.bigint().max(1000000n),
 });
 
-export const validateWallet = compile<z.infer<typeof WalletSchema>>(WalletSchema);
+export const validateWallet = compile(WalletSchema);
 
 const TagSetSchema = z.set(z.string().min(1)).min(1).max(20);
 
-export const validateTagSet = compile<z.infer<typeof TagSetSchema>>(TagSetSchema);
+export const validateTagSet = compile(TagSetSchema);
 
 const HeadersSchema = z.map(z.string().min(1), z.string());
 
-export const validateHeaders = compile<z.infer<typeof HeadersSchema>>(HeadersSchema);
+export const validateHeaders = compile(HeadersSchema);
 
 const PositiveIntSchema = z.number().int().pipe(z.number().positive());
 
-export const validatePositiveInt = compile<z.infer<typeof PositiveIntSchema>>(PositiveIntSchema);
+export const validatePositiveInt = compile(PositiveIntSchema);
 
 // --- Lazy schemas ---
 
@@ -92,7 +92,7 @@ const CategorySchema = z.object({
   description: z.lazy(() => z.nullable(z.string())),
 });
 
-export const validateCategory = compile<z.infer<typeof CategorySchema>>(CategorySchema);
+export const validateCategory = compile(CategorySchema);
 
 const TreeNodeSchema: z.ZodType = z.object({
   value: z.string().min(1),
