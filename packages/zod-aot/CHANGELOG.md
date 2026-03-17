@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/wakita181009/zod-aot/compare/v0.3.1...v0.3.2) (2026-03-17)
+
+
+### Bug Fixes
+
+* strip trailing comma from inline compile() argument in unplugin transform ([#33](https://github.com/wakita181009/zod-aot/issues/33)) ([a16017f](https://github.com/wakita181009/zod-aot/commit/a16017f4df14c0f3d22ee1e861de0b5b2f2f28f5))
+
 ## [0.3.1](https://github.com/wakita181009/zod-aot/compare/v0.3.0...v0.3.1) (2026-03-17)
 
 
