@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/wakita181009/zod-aot/compare/v0.3.0...v0.3.1) (2026-03-17)
+
+
+### Bug Fixes
+
+* remove unplugin re-export from main entry point ([#31](https://github.com/wakita181009/zod-aot/issues/31)) ([634108b](https://github.com/wakita181009/zod-aot/commit/634108b7ea3bd16465cf023d758220df8d9f47c0))
+
 ## [0.3.0](https://github.com/wakita181009/zod-aot/compare/v0.2.0...v0.3.0) (2026-03-17)
 
 
