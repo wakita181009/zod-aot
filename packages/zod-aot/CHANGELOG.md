@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/wakita181009/zod-aot/compare/v0.2.0...v0.3.0) (2026-03-17)
+
+
+### Features
+
+* Zod-compatible CompiledSchema with improved compile() type ([#28](https://github.com/wakita181009/zod-aot/issues/28)) ([bc92a01](https://github.com/wakita181009/zod-aot/commit/bc92a017f4f48cf41f05c72a6da6a1b9f89f1d3d))
+
 ## [0.2.0](https://github.com/wakita181009/zod-aot/compare/v0.1.0...v0.2.0) (2026-03-16)
 
 
