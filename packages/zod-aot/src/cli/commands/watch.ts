@@ -13,6 +13,7 @@ import {
 interface WatchOptions {
   inputs: string[];
   output: string | undefined;
+  zodCompat?: boolean | undefined;
 }
 
 /** Dependencies for runWatch, injectable for testing. */
@@ -100,7 +101,7 @@ export async function runWatch(
 
   for (const filePath of files) {
     try {
-      const result = await generateFile(filePath, options.output);
+      const result = await generateFile(filePath, options.output, { zodCompat: options.zodCompat });
       if (result) {
         logResult(result);
         totalSchemas += result.schemaCount;
@@ -131,7 +132,10 @@ export async function runWatch(
 
     for (const filePath of batch) {
       try {
-        const result = await generateFile(filePath, options.output, { cacheBust: true });
+        const result = await generateFile(filePath, options.output, {
+          cacheBust: true,
+          zodCompat: options.zodCompat,
+        });
         if (result) {
           logResult(result);
         }

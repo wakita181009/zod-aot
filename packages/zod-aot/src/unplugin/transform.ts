@@ -23,7 +23,11 @@ export function shouldTransform(id: string, options?: ZodAotPluginOptions): bool
  * Transform source code by replacing compile() calls with optimized validators.
  * Returns the transformed code or null if no transformation was needed.
  */
-export async function transformCode(code: string, id: string): Promise<string | null> {
+export async function transformCode(
+  code: string,
+  id: string,
+  options?: { zodCompat?: boolean | undefined },
+): Promise<string | null> {
   // Quick check: source must reference both "zod-aot" and "compile"
   if (!code.includes("zod-aot") || !code.includes("compile")) return null;
 
@@ -40,13 +44,17 @@ export async function transformCode(code: string, id: string): Promise<string | 
   // For each schema, run the compilation pipeline
   const compiled = compileSchemas(schemas);
 
-  return rewriteSource(code, compiled);
+  return rewriteSource(code, compiled, { zodCompat: options?.zodCompat });
 }
 
 /**
  * Generate an IIFE that replaces a compile() call with inline optimized code.
  */
-function generateInlineReplacement(schemaArgName: string, schema: CompiledSchemaInfo): string {
+function generateInlineReplacement(
+  schemaArgName: string,
+  schema: CompiledSchemaInfo,
+  options?: { zodCompat?: boolean | undefined },
+): string {
   const { codegenResult, fallbackEntries } = schema;
   const fnName = extractFunctionName(codegenResult.functionName);
 
@@ -66,12 +74,32 @@ function generateInlineReplacement(schemaArgName: string, schema: CompiledSchema
   // Capture Zod's localeError for message generation inside the IIFE
   const msgDecl = "var __msg=__zodAotConfig().localeError;\n";
 
+  const zodCompat = options?.zodCompat !== false;
+
+  if (zodCompat) {
+    return [
+      "/* @__PURE__ */ (() => {",
+      msgDecl + fbDecl + preambleStr + codegenResult.functionName,
+      `var __w=Object.create(${schemaArgName});`,
+      `__w.parse=function(input){const r=${fnName}(input);if(r.success)return r.data;throw Object.assign(new Error("Validation failed"),r.error);};`,
+      `__w.safeParse=${fnName};`,
+      `__w.safeParseAsync=function(input){return Promise.resolve(${fnName}(input));};`,
+      `__w.parseAsync=function(input){const r=${fnName}(input);if(r.success)return Promise.resolve(r.data);return Promise.reject(Object.assign(new Error("Validation failed"),r.error));};`,
+      `__w.is=function(input){return ${fnName}(input).success;};`,
+      `__w.schema=${schemaArgName};`,
+      "return __w;",
+      "})()",
+    ].join("\n");
+  }
+
   return [
     "/* @__PURE__ */ (() => {",
     msgDecl + fbDecl + preambleStr + codegenResult.functionName,
     "return {",
     `parse(input){const r=${fnName}(input);if(r.success)return r.data;throw Object.assign(new Error("Validation failed"),r.error);},`,
     `safeParse:${fnName},`,
+    `safeParseAsync(input){return Promise.resolve(${fnName}(input));},`,
+    `parseAsync(input){const r=${fnName}(input);if(r.success)return Promise.resolve(r.data);return Promise.reject(Object.assign(new Error("Validation failed"),r.error));},`,
     `is(input){return ${fnName}(input).success;},`,
     `schema:${schemaArgName},`,
     "};",
@@ -99,7 +127,11 @@ function findMatchingParen(code: string, openIndex: number): number {
 /**
  * Rewrite source code by replacing compile() calls with IIFE-wrapped optimized validators.
  */
-export function rewriteSource(code: string, schemas: CompiledSchemaInfo[]): string {
+export function rewriteSource(
+  code: string,
+  schemas: CompiledSchemaInfo[],
+  options?: { zodCompat?: boolean | undefined },
+): string {
   let result = code;
 
   for (const schema of schemas) {
@@ -118,7 +150,7 @@ export function rewriteSource(code: string, schemas: CompiledSchemaInfo[]): stri
     const schemaArgName = result.slice(openParenIndex + 1, closeParenIndex).trim();
     const prefix = match[1] ?? "";
     const fullMatch = result.slice(match.index, closeParenIndex + 1);
-    const replacement = prefix + generateInlineReplacement(schemaArgName, schema);
+    const replacement = prefix + generateInlineReplacement(schemaArgName, schema, options);
     result = result.replace(fullMatch, replacement);
   }
 

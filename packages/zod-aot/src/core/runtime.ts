@@ -1,59 +1,24 @@
-import type { CompiledSchema, SafeParseResult, ZodErrorLike, ZodIssueLike } from "./types.js";
-
-interface ZodSafeParseSuccess {
-  success: true;
-  data: unknown;
-}
-
-interface ZodSafeParseFailure {
-  success: false;
-  error: {
-    issues: Array<{
-      code: string;
-      path: (string | number)[];
-      message: string;
-      [key: string]: unknown;
-    }>;
-  };
-}
-
-type ZodSafeParseResult = ZodSafeParseSuccess | ZodSafeParseFailure;
+import type { CompiledSchema } from "./types.js";
 
 interface ZodLikeSchema {
-  parse(input: unknown): unknown;
-  safeParse(input: unknown): ZodSafeParseResult;
+  safeParse(input: unknown): { success: boolean; data?: unknown; error?: unknown };
 }
 
 /**
- * Dev-time fallback: wraps Zod schema to provide the CompiledSchema interface.
+ * Dev-time fallback: wraps Zod schema via Object.create to provide the CompiledSchema interface
+ * while preserving full Zod compatibility (e.g. `_zod`, `shape`, `safeParseAsync`).
+ *
+ * parse/safeParse/parseAsync/safeParseAsync fall through to the original Zod schema via prototype.
+ * Only `is` and `schema` are added as own properties.
  */
 export function createFallback<T>(zodSchema: unknown): CompiledSchema<T> {
-  const schema = zodSchema as ZodLikeSchema;
+  const schema = zodSchema as ZodLikeSchema & object;
 
-  return {
-    parse(input: unknown): T {
-      return schema.parse(input) as T;
-    },
+  const wrapped = Object.create(schema) as CompiledSchema<T>;
 
-    safeParse(input: unknown): SafeParseResult<T> {
-      const result = schema.safeParse(input);
-      if (result.success) {
-        return { success: true, data: result.data as T };
-      }
-      const issues: ZodIssueLike[] = result.error.issues.map((issue) => ({
-        ...issue,
-        code: issue.code,
-        path: issue.path,
-        message: issue.message,
-      }));
-      const error: ZodErrorLike = { issues };
-      return { success: false, error };
-    },
+  wrapped.is = (input: unknown): input is T => schema.safeParse(input).success;
 
-    is(input: unknown): input is T {
-      return schema.safeParse(input).success;
-    },
+  wrapped.schema = zodSchema;
 
-    schema: zodSchema,
-  };
+  return wrapped;
 }

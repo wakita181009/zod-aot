@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { createFallback } from "#src/core/runtime.js";
 
-describe("createFallback — wraps Zod schema as CompiledSchema", () => {
+describe("createFallback — wraps Zod schema as CompiledSchema via Object.create", () => {
   const schema = z.object({
     name: z.string().min(1),
     age: z.number().int().positive(),
@@ -67,5 +67,36 @@ describe("createFallback — handles non-AOT-compilable schemas", () => {
     );
     expect(compiled.parse("abc")).toBe("abc");
     expect(() => compiled.parse("xyz")).toThrow();
+  });
+});
+
+describe("createFallback — Zod compatibility via Object.create", () => {
+  const schema = z.object({
+    name: z.string(),
+    age: z.number(),
+  });
+
+  it("preserves _zod property via prototype", () => {
+    const compiled = createFallback(schema);
+    expect("_zod" in compiled).toBe(true);
+  });
+
+  it("preserves shape property via prototype", () => {
+    const compiled = createFallback(schema);
+    expect((compiled as Record<string, unknown>).shape).toBeDefined();
+    expect((compiled as Record<string, unknown>).shape).toBe(schema.shape);
+  });
+
+  it("safeParseAsync works via prototype", async () => {
+    const compiled = createFallback(schema);
+    const result = await (
+      compiled as Record<string, (...args: unknown[]) => unknown>
+    ).safeParseAsync({ name: "Alice", age: 30 });
+    expect(result).toHaveProperty("success", true);
+  });
+
+  it("instanceof checks pass", () => {
+    const compiled = createFallback(schema);
+    expect(compiled instanceof z.ZodObject).toBe(true);
   });
 });

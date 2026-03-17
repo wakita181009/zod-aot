@@ -153,6 +153,37 @@ The plugin:
 - Adds `/* @__PURE__ */` annotations for tree-shaking
 - Supports HMR in development
 
+## Zod Ecosystem Compatibility
+
+`compile()` returns a full Zod schema (`T & CompiledSchema<T>`) — it preserves all original Zod methods and only replaces validation methods (`safeParse`, `parse`, etc.) with AOT-optimized versions. This means compiled schemas work with any library that accepts Zod schemas.
+
+### Hono
+
+```typescript
+import { Hono } from "hono";
+import { zValidator } from "@hono/zod-validator";
+import { z } from "zod";
+import { compile } from "zod-aot";
+
+const UserSchema = z.object({
+  name: z.string().min(3),
+  age: z.number().int().positive(),
+  email: z.email(),
+});
+
+// Still a Zod schema — but safeParse is AOT-optimized
+const validateUser = compile(UserSchema);
+
+const app = new Hono();
+
+app.post("/users", zValidator("json", validateUser), (c) => {
+  const user = c.req.valid("json");
+  return c.json(user);
+});
+```
+
+`@hono/zod-validator` internally calls `schema.safeParse()` — with zod-aot, this call is replaced by the generated optimized validator at build time, giving you faster request validation with zero code changes.
+
 ## How It Works
 
 ```
