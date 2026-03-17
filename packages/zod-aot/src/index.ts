@@ -7,5 +7,4 @@ export type {
   ZodErrorLike,
   ZodIssueLike,
 } from "#src/core/types.js";
-export { unplugin } from "#src/unplugin/index.js";
 export type { ZodAotPluginOptions } from "#src/unplugin/types.js";
