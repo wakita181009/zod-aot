@@ -4,6 +4,7 @@ import {
   validateContact,
   validateEvent,
   validateHeaders,
+  validateInline,
   validateNotification,
   validateOrder,
   validatePositiveInt,
@@ -296,6 +297,19 @@ test("TreeNode: invalid child value", () => {
 test("TreeNode: invalid children type", () => {
   const result = validateTreeNode.safeParse({ value: "root", children: "not array" });
   log(`  success: ${result.success}`);
+});
+
+// --- Inline compile (no intermediate variable) ---
+
+test("Inline: valid", () => {
+  const result = validateInline.safeParse({ id: "abc", value: 42 });
+  log(`  success: ${result.success}`);
+});
+
+test("Inline: invalid (negative value)", () => {
+  const result = validateInline.safeParse({ id: "abc", value: -1 });
+  log(`  success: ${result.success}`);
+  if (!result.success) log(`  issues: ${result.error?.issues.length}`);
 });
 
 log("\nAll tests completed.");

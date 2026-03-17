@@ -229,6 +229,24 @@ describe("rewriteSource()", () => {
     expect(result).toContain("__w.schema=z.object({ name: z.string() });");
   });
 
+  it("handles inline schema with trailing comma", () => {
+    const code = [
+      `import { compile } from "zod-aot";`,
+      `export const validateUser = compile(`,
+      `  z.object({ name: z.string() }),`,
+      `);`,
+    ].join("\n");
+
+    const schemas = [makeCompiledInfo("validateUser", simpleSchema)];
+    const result = rewriteSource(code, schemas);
+
+    expect(result).toContain("safeParse_validateUser");
+    expect(result).not.toContain("compile(");
+    // Trailing comma should be stripped from the schema arg
+    expect(result).toContain("__w.schema=z.object({ name: z.string() });");
+    expect(result).not.toContain("z.object({ name: z.string() }),");
+  });
+
   // C1 (from review): findMatchingParen should handle parens inside string literals
   it("handles parentheses inside string literal default values", () => {
     const code = [
