@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/wakita181009/zod-aot/compare/v0.3.2...v0.4.0) (2026-03-17)
+
+
+### Features
+
+* support includes/startsWith/endsWith string checks ([#35](https://github.com/wakita181009/zod-aot/issues/35)) ([84b98d7](https://github.com/wakita181009/zod-aot/commit/84b98d7c2463d54149a5325f0056dfabf763526b))
+
 ## [0.3.2](https://github.com/wakita181009/zod-aot/compare/v0.3.1...v0.3.2) (2026-03-17)
 
 
