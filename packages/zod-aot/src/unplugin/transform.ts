@@ -147,7 +147,10 @@ export function rewriteSource(
     const closeParenIndex = findMatchingParen(result, openParenIndex);
     if (closeParenIndex === -1) continue;
 
-    const schemaArgName = result.slice(openParenIndex + 1, closeParenIndex).trim();
+    const schemaArgName = result
+      .slice(openParenIndex + 1, closeParenIndex)
+      .trim()
+      .replace(/,\s*$/, "");
     const prefix = match[1] ?? "";
     const fullMatch = result.slice(match.index, closeParenIndex + 1);
     const replacement = prefix + generateInlineReplacement(schemaArgName, schema, options);

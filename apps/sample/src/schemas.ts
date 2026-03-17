@@ -100,3 +100,12 @@ const TreeNodeSchema: z.ZodType = z.object({
 });
 
 export const validateTreeNode = compile(TreeNodeSchema);
+
+// --- Inline compile (no intermediate variable) ---
+
+export const validateInline = compile(
+  z.object({
+    id: z.string().min(1),
+    value: z.number().positive(),
+  }),
+);
