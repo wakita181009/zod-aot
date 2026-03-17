@@ -38,6 +38,22 @@ export function extractChecks(checks: ZodCheckSchema[]): {
         });
         break;
       case "string_format": {
+        if (def.format === "includes" && typeof def.includes === "string") {
+          checkIRs.push({
+            kind: "includes",
+            includes: def.includes,
+            ...(typeof def.position === "number" ? { position: def.position } : {}),
+          });
+          break;
+        }
+        if (def.format === "starts_with" && typeof def.prefix === "string") {
+          checkIRs.push({ kind: "starts_with", prefix: def.prefix });
+          break;
+        }
+        if (def.format === "ends_with" && typeof def.suffix === "string") {
+          checkIRs.push({ kind: "ends_with", suffix: def.suffix });
+          break;
+        }
         const pattern = def.pattern instanceof RegExp ? def.pattern.source : def.pattern;
         checkIRs.push({
           kind: "string_format",

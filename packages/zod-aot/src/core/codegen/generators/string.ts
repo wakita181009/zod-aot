@@ -38,6 +38,24 @@ export function generateStringValidation(
               ${issuesVar}.push({code:"too_big",maximum:${check.length},origin:"string",inclusive:true,exact:true,input:${inputExpr},path:${pathExpr}});
             }`;
           break;
+        case "includes":
+          code += emit`
+            if(!${inputExpr}.includes(${escapeString(check.includes)}${check.position !== undefined ? `,${check.position}` : ""})){
+              ${issuesVar}.push({code:"invalid_format",format:"includes",includes:${escapeString(check.includes)},input:${inputExpr},path:${pathExpr}});
+            }`;
+          break;
+        case "starts_with":
+          code += emit`
+            if(!${inputExpr}.startsWith(${escapeString(check.prefix)})){
+              ${issuesVar}.push({code:"invalid_format",format:"starts_with",prefix:${escapeString(check.prefix)},input:${inputExpr},path:${pathExpr}});
+            }`;
+          break;
+        case "ends_with":
+          code += emit`
+            if(!${inputExpr}.endsWith(${escapeString(check.suffix)})){
+              ${issuesVar}.push({code:"invalid_format",format:"ends_with",suffix:${escapeString(check.suffix)},input:${inputExpr},path:${pathExpr}});
+            }`;
+          break;
         case "string_format": {
           let regexVar: string;
           if (check.format === "email") {

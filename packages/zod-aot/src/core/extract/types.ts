@@ -1,13 +1,17 @@
 export interface ZodCheckDef {
   check: string;
+  type: string;
+  format: string;
+  pattern: RegExp | string;
   minimum: number;
   maximum: number;
   length: number;
   value: number;
   inclusive: boolean;
-  format: string;
-  pattern: RegExp | string;
-  type: string;
+  includes: string;
+  position: number;
+  prefix: string;
+  suffix: string;
   fn: unknown;
 }
 

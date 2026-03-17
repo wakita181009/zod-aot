@@ -64,6 +64,30 @@ describe("extractSchema — string checks", () => {
     );
   });
 
+  it("extracts includes check", () => {
+    const ir = extractSchema(z.string().includes("foo")) as StringIR;
+    expect(ir.type).toBe("string");
+    expect(ir.checks).toContainEqual({ kind: "includes", includes: "foo" });
+  });
+
+  it("extracts includes check with position", () => {
+    const ir = extractSchema(z.string().includes("bar", { position: 3 })) as StringIR;
+    expect(ir.type).toBe("string");
+    expect(ir.checks).toContainEqual({ kind: "includes", includes: "bar", position: 3 });
+  });
+
+  it("extracts startsWith check", () => {
+    const ir = extractSchema(z.string().startsWith("http")) as StringIR;
+    expect(ir.type).toBe("string");
+    expect(ir.checks).toContainEqual({ kind: "starts_with", prefix: "http" });
+  });
+
+  it("extracts endsWith check", () => {
+    const ir = extractSchema(z.string().endsWith(".ts")) as StringIR;
+    expect(ir.type).toBe("string");
+    expect(ir.checks).toContainEqual({ kind: "ends_with", suffix: ".ts" });
+  });
+
   it("extracts multiple checks in correct order", () => {
     const ir = extractSchema(z.string().min(1).max(100).regex(/^\w+$/)) as StringIR;
     expect(ir.checks).toHaveLength(3);

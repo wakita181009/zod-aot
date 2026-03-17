@@ -48,6 +48,22 @@ export interface CheckStringFormat {
   pattern?: string;
 }
 
+export interface CheckIncludes {
+  kind: "includes";
+  includes: string;
+  position?: number;
+}
+
+export interface CheckStartsWith {
+  kind: "starts_with";
+  prefix: string;
+}
+
+export interface CheckEndsWith {
+  kind: "ends_with";
+  suffix: string;
+}
+
 export type CheckIR =
   | CheckMinLength
   | CheckMaxLength
@@ -56,7 +72,10 @@ export type CheckIR =
   | CheckLessThan
   | CheckMultipleOf
   | CheckNumberFormat
-  | CheckStringFormat;
+  | CheckStringFormat
+  | CheckIncludes
+  | CheckStartsWith
+  | CheckEndsWith;
 
 // ─── Date Check IR ──────────────────────────────────────────────────────────
 
