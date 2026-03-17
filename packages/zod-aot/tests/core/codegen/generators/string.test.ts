@@ -150,6 +150,69 @@ describe("codegen — string", () => {
     expect(safeParse("").success).toBe(true);
   });
 
+  it("generates includes check", () => {
+    const ir: StringIR = {
+      type: "string",
+      checks: [{ kind: "includes", includes: "foo" }],
+    };
+    const safeParse = compileIR(ir);
+    expect(safeParse("foobar").success).toBe(true);
+    expect(safeParse("barfoo").success).toBe(true);
+    expect(safeParse("bar").success).toBe(false);
+    expect(safeParse("FOO").success).toBe(false);
+  });
+
+  it("generates includes check with position", () => {
+    const ir: StringIR = {
+      type: "string",
+      checks: [{ kind: "includes", includes: "bar", position: 3 }],
+    };
+    const safeParse = compileIR(ir);
+    expect(safeParse("foobar").success).toBe(true);
+    expect(safeParse("foobaz").success).toBe(false);
+    expect(safeParse("bar").success).toBe(false);
+  });
+
+  it("generates starts_with check", () => {
+    const ir: StringIR = {
+      type: "string",
+      checks: [{ kind: "starts_with", prefix: "http" }],
+    };
+    const safeParse = compileIR(ir);
+    expect(safeParse("https://example.com").success).toBe(true);
+    expect(safeParse("http://localhost").success).toBe(true);
+    expect(safeParse("ftp://example.com").success).toBe(false);
+    expect(safeParse("").success).toBe(false);
+  });
+
+  it("generates ends_with check", () => {
+    const ir: StringIR = {
+      type: "string",
+      checks: [{ kind: "ends_with", suffix: ".ts" }],
+    };
+    const safeParse = compileIR(ir);
+    expect(safeParse("index.ts").success).toBe(true);
+    expect(safeParse("main.ts").success).toBe(true);
+    expect(safeParse("index.js").success).toBe(false);
+    expect(safeParse("ts").success).toBe(false);
+  });
+
+  it("generates combined includes + starts_with + ends_with checks", () => {
+    const ir: StringIR = {
+      type: "string",
+      checks: [
+        { kind: "starts_with", prefix: "http" },
+        { kind: "includes", includes: "example" },
+        { kind: "ends_with", suffix: ".com" },
+      ],
+    };
+    const safeParse = compileIR(ir);
+    expect(safeParse("https://example.com").success).toBe(true);
+    expect(safeParse("ftp://example.com").success).toBe(false);
+    expect(safeParse("https://other.com").success).toBe(false);
+    expect(safeParse("https://example.org").success).toBe(false);
+  });
+
   // H1: URL validation should not produce unused preamble variables (dead code)
   it("url format does not produce unused preamble variables", () => {
     const ir: StringIR = {
