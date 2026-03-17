@@ -86,7 +86,7 @@ const result = validateUser.safeParse(data);    // { success, data/error }
 const isUser = validateUser.is(data);           // type guard (boolean)
 ```
 
-Exports: `compile`, `isCompiledSchema`, `unplugin`, types (`CompiledSchema`, `SafeParseResult`, `SafeParseError`, `SafeParseSuccess`, `ZodErrorLike`, `ZodIssueLike`, `ZodAotPluginOptions`)
+Exports: `compile`, `isCompiledSchema`, types (`CompiledSchema`, `SafeParseResult`, `SafeParseError`, `SafeParseSuccess`, `ZodErrorLike`, `ZodIssueLike`, `ZodAotPluginOptions`)
 
 ### Internal API (`zod-aot/internals`)
 
