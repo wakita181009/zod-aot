@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/wakita181009/zod-aot/compare/v0.5.0...v0.5.1) (2026-03-19)
+
+
+### Bug Fixes
+
+* add Zod v3 to benchmarks for 5-way comparison ([#42](https://github.com/wakita181009/zod-aot/issues/42)) ([220f906](https://github.com/wakita181009/zod-aot/commit/220f906fafd09fec1551be37d202641c75781420))
+
 ## [0.5.0](https://github.com/wakita181009/zod-aot/compare/v0.4.1...v0.5.0) (2026-03-19)
 
 
