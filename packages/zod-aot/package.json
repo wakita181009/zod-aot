@@ -35,41 +35,49 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "source": "./src/index.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
     "./vite": {
       "types": "./dist/unplugin/vite.d.ts",
+      "source": "./src/unplugin/vite.ts",
       "import": "./dist/unplugin/vite.js",
       "default": "./dist/unplugin/vite.js"
     },
     "./webpack": {
       "types": "./dist/unplugin/webpack.d.ts",
+      "source": "./src/unplugin/webpack.ts",
       "import": "./dist/unplugin/webpack.js",
       "default": "./dist/unplugin/webpack.js"
     },
     "./esbuild": {
       "types": "./dist/unplugin/esbuild.d.ts",
+      "source": "./src/unplugin/esbuild.ts",
       "import": "./dist/unplugin/esbuild.js",
       "default": "./dist/unplugin/esbuild.js"
     },
     "./rollup": {
       "types": "./dist/unplugin/rollup.d.ts",
+      "source": "./src/unplugin/rollup.ts",
       "import": "./dist/unplugin/rollup.js",
       "default": "./dist/unplugin/rollup.js"
     },
     "./rolldown": {
       "types": "./dist/unplugin/rolldown.d.ts",
+      "source": "./src/unplugin/rolldown.ts",
       "import": "./dist/unplugin/rolldown.js",
       "default": "./dist/unplugin/rolldown.js"
     },
     "./bun": {
       "types": "./dist/unplugin/bun.d.ts",
+      "source": "./src/unplugin/bun.ts",
       "import": "./dist/unplugin/bun.js",
       "default": "./dist/unplugin/bun.js"
     },
     "./internals": {
       "types": "./dist/internals.d.ts",
+      "source": "./src/internals.ts",
       "import": "./dist/internals.js",
       "default": "./dist/internals.js"
     }

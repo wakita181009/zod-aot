@@ -38,12 +38,12 @@ Discovery       discoverSchemas()           discoverSchemas()        (direct sch
                   └─ loadSourceFile()          └─ loadSourceFile()
                   └─ isCompiledSchema()        └─ isCompiledSchema()
                          ↓                           ↓                   ↓
-Compile         compileSchemas(schemas)     compileSchemas(schemas)  extractSchema(zodSchema)
-(extract+codegen) └─ extractSchema()          └─ extractSchema()       └─ generateValidator()
+Compile         compileSchemas(schemas)     compileSchemas(schemas)  zodAot() vite plugin
+(extract+codegen) └─ extractSchema()          └─ extractSchema()       └─ (same as unplugin)
                    └─ generateValidator()      └─ generateValidator()
                          ↓                           ↓                   ↓
-Output          emitter.ts                  rewriteSource()          new Function()
-                .compiled.ts file           IIFE inline in source    runtime eval
+Output          emitter.ts                  rewriteSource()          IIFE inline via unplugin
+                .compiled.ts file           IIFE inline in source    (vitest runs vite plugins)
 ```
 
 Key files:
@@ -52,11 +52,11 @@ Key files:
 - `discovery.ts`: `discoverSchemas()` loads file → scans exports with `isCompiledSchema()`
 - `cli/commands/generate.ts`: discovery → `compileSchemas()` → `emitter.ts` writes `.compiled.ts`
 - `unplugin/transform.ts`: discovery → `compileSchemas()` → `rewriteSource()` replaces `compile()` with IIFE
-- `benchmarks/helpers/compile.ts`: `compileForBench()` directly calls extract → generate → `new Function()`
+- `benchmarks/vitest.config.ts`: uses `zodAot()` vite plugin + `@typia/unplugin` for build-time compilation
 
 The generated `safeParse_*` function is identical across all paths. Benchmark results accurately reflect CLI/unplugin output performance.
 
-Note: CLI emitter (`emitter.ts`) does not include `schema` property in the output wrapper, unlike unplugin and benchmark which retain the original Zod schema reference.
+Note: CLI emitter (`emitter.ts`) does not include `schema` property in the output wrapper, unlike unplugin which retains the original Zod schema reference.
 
 ### Why Runtime Extraction
 
@@ -207,7 +207,7 @@ zod-aot/
 │       │       └── index.test.ts
 │       ├── package.json
 │       └── tsconfig.json
-├── benchmarks/                   # Workspace package (@zod-aot/benchmarks)
+├── benchmarks/                   # Workspace package (@zod-aot/benchmarks) — 4-way comparison: zod vs zod-aot vs ajv vs typia
 ├── apps/
 │   └── sample/                   # Vite + unplugin demo app
 ├── .github/workflows/
@@ -256,8 +256,8 @@ Source files to reference during implementation:
 pnpm build          # tsc across all packages
 pnpm test           # vitest run
 pnpm bench          # vitest bench
-pnpm lint           # biome check .
-pnpm lint:fix       # biome check --fix .
+pnpm check          # biome check .
+pnpm check:fix      # biome check --fix .
 pnpm format         # biome format --write .
 
 # packages/zod-aot
@@ -292,6 +292,5 @@ Key rules:
 ## Verification
 
 1. `pnpm test` — Vitest for extractor/codegen/integration tests
-2. `pnpm bench` — vitest bench for Zod v4 performance comparison
-3. `pnpm --filter @zod-aot/benchmarks bench:zod-only` / `pnpm --filter @zod-aot/benchmarks bench:zod-aot` — Standalone benchmark scripts
-4. Integration test: schema → extract → generate → execute → compare results with Zod on same input
+2. `pnpm bench` — vitest bench (zod vs zod-aot vs ajv vs typia, uses `benchmarks/vitest.config.ts`)
+3. Integration test: schema → extract → generate → execute → compare results with Zod on same input

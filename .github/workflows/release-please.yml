@@ -39,8 +39,8 @@ jobs:
           cache: pnpm
           registry-url: https://registry.npmjs.org
       - run: pnpm install --frozen-lockfile
-      - name: Lint
-        run: pnpm lint
+      - name: Lint & Format
+        run: pnpm check
       - name: Typecheck
         run: pnpm -r typecheck
       - name: Test

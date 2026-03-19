@@ -6,15 +6,16 @@
     "build": "pnpm -r build",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "bench": "vitest bench",
-    "lint": "biome check .",
-    "lint:fix": "biome check --fix .",
+    "bench": "vitest bench --config benchmarks/vitest.config.ts",
+    "check": "biome check .",
+    "check:fix": "biome check --fix .",
     "format": "biome format --write .",
     "typecheck": "pnpm -r typecheck"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.7",
     "@vitest/coverage-v8": "^4.1.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^4.1.0",
     "zod": "^4.0.0"

@@ -32,7 +32,10 @@ export function generateCompiledFileContent(
   lines.push("");
 
   const zodCompat = options?.zodCompat !== false;
-  const importPath = sourceRelPath.replace(/\.[cm]?[jt]sx?$/, "");
+  let importPath = sourceRelPath.replace(/\.[cm]?[jt]sx?$/, "");
+  if (!importPath.startsWith(".")) {
+    importPath = `./${importPath}`;
+  }
   const schemasWithFallbacks = schemas.filter((s) => s.fallbackEntries.length > 0);
 
   if (zodCompat) {
