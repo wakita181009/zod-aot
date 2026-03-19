@@ -166,7 +166,10 @@ describe("extractSchema — lazy (recursive / cycle detection)", () => {
   it("emits recursiveRef inside record value", () => {
     const DirNode: z.ZodType = z.object({
       name: z.string(),
-      subdirs: z.record(z.string(), z.lazy(() => DirNode)),
+      subdirs: z.record(
+        z.string(),
+        z.lazy(() => DirNode),
+      ),
     });
     const ir = extractSchema(DirNode) as ObjectIR;
     expect(ir.type).toBe("object");
@@ -183,7 +186,10 @@ describe("extractSchema — lazy (recursive / cycle detection)", () => {
       z.boolean(),
       z.null(),
       z.array(z.lazy(() => JsonVal)),
-      z.record(z.string(), z.lazy(() => JsonVal)),
+      z.record(
+        z.string(),
+        z.lazy(() => JsonVal),
+      ),
     ]);
     const ir = extractSchema(JsonVal) as UnionIR;
     expect(ir.type).toBe("union");

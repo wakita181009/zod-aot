@@ -1186,7 +1186,10 @@ describe("integration — partial fallback (mixed compilable + non-compilable)",
   it("recursive record (directory tree) matches Zod", () => {
     const DirNode: z.ZodType = z.object({
       name: z.string(),
-      children: z.record(z.string(), z.lazy(() => DirNode)),
+      children: z.record(
+        z.string(),
+        z.lazy(() => DirNode),
+      ),
     });
 
     const safeParse = compileWithFallbacks(DirNode, "dir");
@@ -1237,9 +1240,7 @@ describe("integration — partial fallback (mixed compilable + non-compilable)",
           children: [
             {
               value: "L2",
-              children: [
-                { value: "L3", children: [{ value: "L4", children: [] }] },
-              ],
+              children: [{ value: "L3", children: [{ value: "L4", children: [] }] }],
             },
           ],
         },
@@ -1274,9 +1275,7 @@ describe("integration — partial fallback (mixed compilable + non-compilable)",
     expect(aotResult.success).toBe(false);
     expect(zodResult.success).toBe(false);
     if (!aotResult.success && !zodResult.success) {
-      expect(aotResult.error.issues[0]?.path).toEqual(
-        zodResult.error.issues[0]?.path,
-      );
+      expect(aotResult.error.issues[0]?.path).toEqual(zodResult.error.issues[0]?.path);
     }
   });
 

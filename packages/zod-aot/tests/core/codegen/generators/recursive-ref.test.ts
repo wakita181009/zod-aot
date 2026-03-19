@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { generateRecursiveRefValidation } from "#src/core/codegen/generators/recursive-ref.js";
 import type { CodeGenContext } from "#src/core/codegen/context.js";
+import { generateRecursiveRefValidation } from "#src/core/codegen/generators/recursive-ref.js";
 import type { ObjectIR, RecursiveRefIR } from "#src/core/types.js";
 import { compileIR } from "../helpers.js";
 
@@ -23,7 +23,7 @@ describe("codegen — recursiveRef", () => {
 
   it("merges error issues with path on failure", () => {
     const ctx: CodeGenContext = { preamble: [], counter: 0, fnName: "safeParse_test" };
-    const code = generateRecursiveRefValidation("input", "[\"children\",0]", "__issues", ctx);
+    const code = generateRecursiveRefValidation("input", '["children",0]', "__issues", ctx);
     expect(code).toContain(".concat(");
     expect(code).toContain(".path)");
   });
@@ -52,17 +52,15 @@ describe("codegen — recursiveRef", () => {
     expect(safeParse({ value: "leaf", children: [] }).success).toBe(true);
 
     // Valid: one level deep
-    expect(
-      safeParse({ value: "root", children: [{ value: "child", children: [] }] }).success,
-    ).toBe(true);
+    expect(safeParse({ value: "root", children: [{ value: "child", children: [] }] }).success).toBe(
+      true,
+    );
 
     // Valid: two levels deep
     expect(
       safeParse({
         value: "root",
-        children: [
-          { value: "child", children: [{ value: "grandchild", children: [] }] },
-        ],
+        children: [{ value: "child", children: [{ value: "grandchild", children: [] }] }],
       }).success,
     ).toBe(true);
 
@@ -70,9 +68,9 @@ describe("codegen — recursiveRef", () => {
     expect(safeParse({ value: 42, children: [] }).success).toBe(false);
 
     // Invalid: bad value type in nested child
-    expect(
-      safeParse({ value: "root", children: [{ value: 123, children: [] }] }).success,
-    ).toBe(false);
+    expect(safeParse({ value: "root", children: [{ value: 123, children: [] }] }).success).toBe(
+      false,
+    );
 
     // Invalid: children not an array
     expect(safeParse({ value: "root", children: "not array" }).success).toBe(false);
@@ -132,9 +130,7 @@ describe("codegen — recursiveRef", () => {
     ).toBe(true);
 
     // Invalid: bad value in nested node
-    expect(
-      safeParse({ value: 1, next: { value: "bad", next: null } }).success,
-    ).toBe(false);
+    expect(safeParse({ value: 1, next: { value: "bad", next: null } }).success).toBe(false);
   });
 
   it("validates recursive union (JSON-like value)", () => {
