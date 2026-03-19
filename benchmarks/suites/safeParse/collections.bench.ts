@@ -14,6 +14,11 @@ import {
   TupleSchema,
   typiaValidateRecord,
   typiaValidateTuple,
+  v3MapSchema,
+  v3PipeSchema,
+  v3RecordSchema,
+  v3SetSchema,
+  v3TupleSchema,
   validMap5,
   validMap20,
   validPipe,
@@ -26,6 +31,9 @@ import {
 describe("safeParse: tuple [string, int, boolean]", () => {
   bench("zod", () => {
     TupleSchema.safeParse(validTuple);
+  });
+  bench("zod v3", () => {
+    v3TupleSchema.safeParse(validTuple);
   });
   bench("zod-aot", () => {
     aotTuple.safeParse(validTuple);
@@ -42,6 +50,9 @@ describe("safeParse: record<string, number>", () => {
   bench("zod", () => {
     RecordSchema.safeParse(validRecord);
   });
+  bench("zod v3", () => {
+    v3RecordSchema.safeParse(validRecord);
+  });
   bench("zod-aot", () => {
     aotRecord.safeParse(validRecord);
   });
@@ -57,6 +68,9 @@ describe("safeParse: set<string> (5 items)", () => {
   bench("zod", () => {
     SetSchema.safeParse(validSet5);
   });
+  bench("zod v3", () => {
+    v3SetSchema.safeParse(validSet5);
+  });
   bench("zod-aot", () => {
     aotSet.safeParse(validSet5);
   });
@@ -67,6 +81,9 @@ describe("safeParse: set<string> (5 items)", () => {
 describe("safeParse: set<string> (20 items)", () => {
   bench("zod", () => {
     SetSchema.safeParse(validSet20);
+  });
+  bench("zod v3", () => {
+    v3SetSchema.safeParse(validSet20);
   });
   bench("zod-aot", () => {
     aotSet.safeParse(validSet20);
@@ -79,6 +96,9 @@ describe("safeParse: map<string, number> (5 entries)", () => {
   bench("zod", () => {
     MapSchema.safeParse(validMap5);
   });
+  bench("zod v3", () => {
+    v3MapSchema.safeParse(validMap5);
+  });
   bench("zod-aot", () => {
     aotMap.safeParse(validMap5);
   });
@@ -90,6 +110,9 @@ describe("safeParse: map<string, number> (20 entries)", () => {
   bench("zod", () => {
     MapSchema.safeParse(validMap20);
   });
+  bench("zod v3", () => {
+    v3MapSchema.safeParse(validMap20);
+  });
   bench("zod-aot", () => {
     aotMap.safeParse(validMap20);
   });
@@ -100,6 +123,9 @@ describe("safeParse: map<string, number> (20 entries)", () => {
 describe("safeParse: pipe (string → string, non-transform)", () => {
   bench("zod", () => {
     PipeSchema.safeParse(validPipe);
+  });
+  bench("zod v3", () => {
+    v3PipeSchema.safeParse(validPipe);
   });
   bench("zod-aot", () => {
     aotPipe.safeParse(validPipe);

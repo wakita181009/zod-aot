@@ -4,6 +4,7 @@ import {
   aotTree,
   TreeNodeSchema,
   typiaValidateTree,
+  v3TreeNodeSchema,
   validTreeDeep,
   validTreeShallow,
 } from "../../schemas/index.js";
@@ -11,6 +12,9 @@ import {
 describe("safeParse: recursive tree — shallow (7 nodes)", () => {
   bench("zod", () => {
     TreeNodeSchema.safeParse(validTreeShallow);
+  });
+  bench("zod v3", () => {
+    v3TreeNodeSchema.safeParse(validTreeShallow);
   });
   bench("zod-aot", () => {
     aotTree.safeParse(validTreeShallow);
@@ -26,6 +30,9 @@ describe("safeParse: recursive tree — shallow (7 nodes)", () => {
 describe("safeParse: recursive tree — deep (121 nodes)", () => {
   bench("zod", () => {
     TreeNodeSchema.safeParse(validTreeDeep);
+  });
+  bench("zod v3", () => {
+    v3TreeNodeSchema.safeParse(validTreeDeep);
   });
   bench("zod-aot", () => {
     aotTree.safeParse(validTreeDeep);
