@@ -10,6 +10,7 @@ export interface CodeGenResult {
 export interface CodeGenContext {
   preamble: string[];
   counter: number;
+  fnName: string;
 }
 
 export type GenerateValidationFn = (

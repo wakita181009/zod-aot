@@ -1071,6 +1071,215 @@ describe("integration — partial fallback (mixed compilable + non-compilable)",
     }
   });
 
+  it("recursive tree with string checks matches Zod", () => {
+    const TreeNode: z.ZodType = z.object({
+      value: z.string().min(1),
+      children: z.array(z.lazy(() => TreeNode)),
+    });
+
+    const safeParse = compileWithFallbacks(TreeNode, "treeChecks");
+    const inputs = [
+      { value: "root", children: [] },
+      { value: "root", children: [{ value: "a", children: [] }] },
+      // Invalid: empty string violates min(1)
+      { value: "", children: [] },
+      // Invalid: nested child violates min(1)
+      { value: "root", children: [{ value: "", children: [] }] },
+    ];
+
+    for (const input of inputs) {
+      const zodResult = TreeNode.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+    }
+  });
+
+  it("linked list (nullable self-reference) matches Zod", () => {
+    const ListNode: z.ZodType = z.object({
+      value: z.number(),
+      next: z.lazy(() => ListNode).nullable(),
+    });
+
+    const safeParse = compileWithFallbacks(ListNode, "list");
+    const inputs = [
+      { value: 1, next: null },
+      { value: 1, next: { value: 2, next: null } },
+      { value: 1, next: { value: 2, next: { value: 3, next: null } } },
+      // Invalid: bad value
+      { value: "bad", next: null },
+      // Invalid: nested bad value
+      { value: 1, next: { value: "bad", next: null } },
+      // Invalid: next is not null or object
+      { value: 1, next: "not object" },
+      null,
+    ];
+
+    for (const input of inputs) {
+      const zodResult = ListNode.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+    }
+  });
+
+  it("binary tree (multiple nullable self-references) matches Zod", () => {
+    const BinaryTree: z.ZodType = z.object({
+      value: z.number(),
+      left: z.lazy(() => BinaryTree).nullable(),
+      right: z.lazy(() => BinaryTree).nullable(),
+    });
+
+    const safeParse = compileWithFallbacks(BinaryTree, "btree");
+    const inputs = [
+      { value: 1, left: null, right: null },
+      {
+        value: 1,
+        left: { value: 2, left: null, right: null },
+        right: { value: 3, left: null, right: null },
+      },
+      {
+        value: 1,
+        left: {
+          value: 2,
+          left: { value: 4, left: null, right: null },
+          right: null,
+        },
+        right: null,
+      },
+      // Invalid: bad value in left subtree
+      { value: 1, left: { value: "bad", left: null, right: null }, right: null },
+      // Invalid: missing right
+      { value: 1, left: null },
+    ];
+
+    for (const input of inputs) {
+      const zodResult = BinaryTree.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+    }
+  });
+
+  it("optional recursive self-reference matches Zod", () => {
+    const Category: z.ZodType = z.object({
+      name: z.string(),
+      parent: z.lazy(() => Category).optional(),
+    });
+
+    const safeParse = compileWithFallbacks(Category, "category");
+    const inputs = [
+      { name: "root" },
+      { name: "child", parent: { name: "root" } },
+      { name: "grandchild", parent: { name: "child", parent: { name: "root" } } },
+      // Invalid: bad name
+      { name: 42 },
+      // Invalid: bad nested name
+      { name: "child", parent: { name: 123 } },
+      null,
+    ];
+
+    for (const input of inputs) {
+      const zodResult = Category.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+    }
+  });
+
+  it("recursive record (directory tree) matches Zod", () => {
+    const DirNode: z.ZodType = z.object({
+      name: z.string(),
+      children: z.record(z.string(), z.lazy(() => DirNode)),
+    });
+
+    const safeParse = compileWithFallbacks(DirNode, "dir");
+    const inputs = [
+      { name: "root", children: {} },
+      {
+        name: "root",
+        children: {
+          src: { name: "src", children: {} },
+          lib: { name: "lib", children: {} },
+        },
+      },
+      {
+        name: "root",
+        children: {
+          src: {
+            name: "src",
+            children: {
+              core: { name: "core", children: {} },
+            },
+          },
+        },
+      },
+      // Invalid: child has bad name
+      { name: "root", children: { bad: { name: 42, children: {} } } },
+      null,
+    ];
+
+    for (const input of inputs) {
+      const zodResult = DirNode.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+    }
+  });
+
+  it("deep recursive tree (4 levels) matches Zod results", () => {
+    const TreeNode: z.ZodType = z.object({
+      value: z.string(),
+      children: z.array(z.lazy(() => TreeNode)),
+    });
+
+    const safeParse = compileWithFallbacks(TreeNode, "deepTree");
+    const deepTree = {
+      value: "L0",
+      children: [
+        {
+          value: "L1",
+          children: [
+            {
+              value: "L2",
+              children: [
+                { value: "L3", children: [{ value: "L4", children: [] }] },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const zodResult = TreeNode.safeParse(deepTree);
+    const aotResult = safeParse(deepTree);
+    expect(aotResult.success).toBe(zodResult.success);
+    if (aotResult.success && zodResult.success) {
+      expect(aotResult.data).toEqual(zodResult.data);
+    }
+  });
+
+  it("recursive schema error paths match Zod", () => {
+    const TreeNode: z.ZodType = z.object({
+      value: z.string(),
+      children: z.array(z.lazy(() => TreeNode)),
+    });
+
+    const safeParse = compileWithFallbacks(TreeNode, "treePaths");
+    const input = {
+      value: "root",
+      children: [
+        { value: "ok", children: [] },
+        { value: 42, children: [] },
+      ],
+    };
+
+    const zodResult = TreeNode.safeParse(input);
+    const aotResult = safeParse(input);
+    expect(aotResult.success).toBe(false);
+    expect(zodResult.success).toBe(false);
+    if (!aotResult.success && !zodResult.success) {
+      expect(aotResult.error.issues[0]?.path).toEqual(
+        zodResult.error.issues[0]?.path,
+      );
+    }
+  });
+
   it("non-recursive lazy compiles fully without fallback", () => {
     const schema = z.object({
       name: z.lazy(() => z.string().min(1)),
