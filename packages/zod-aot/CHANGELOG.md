@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/wakita181009/zod-aot/compare/v0.4.1...v0.5.0) (2026-03-19)
+
+
+### Features
+
+* optimize recursive schema validation with self-recursive codegen ([#40](https://github.com/wakita181009/zod-aot/issues/40)) ([ca006cc](https://github.com/wakita181009/zod-aot/commit/ca006cccc3cfbc45b47e9d78111413a585e7f8b2))
+
 ## [0.4.1](https://github.com/wakita181009/zod-aot/compare/v0.4.0...v0.4.1) (2026-03-19)
 
 
