@@ -88,16 +88,6 @@ const isUser = validateUser.is(data);           // type guard (boolean)
 
 Exports: `compile`, `isCompiledSchema`, types (`CompiledSchema`, `SafeParseResult`, `SafeParseError`, `SafeParseSuccess`, `ZodErrorLike`, `ZodIssueLike`, `ZodAotPluginOptions`)
 
-### Internal API (`zod-aot/internals`)
-
-Low-level extraction and codegen functions. Not intended for end users — used by benchmarks and custom build scripts.
-
-```typescript
-import { extractSchema, generateValidator, createFallback } from "zod-aot/internals";
-```
-
-Exports: `extractSchema`, `generateValidator`, `createFallback`, types (`SchemaIR`, `CheckIR`, `DateCheckIR`, `CodeGenResult`, `FallbackEntry`)
-
 ### CLI
 
 ```bash
@@ -137,10 +127,10 @@ Plugin entries: `zod-aot/vite`, `zod-aot/webpack`, `zod-aot/esbuild`, `zod-aot/r
 
 ## Schema Coverage
 
-string, number, int, boolean, object, array, literal, enum, union, optional, nullable, null, undefined, tuple, record, intersection, discriminatedUnion, date, any, unknown, default, readonly, bigint, set, map, pipe (non-transform)
+string, number, int, boolean, object, array, literal, enum, union, optional, nullable, null, undefined, tuple, record, intersection, discriminatedUnion, date, any, unknown, default, readonly, bigint, set, map, pipe (non-transform), lazy (self-recursive via recursiveRef)
 
 ### Fallback to Zod
-transform, refine, superRefine, custom, preprocess, lazy
+transform, refine, superRefine, custom, preprocess, lazy (non-recursive only — self-recursive lazy schemas are compiled via `recursiveRef`)
 
 **Partial fallback strategy:** Even schemas containing transform etc. optimize compilable parts and delegate only incompilable parts to Zod.
 
@@ -152,7 +142,6 @@ zod-aot/
 │   └── zod-aot/                  # Main npm package (published as "zod-aot")
 │       ├── src/
 │       │   ├── index.ts          # Public API exports (zod-aot)
-│       │   ├── internals.ts      # Internal API exports (zod-aot/internals)
 │       │   ├── discovery.ts      # discoverSchemas() — shared by cli & unplugin
 │       │   ├── loader.ts         # loadSourceFile() — runtime-aware file loader
 │       │   ├── core/             # Pure logic (no cli/unplugin/discovery/loader deps)
@@ -165,11 +154,11 @@ zod-aot/
 │       │   │   │   ├── checks.ts # Check extraction (string/number/bigint/date)
 │       │   │   │   ├── fallback.ts # FallbackEntry tracking
 │       │   │   │   ├── types.ts  # Extractor types
-│       │   │   │   └── extractors/ # Per-type extractors (bigint, date, default, lazy, number, pipe, set, string, union)
+│       │   │   │   └── extractors/ # Per-type extractors (bigint, date, default, lazy (with cycle detection → recursiveRef), number, pipe, set, string, union)
 │       │   │   └── codegen/
 │       │   │       ├── index.ts  # generateValidator() — SchemaIR → JS code
 │       │   │       ├── context.ts # CodeGenContext, CodeGenResult, utils
-│       │   │       └── generators/ # 25 type-specific code generators
+│       │   │       └── generators/ # 27 type-specific code generators
 │       │   ├── cli/              # CLI-specific (no unplugin deps)
 │       │   │   ├── index.ts      # CLI entry point (command parser)
 │       │   │   ├── logger.ts     # Logging utility

@@ -13,11 +13,11 @@ No code changes required — keep your existing Zod schemas and get **2-80x fast
 
 Zod v4 is already fast, but runtime schema traversal still costs ~10x compared to ahead-of-time (AOT) compiled approaches. Existing AOT solutions like [Typia](https://typia.io/) require rewriting your schemas as TypeScript types. **zod-aot** bridges this gap — it takes your existing Zod schemas and generates optimized, plain JavaScript validation functions at build time.
 
-| | zod-aot | Typia | AJV standalone | Zod v4 | Zod v3 |
-|---|---|---|---|---|---|
-| **Input** | Zod schemas | TS types | JSON Schema | Zod schemas | Zod schemas |
-| **Existing code changes** | None | Full rewrite | Full rewrite | N/A | N/A |
-| **Type inference** | Inherited from Zod | Native | External | Native | Native |
+| | Zod AOT             | Typia | AJV standalone | Zod v3 | Zod v4 |
+|---|---------------------|---|---|---|---|
+| **Input** | Zod schemas         | TS types | JSON Schema | Zod schemas | Zod schemas |
+| **Existing code changes** | None                | Full rewrite | Full rewrite | N/A | N/A |
+| **Type inference** | Inherited from Zod  | Native | External | Native | Native |
 | **Runtime dependency** | None (generated code) | Typia runtime | AJV runtime | Zod | Zod |
 
 ## Benchmarks
@@ -32,25 +32,25 @@ pnpm bench
 
 ### safeParse
 
-| Scenario | Zod v3 | Zod v4 | zod-aot | vs v4 | vs v3 |
-|---|---|---|---|---|---|
-| simple string | 8.2M ops/s | 9.6M ops/s | 10.4M ops/s | **1.1x** | **1.3x** |
-| string (min/max) | 7.8M ops/s | 5.4M ops/s | 10.5M ops/s | **2.0x** | **1.4x** |
-| number (int+positive) | 7.8M ops/s | 5.7M ops/s | 10.5M ops/s | **1.8x** | **1.3x** |
-| enum | 7.5M ops/s | 9.1M ops/s | 10.0M ops/s | **1.1x** | **1.3x** |
-| tuple [string, int, boolean] | 4.2M ops/s | 4.6M ops/s | 10.5M ops/s | **2.3x** | **2.5x** |
-| record\<string, number\> (5 keys) | 2.3M ops/s | 1.9M ops/s | 5.6M ops/s | **2.9x** | **2.4x** |
-| discriminatedUnion (3 variants) | 2.3M ops/s | 2.9M ops/s | 9.3M ops/s | **3.3x** | **4.1x** |
-| medium object (7 props, valid) | 1.3M ops/s | 1.7M ops/s | 5.2M ops/s | **3.0x** | **4.0x** |
-| medium object (7 props, invalid) | 346K ops/s | 62K ops/s | 467K ops/s | **7.5x** | **1.4x** |
-| large object (10 nested items) | 83K ops/s | 110K ops/s | 4.0M ops/s | **36x** | **48x** |
-| large object (100 nested items) | 8.5K ops/s | 11.3K ops/s | 680K ops/s | **60x** | **80x** |
-| recursive tree (7 nodes) | 398K ops/s | 1.5M ops/s | 6.3M ops/s | **4.2x** | **16x** |
-| recursive tree (121 nodes) | 23K ops/s | 101K ops/s | 749K ops/s | **7.4x** | **33x** |
-| event log (combined) | 265K ops/s | 440K ops/s | 4.4M ops/s | **10x** | **17x** |
-| partial fallback object (transform) | 822K ops/s | 1.4M ops/s | 3.5M ops/s | **2.4x** | **4.2x** |
-| partial fallback array 10 (transform) | 85K ops/s | 144K ops/s | 1.1M ops/s | **7.7x** | **13x** |
-| partial fallback array 50 (transform) | 18K ops/s | 30K ops/s | 237K ops/s | **7.8x** | **13x** |
+| Scenario | Zod v3 | Zod v4 | Zod AOT   | vs v3 | vs v4 |
+|---|---|---|-----------|---|---|
+| simple string | 8.2M ops/s | 9.6M ops/s | 10.4M ops/s | **1.3x** | **1.1x** |
+| string (min/max) | 7.8M ops/s | 5.4M ops/s | 10.5M ops/s | **1.4x** | **2.0x** |
+| number (int+positive) | 7.8M ops/s | 5.7M ops/s | 10.5M ops/s | **1.3x** | **1.8x** |
+| enum | 7.5M ops/s | 9.1M ops/s | 10.0M ops/s | **1.3x** | **1.1x** |
+| tuple [string, int, boolean] | 4.2M ops/s | 4.6M ops/s | 10.5M ops/s | **2.5x** | **2.3x** |
+| record\<string, number\> (5 keys) | 2.3M ops/s | 1.9M ops/s | 5.6M ops/s | **2.4x** | **2.9x** |
+| discriminatedUnion (3 variants) | 2.3M ops/s | 2.9M ops/s | 9.3M ops/s | **4.1x** | **3.3x** |
+| medium object (7 props, valid) | 1.3M ops/s | 1.7M ops/s | 5.2M ops/s | **4.0x** | **3.0x** |
+| medium object (7 props, invalid) | 346K ops/s | 62K ops/s | 467K ops/s | **1.4x** | **7.5x** |
+| large object (10 nested items) | 83K ops/s | 110K ops/s | 4.0M ops/s | **48x** | **36x** |
+| large object (100 nested items) | 8.5K ops/s | 11.3K ops/s | 680K ops/s | **80x** | **60x** |
+| recursive tree (7 nodes) | 398K ops/s | 1.5M ops/s | 6.3M ops/s | **16x** | **4.2x** |
+| recursive tree (121 nodes) | 23K ops/s | 101K ops/s | 749K ops/s | **33x** | **7.4x** |
+| event log (combined) | 265K ops/s | 440K ops/s | 4.4M ops/s | **17x** | **10x** |
+| partial fallback object (transform) | 822K ops/s | 1.4M ops/s | 3.5M ops/s | **4.2x** | **2.4x** |
+| partial fallback array 10 (transform) | 85K ops/s | 144K ops/s | 1.1M ops/s | **13x** | **7.7x** |
+| partial fallback array 50 (transform) | 18K ops/s | 30K ops/s | 237K ops/s | **13x** | **7.8x** |
 
 Performance gains scale with schema complexity. The `discriminatedUnion` optimization uses an O(1) `switch` dispatch instead of Zod's sequential trial approach. Partial fallback schemas (containing `transform`/`refine`) still show 2-8x speedups by compiling the optimizable portions.
 
@@ -304,7 +304,7 @@ interface CompiledSchema<T> {
 
 | Type | Supported Checks |
 |---|---|
-| `string` | `min`, `max`, `length`, `email`, `url`, `uuid`, `regex` |
+| `string` | `min`, `max`, `length`, `email`, `url`, `uuid`, `regex`, `includes`, `startsWith`, `endsWith` |
 | `number` | `int`, `positive`, `negative`, `nonnegative`, `nonpositive`, `min`, `max`, `multipleOf` |
 | `bigint` | `min`, `max`, `positive`, `negative`, `nonnegative`, `nonpositive`, `multipleOf` |
 | `boolean` | — |
@@ -329,6 +329,7 @@ interface CompiledSchema<T> {
 | `nullable` | wraps any supported type |
 | `readonly` | validates inner type (TS-only concept) |
 | `default` | replaces `undefined` with default value, then validates inner |
+| `lazy` (self-recursive) | cycle detection → self-recursive codegen |
 
 ### Automatic Fallback to Zod
 
@@ -338,7 +339,7 @@ These schema types contain JavaScript closures or runtime-dependent logic that c
 - `refine` / `superRefine` — custom validation with closures
 - `custom` — arbitrary validation logic
 - `preprocess` — input preprocessing
-- `lazy` — deferred schema resolution (getter function not serializable)
+- `lazy` (non-recursive) — deferred schema resolution where inner type cannot be resolved
 
 #### Partial Fallback
 
@@ -375,7 +376,6 @@ zod-aot/
 ├── packages/zod-aot/        # Main npm package
 │   ├── src/
 │   │   ├── index.ts          # Public API exports (zod-aot)
-│   │   ├── internals.ts      # Internal API exports (zod-aot/internals)
 │   │   ├── discovery.ts      # Schema discovery (shared by CLI & unplugin)
 │   │   ├── loader.ts         # Runtime-aware file loader
 │   │   ├── core/             # Pure logic (no CLI/unplugin deps)

@@ -11,7 +11,9 @@
  */
 
 import { z } from "zod";
-import { createFallback, extractSchema, generateValidator } from "../dist/internals.js";
+import { generateValidator } from "../dist/core/codegen/index.js";
+import { extractSchema } from "../dist/core/extract/index.js";
+import { createFallback } from "../dist/core/runtime.js";
 
 let passed = 0;
 let failed = 0;
