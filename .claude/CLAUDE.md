@@ -256,8 +256,8 @@ Source files to reference during implementation:
 pnpm build          # tsc across all packages
 pnpm test           # vitest run
 pnpm bench          # vitest bench
-pnpm lint           # biome check .
-pnpm lint:fix       # biome check --fix .
+pnpm check          # biome check .
+pnpm check:fix      # biome check --fix .
 pnpm format         # biome format --write .
 
 # packages/zod-aot

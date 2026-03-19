@@ -36,6 +36,14 @@ export function compileForBench<T>(zodSchema: unknown, name: string): CompiledSc
     is(input: unknown): input is T {
       return safeParseFn(input).success;
     },
+    async parseAsync(input: unknown): Promise<T> {
+      const r = safeParseFn(input);
+      if (r.success) return r.data;
+      throw new Error(`Validation failed: ${JSON.stringify(r.error)}`);
+    },
+    async safeParseAsync(input: unknown): Promise<SafeParseResult<T>> {
+      return safeParseFn(input);
+    },
     schema: zodSchema,
   };
 }
