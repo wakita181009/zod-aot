@@ -24,6 +24,7 @@ import {
   generatePipeValidation,
   generateReadonlyValidation,
   generateRecordValidation,
+  generateRecursiveRefValidation,
   generateSetValidation,
   generateStringValidation,
   generateTupleValidation,
@@ -127,6 +128,8 @@ function generateValidation(
       return generateMapValidation(ir, inputExpr, pathExpr, issuesVar, ctx, generateValidation);
     case "pipe":
       return generatePipeValidation(ir, inputExpr, pathExpr, issuesVar, ctx, generateValidation);
+    case "recursiveRef":
+      return generateRecursiveRefValidation(inputExpr, pathExpr, issuesVar, ctx);
   }
 }
 
@@ -143,12 +146,11 @@ export function generateValidator(
   name: string,
   options?: { fallbackCount?: number },
 ): CodeGenResult {
-  const ctx: CodeGenContext = { preamble: [], counter: 0 };
+  const fnName = `safeParse_${name}`;
+  const ctx: CodeGenContext = { preamble: [], counter: 0, fnName };
   const bodyCode = generateValidation(ir, "input", "[]", "__issues", ctx);
 
   const code = ["/* zod-aot */", ...ctx.preamble].join("\n");
-
-  const fnName = `safeParse_${name}`;
   const functionName = [
     `function ${fnName}(input){`,
     `var __issues=[];`,

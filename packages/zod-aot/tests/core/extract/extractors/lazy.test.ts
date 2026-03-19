@@ -2,7 +2,15 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import type { FallbackEntry } from "#src/core/extract/index.js";
 import { extractSchema } from "#src/core/extract/index.js";
-import type { ArrayIR, FallbackIR, ObjectIR, OptionalIR, StringIR } from "#src/core/types.js";
+import type {
+  ArrayIR,
+  NullableIR,
+  ObjectIR,
+  OptionalIR,
+  RecordIR,
+  StringIR,
+  UnionIR,
+} from "#src/core/types.js";
 
 // ─── Non-recursive lazy ─────────────────────────────────────────────────────
 
@@ -54,7 +62,7 @@ describe("extractSchema — lazy (non-recursive)", () => {
 // ─── Recursive lazy (cycle detection) ───────────────────────────────────────
 
 describe("extractSchema — lazy (recursive / cycle detection)", () => {
-  it("detects cycle in self-referencing tree node and falls back at recursion point", () => {
+  it("detects cycle in self-referencing tree node and emits recursiveRef", () => {
     const TreeNode: z.ZodType = z.object({
       value: z.string(),
       children: z.array(z.lazy(() => TreeNode)),
@@ -63,23 +71,20 @@ describe("extractSchema — lazy (recursive / cycle detection)", () => {
     expect(ir.type).toBe("object");
     expect(ir.properties["value"]?.type).toBe("string");
 
-    // children is an array whose element hits the cycle → fallback
+    // children is an array whose element hits the cycle → recursiveRef
     const childrenIR = ir.properties["children"] as ArrayIR;
     expect(childrenIR.type).toBe("array");
-    expect(childrenIR.element.type).toBe("fallback");
-    expect((childrenIR.element as FallbackIR).reason).toBe("lazy");
+    expect(childrenIR.element.type).toBe("recursiveRef");
   });
 
-  it("collects fallback entry for recursive reference point", () => {
+  it("does not collect fallback entry for recursive reference point", () => {
     const TreeNode: z.ZodType = z.object({
       value: z.string(),
       children: z.array(z.lazy(() => TreeNode)),
     });
     const fallbacks: FallbackEntry[] = [];
     extractSchema(TreeNode, fallbacks);
-    expect(fallbacks).toHaveLength(1);
-    // The fallback schema should be the lazy wrapper's resolved schema (TreeNode itself)
-    expect(fallbacks[0]?.schema).toBeDefined();
+    expect(fallbacks).toHaveLength(0);
   });
 
   it("handles mutual recursion (A → lazy(B), B → lazy(A))", () => {
@@ -92,10 +97,10 @@ describe("extractSchema — lazy (recursive / cycle detection)", () => {
     const ir = extractSchema(A) as ObjectIR;
     expect(ir.type).toBe("object");
 
-    // A.b resolves to B (object), but B.a hits cycle back to A → fallback
+    // A.b resolves to B (object), but B.a hits cycle back to A → recursiveRef
     const bIR = ir.properties["b"] as ObjectIR;
     expect(bIR.type).toBe("object");
-    expect(bIR.properties["a"]?.type).toBe("fallback");
+    expect(bIR.properties["a"]?.type).toBe("recursiveRef");
   });
 
   it("does not falsely detect cycle for DAG (same schema referenced from siblings)", () => {
@@ -127,7 +132,92 @@ describe("extractSchema — lazy (recursive / cycle detection)", () => {
     const fallbacks: FallbackEntry[] = [];
     const ir = extractSchema(JsonValue, fallbacks);
     expect(ir.type).toBe("union");
-    // Should have fallbacks only for the recursive references
-    expect(fallbacks.length).toBeGreaterThan(0);
+    // Recursive references become recursiveRef IR, no fallbacks needed
+    expect(fallbacks).toHaveLength(0);
+  });
+
+  it("emits recursiveRef inside nullable (linked list pattern)", () => {
+    const ListNode: z.ZodType = z.object({
+      value: z.number(),
+      next: z.lazy(() => ListNode).nullable(),
+    });
+    const ir = extractSchema(ListNode) as ObjectIR;
+    expect(ir.type).toBe("object");
+    expect(ir.properties["value"]?.type).toBe("number");
+
+    const nextIR = ir.properties["next"] as NullableIR;
+    expect(nextIR.type).toBe("nullable");
+    expect(nextIR.inner.type).toBe("recursiveRef");
+  });
+
+  it("emits recursiveRef inside optional", () => {
+    const OptNode: z.ZodType = z.object({
+      value: z.string(),
+      child: z.lazy(() => OptNode).optional(),
+    });
+    const ir = extractSchema(OptNode) as ObjectIR;
+    expect(ir.type).toBe("object");
+
+    const childIR = ir.properties["child"] as OptionalIR;
+    expect(childIR.type).toBe("optional");
+    expect(childIR.inner.type).toBe("recursiveRef");
+  });
+
+  it("emits recursiveRef inside record value", () => {
+    const DirNode: z.ZodType = z.object({
+      name: z.string(),
+      subdirs: z.record(
+        z.string(),
+        z.lazy(() => DirNode),
+      ),
+    });
+    const ir = extractSchema(DirNode) as ObjectIR;
+    expect(ir.type).toBe("object");
+
+    const subdirsIR = ir.properties["subdirs"] as RecordIR;
+    expect(subdirsIR.type).toBe("record");
+    expect(subdirsIR.valueType.type).toBe("recursiveRef");
+  });
+
+  it("emits recursiveRef inside union options (JSON value)", () => {
+    const JsonVal: z.ZodType = z.union([
+      z.string(),
+      z.number(),
+      z.boolean(),
+      z.null(),
+      z.array(z.lazy(() => JsonVal)),
+      z.record(
+        z.string(),
+        z.lazy(() => JsonVal),
+      ),
+    ]);
+    const ir = extractSchema(JsonVal) as UnionIR;
+    expect(ir.type).toBe("union");
+    expect(ir.options).toHaveLength(6);
+
+    // array element should be recursiveRef
+    const arrayOption = ir.options[4] as ArrayIR;
+    expect(arrayOption.type).toBe("array");
+    expect(arrayOption.element.type).toBe("recursiveRef");
+
+    // record value should be recursiveRef
+    const recordOption = ir.options[5] as RecordIR;
+    expect(recordOption.type).toBe("record");
+    expect(recordOption.valueType.type).toBe("recursiveRef");
+  });
+
+  it("emits recursiveRef for multiple self-references in one schema", () => {
+    const BinaryTree: z.ZodType = z.object({
+      value: z.number(),
+      left: z.lazy(() => BinaryTree).nullable(),
+      right: z.lazy(() => BinaryTree).nullable(),
+    });
+    const ir = extractSchema(BinaryTree) as ObjectIR;
+    expect(ir.type).toBe("object");
+
+    const leftIR = ir.properties["left"] as NullableIR;
+    const rightIR = ir.properties["right"] as NullableIR;
+    expect(leftIR.inner.type).toBe("recursiveRef");
+    expect(rightIR.inner.type).toBe("recursiveRef");
   });
 });

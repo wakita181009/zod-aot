@@ -14,9 +14,9 @@ export function extractLazy(
   if (!innerSchema) {
     return makeFallback("lazy", zodSchema, fallbacks, p);
   }
-  // Cycle detection: if we've already visited this resolved schema, fall back
+  // Cycle detection: if we've already visited this resolved schema, emit a recursive ref
   if (visiting?.has(innerSchema)) {
-    return makeFallback("lazy", zodSchema, fallbacks, p);
+    return { type: "recursiveRef" };
   }
   return recurse(innerSchema, fallbacks, `${p}._zod.innerType`, visiting);
 }

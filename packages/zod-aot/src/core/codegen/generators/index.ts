@@ -18,6 +18,7 @@ export { generateOptionalValidation } from "./optional.js";
 export { generatePipeValidation } from "./pipe.js";
 export { generateReadonlyValidation } from "./readonly.js";
 export { generateRecordValidation } from "./record.js";
+export { generateRecursiveRefValidation } from "./recursive-ref.js";
 export { generateSetValidation } from "./set.js";
 export { generateStringValidation } from "./string.js";
 export { generateTupleValidation } from "./tuple.js";

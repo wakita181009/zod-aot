@@ -225,6 +225,10 @@ export interface PipeIR {
   out: SchemaIR;
 }
 
+export interface RecursiveRefIR {
+  type: "recursiveRef";
+}
+
 // ─── Tier 2 Schema IR ───────────────────────────────────────────────────────
 
 export interface AnyIR {
@@ -302,7 +306,8 @@ export type SchemaIR =
   | BigIntIR
   | SetIR
   | MapIR
-  | PipeIR;
+  | PipeIR
+  | RecursiveRefIR;
 
 // ─── Compiled Schema Interface ──────────────────────────────────────────────
 
