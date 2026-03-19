@@ -7,22 +7,22 @@
 [![npm](https://img.shields.io/npm/v/zod-aot)](https://www.npmjs.com/package/zod-aot)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-No code changes required — keep your existing Zod schemas and get **2-64x faster** validation.
+No code changes required — keep your existing Zod schemas and get **2-80x faster** validation.
 
 ## Why
 
 Zod v4 is already fast, but runtime schema traversal still costs ~10x compared to ahead-of-time (AOT) compiled approaches. Existing AOT solutions like [Typia](https://typia.io/) require rewriting your schemas as TypeScript types. **zod-aot** bridges this gap — it takes your existing Zod schemas and generates optimized, plain JavaScript validation functions at build time.
 
-| | zod-aot | Typia | AJV standalone | Zod v4 |
-|---|---|---|---|---|
-| **Input** | Zod schemas | TS types | JSON Schema | Zod schemas |
-| **Existing code changes** | None | Full rewrite | Full rewrite | N/A |
-| **Type inference** | Inherited from Zod | Native | External | Native |
-| **Runtime dependency** | None (generated code) | Typia runtime | AJV runtime | Zod |
+| | zod-aot | Typia | AJV standalone | Zod v4 | Zod v3 |
+|---|---|---|---|---|---|
+| **Input** | Zod schemas | TS types | JSON Schema | Zod schemas | Zod schemas |
+| **Existing code changes** | None | Full rewrite | Full rewrite | N/A | N/A |
+| **Type inference** | Inherited from Zod | Native | External | Native | Native |
+| **Runtime dependency** | None (generated code) | Typia runtime | AJV runtime | Zod | Zod |
 
 ## Benchmarks
 
-Measured with `vitest bench` on Node.js (Apple M-series). The benchmark suite compares **zod**, **zod-aot**, **[ajv](https://ajv.js.org/)**, and **[typia](https://typia.io/)** across primitives, objects, collections, unions, recursive schemas, and real-world scenarios.
+Measured with `vitest bench` on Node.js (Apple M-series). The benchmark suite compares **Zod v3**, **Zod v4**, **zod-aot**, **[ajv](https://ajv.js.org/)**, and **[typia](https://typia.io/)** across primitives, objects, collections, unions, recursive schemas, and real-world scenarios.
 
 Run benchmarks locally:
 
@@ -30,27 +30,29 @@ Run benchmarks locally:
 pnpm bench
 ```
 
-### safeParse (zod vs zod-aot)
+### safeParse
 
-| Scenario | Zod v4 | zod-aot | Speedup  |
-|---|---|---|----------|
-| simple string | 11.1M ops/s | 19.6M ops/s | **1.8x** |
-| string (min/max) | 5.5M ops/s | 20.0M ops/s | **3.6x** |
-| number (int+positive) | 5.5M ops/s | 18.7M ops/s | **3.4x** |
-| enum | 9.1M ops/s | 17.2M ops/s | **1.9x** |
-| tuple [string, int, boolean] | 4.3M ops/s | 18.1M ops/s | **4.2x** |
-| record\<string, number\> (5 keys) | 1.9M ops/s | 7.1M ops/s | **3.7x** |
-| discriminatedUnion (3 variants) | 3.0M ops/s | 17.3M ops/s | **5.8x** |
-| medium object (7 props, valid) | 1.6M ops/s | 6.6M ops/s | **4.1x** |
-| medium object (7 props, invalid) | 63K ops/s | 474K ops/s | **7.5x** |
-| large object (10 nested items) | 107K ops/s | 5.0M ops/s | **46x**  |
-| large object (100 nested items) | 11.6K ops/s | 740K ops/s | **64x**  |
-| event log (combined) | 442K ops/s | 5.5M ops/s | **12x**  |
-| partial fallback object (transform) | 1.7M ops/s | 3.9M ops/s | **2.3x** |
-| partial fallback array 10 (transform) | 139K ops/s | 577K ops/s | **4.1x** |
-| partial fallback array 50 (transform) | 28K ops/s | 119K ops/s | **4.2x** |
+| Scenario | Zod v3 | Zod v4 | zod-aot | vs v4 | vs v3 |
+|---|---|---|---|---|---|
+| simple string | 8.2M ops/s | 9.6M ops/s | 10.4M ops/s | **1.1x** | **1.3x** |
+| string (min/max) | 7.8M ops/s | 5.4M ops/s | 10.5M ops/s | **2.0x** | **1.4x** |
+| number (int+positive) | 7.8M ops/s | 5.7M ops/s | 10.5M ops/s | **1.8x** | **1.3x** |
+| enum | 7.5M ops/s | 9.1M ops/s | 10.0M ops/s | **1.1x** | **1.3x** |
+| tuple [string, int, boolean] | 4.2M ops/s | 4.6M ops/s | 10.5M ops/s | **2.3x** | **2.5x** |
+| record\<string, number\> (5 keys) | 2.3M ops/s | 1.9M ops/s | 5.6M ops/s | **2.9x** | **2.4x** |
+| discriminatedUnion (3 variants) | 2.3M ops/s | 2.9M ops/s | 9.3M ops/s | **3.3x** | **4.1x** |
+| medium object (7 props, valid) | 1.3M ops/s | 1.7M ops/s | 5.2M ops/s | **3.0x** | **4.0x** |
+| medium object (7 props, invalid) | 346K ops/s | 62K ops/s | 467K ops/s | **7.5x** | **1.4x** |
+| large object (10 nested items) | 83K ops/s | 110K ops/s | 4.0M ops/s | **36x** | **48x** |
+| large object (100 nested items) | 8.5K ops/s | 11.3K ops/s | 680K ops/s | **60x** | **80x** |
+| recursive tree (7 nodes) | 398K ops/s | 1.5M ops/s | 6.3M ops/s | **4.2x** | **16x** |
+| recursive tree (121 nodes) | 23K ops/s | 101K ops/s | 749K ops/s | **7.4x** | **33x** |
+| event log (combined) | 265K ops/s | 440K ops/s | 4.4M ops/s | **10x** | **17x** |
+| partial fallback object (transform) | 822K ops/s | 1.4M ops/s | 3.5M ops/s | **2.4x** | **4.2x** |
+| partial fallback array 10 (transform) | 85K ops/s | 144K ops/s | 1.1M ops/s | **7.7x** | **13x** |
+| partial fallback array 50 (transform) | 18K ops/s | 30K ops/s | 237K ops/s | **7.8x** | **13x** |
 
-Performance gains scale with schema complexity. The `discriminatedUnion` optimization uses an O(1) `switch` dispatch instead of Zod's sequential trial approach. Partial fallback schemas (containing `transform`/`refine`) still show 2.5-4.7x speedups by compiling the optimizable portions.
+Performance gains scale with schema complexity. The `discriminatedUnion` optimization uses an O(1) `switch` dispatch instead of Zod's sequential trial approach. Partial fallback schemas (containing `transform`/`refine`) still show 2-8x speedups by compiling the optimizable portions.
 
 ## Runtime Support
 
@@ -353,7 +355,7 @@ pnpm install
 # Run tests
 pnpm test
 
-# Run benchmarks (zod vs zod-aot vs ajv vs typia)
+# Run benchmarks (zod v3 vs zod v4 vs zod-aot vs ajv vs typia)
 pnpm bench
 
 # Lint (Biome)
@@ -385,7 +387,7 @@ zod-aot/
 │   │   ├── cli/              # CLI commands (generate, check, watch)
 │   │   └── unplugin/         # Build plugin (Vite/webpack/esbuild/Rollup/Rolldown/Bun)
 │   └── tests/
-├── benchmarks/               # vitest bench (zod vs zod-aot vs ajv vs typia)
+├── benchmarks/               # vitest bench (zod v3 vs v4 vs zod-aot vs ajv vs typia)
 └── .github/workflows/        # CI + release automation
 ```
 

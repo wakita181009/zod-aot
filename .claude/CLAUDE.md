@@ -207,7 +207,7 @@ zod-aot/
 │       │       └── index.test.ts
 │       ├── package.json
 │       └── tsconfig.json
-├── benchmarks/                   # Workspace package (@zod-aot/benchmarks) — 4-way comparison: zod vs zod-aot vs ajv vs typia
+├── benchmarks/                   # Workspace package (@zod-aot/benchmarks) — 5-way comparison: zod v3 vs v4 vs zod-aot vs ajv vs typia
 ├── apps/
 │   └── sample/                   # Vite + unplugin demo app
 ├── .github/workflows/
@@ -292,5 +292,5 @@ Key rules:
 ## Verification
 
 1. `pnpm test` — Vitest for extractor/codegen/integration tests
-2. `pnpm bench` — vitest bench (zod vs zod-aot vs ajv vs typia, uses `benchmarks/vitest.config.ts`)
+2. `pnpm bench` — vitest bench (zod v3 vs v4 vs zod-aot vs ajv vs typia, uses `benchmarks/vitest.config.ts`)
 3. Integration test: schema → extract → generate → execute → compare results with Zod on same input

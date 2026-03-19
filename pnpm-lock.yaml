@@ -140,6 +140,9 @@ importers:
       zod-aot:
         specifier: workspace:*
         version: link:../packages/zod-aot
+      zod3:
+        specifier: npm:zod@3.23.8
+        version: zod@3.23.8
     devDependencies:
       '@types/node':
         specifier: ^25.5.0
@@ -1568,6 +1571,9 @@ packages:
     resolution: {integrity: sha512-4LCcse/U2MHZ63HAJVE+v71o7yOdIe4cZ70Wpf8D/IyjDKYQLV5GD46B+hSTjJsvV5PztjvHoU580EftxjDZFQ==}
     engines: {node: '>=12.20'}
 
+  zod@3.23.8:
+    resolution: {integrity: sha512-XBx9AXhXktjUqnepgTiE5flcKIYWi/rme0Eaj+5Y0lftuGBq+jyRu/md4WnuxqgP1ubdpNCsYEYPxrzVHD8d6g==}
+
   zod@4.3.6:
     resolution: {integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==}
 
@@ -2720,5 +2726,7 @@ snapshots:
       strip-ansi: 6.0.1
 
   yocto-queue@1.2.2: {}
+
+  zod@3.23.8: {}
 
   zod@4.3.6: {}

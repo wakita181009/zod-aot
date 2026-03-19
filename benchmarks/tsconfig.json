@@ -2,7 +2,10 @@
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
-    "rootDir": ".."
+    "rootDir": "..",
+    "paths": {
+      "zod3": ["./node_modules/zod3"]
+    }
   },
   "include": ["**/*.ts"],
   "references": [{ "path": "../packages/zod-aot" }]
