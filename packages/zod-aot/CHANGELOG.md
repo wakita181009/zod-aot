@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/wakita181009/zod-aot/compare/v0.4.0...v0.4.1) (2026-03-19)
+
+
+### Bug Fixes
+
+* restructure benchmarks with 4-way comparison ([#37](https://github.com/wakita181009/zod-aot/issues/37)) ([e31017f](https://github.com/wakita181009/zod-aot/commit/e31017fe70c730a7a6b523ff71802b32318edd02))
+
 ## [0.4.0](https://github.com/wakita181009/zod-aot/compare/v0.3.2...v0.4.0) (2026-03-17)
 
 
