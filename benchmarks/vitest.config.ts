@@ -1,24 +1,20 @@
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
+import UnpluginTypia from "@typia/unplugin/vite";
 import { defineConfig } from "vitest/config";
+import zodAot from "zod-aot/vite";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
+  plugins: [UnpluginTypia({ cache: false }), zodAot()],
   resolve: {
     conditions: ["source"],
-    alias: {
-      "#src": path.resolve(__dirname, "packages/zod-aot/src"),
-    },
   },
   test: {
-    include: ["packages/*/tests/**/*.test.ts"],
-    coverage: {
-      provider: "v8",
-      reporter: ["text", "lcov"],
-      reportsDirectory: "./coverage",
-      include: ["packages/zod-aot/src/**/*.ts"],
-      exclude: ["packages/zod-aot/src/cli/index.ts"],
+    root: __dirname,
+    benchmark: {
+      include: ["suites/**/*.bench.ts"],
     },
     server: {
       deps: {

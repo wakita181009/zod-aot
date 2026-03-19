@@ -22,9 +22,15 @@ Zod v4 is already fast, but runtime schema traversal still costs ~10x compared t
 
 ## Benchmarks
 
-Measured with `vitest bench` on Node.js (Apple M-series):
+Measured with `vitest bench` on Node.js (Apple M-series). The benchmark suite compares **zod**, **zod-aot**, **[ajv](https://ajv.js.org/)**, and **[typia](https://typia.io/)** across primitives, objects, collections, unions, recursive schemas, and real-world scenarios.
 
-### safeParse
+Run benchmarks locally:
+
+```bash
+pnpm bench
+```
+
+### safeParse (zod vs zod-aot)
 
 | Scenario | Zod v4 | zod-aot | Speedup  |
 |---|---|---|----------|
@@ -347,7 +353,7 @@ pnpm install
 # Run tests
 pnpm test
 
-# Run benchmarks (Zod v4 vs zod-aot)
+# Run benchmarks (zod vs zod-aot vs ajv vs typia)
 pnpm bench
 
 # Lint (Biome)
@@ -379,7 +385,7 @@ zod-aot/
 │   │   ├── cli/              # CLI commands (generate, check, watch)
 │   │   └── unplugin/         # Build plugin (Vite/webpack/esbuild/Rollup/Rolldown/Bun)
 │   └── tests/
-├── benchmarks/               # vitest bench + standalone scripts
+├── benchmarks/               # vitest bench (zod vs zod-aot vs ajv vs typia)
 └── .github/workflows/        # CI + release automation
 ```
 

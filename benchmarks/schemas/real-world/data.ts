@@ -1,22 +1,3 @@
-import { z } from "zod";
-import { DiscriminatedUnionSchema } from "./composites.js";
-
-// ─── Event Log (real-world scenario combining multiple type features) ────────
-
-export const EventLogSchema = z.object({
-  sessionId: z.uuid(),
-  events: z.array(DiscriminatedUnionSchema).min(1),
-  dimensions: z.tuple([z.number().int().positive(), z.number().int().positive()]),
-  tags: z.record(z.string(), z.string()),
-  startedAt: z.date(),
-  config: z.object({
-    sampleRate: z.number().positive().default(1.0),
-    debug: z.boolean().default(false),
-  }),
-});
-
-export type EventLog = z.infer<typeof EventLogSchema>;
-
 export const validEventLog = {
   sessionId: "550e8400-e29b-41d4-a716-446655440000",
   events: [
@@ -31,3 +12,25 @@ export const validEventLog = {
   startedAt: new Date("2025-01-01T00:00:00Z"),
   config: { sampleRate: 0.5, debug: false },
 };
+
+export const validPartialFallbackObject = {
+  id: 1,
+  name: "Alice Developer",
+  email: "alice@example.com",
+  slug: "Alice Developer",
+  role: "admin" as const,
+  isActive: true,
+};
+
+function makeFallbackItem(i: number) {
+  return {
+    id: i + 1,
+    title: `Item ${i + 1}`,
+    normalizedTitle: ` Item ${i + 1} `,
+    tags: ["tag1", "tag2"],
+    score: (i + 1) * 10.5,
+  };
+}
+
+export const validFallbackArray10 = Array.from({ length: 10 }, (_, i) => makeFallbackItem(i));
+export const validFallbackArray50 = Array.from({ length: 50 }, (_, i) => makeFallbackItem(i));
