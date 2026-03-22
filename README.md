@@ -51,7 +51,6 @@ export const validateUser = compile(UserSchema);
 
 validateUser.parse(data);       // throws ZodError on failure
 validateUser.safeParse(data);   // { success, data/error }
-validateUser.is(data);          // type guard (boolean)
 ```
 
 Available plugins:

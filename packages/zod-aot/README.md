@@ -96,7 +96,6 @@ export const validateUser = compile(UserSchema);
 // Same interface as Zod — works in both dev and production
 const user = validateUser.parse(data);          // throws on failure
 const result = validateUser.safeParse(data);    // { success, data/error }
-const isUser = validateUser.is(data);           // type guard (boolean)
 ```
 
 ### 3. Generate optimized code
@@ -295,7 +294,6 @@ The interface returned by `compile()`:
 interface CompiledSchema<T> {
   parse(input: unknown): T;           // throws on failure
   safeParse(input: unknown): SafeParseResult<T>;  // { success, data/error }
-  is(input: unknown): input is T;     // type guard (boolean)
   schema: unknown;                    // reference to original Zod schema
 }
 ```

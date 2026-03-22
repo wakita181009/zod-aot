@@ -83,7 +83,6 @@ export const validateUser = compile(UserSchema);
 // Usage (same interface as Zod)
 const user = validateUser.parse(data);          // throws ZodError on failure
 const result = validateUser.safeParse(data);    // { success, data/error }
-const isUser = validateUser.is(data);           // type guard (boolean)
 ```
 
 Exports: `compile`, `isCompiledSchema`, types (`CompiledSchema`, `SafeParseResult`, `SafeParseError`, `SafeParseSuccess`, `ZodErrorLike`, `ZodIssueLike`, `ZodAotPluginOptions`)
