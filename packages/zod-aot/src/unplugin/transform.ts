@@ -1,4 +1,4 @@
-import { extractFunctionName } from "#src/core/codegen/context.js";
+import { generateIIFE, ZOD_CONFIG_IMPORT, ZOD_MSG_DECLARATION } from "#src/core/iife.js";
 import type { CompiledSchemaInfo } from "#src/core/pipeline.js";
 import { compileSchemas } from "#src/core/pipeline.js";
 import { discoverSchemas } from "#src/discovery.js";
@@ -48,66 +48,6 @@ export async function transformCode(
 }
 
 /**
- * Generate an IIFE that replaces a compile() call with inline optimized code.
- */
-function generateInlineReplacement(
-  schemaArgName: string,
-  schema: CompiledSchemaInfo,
-  options?: { zodCompat?: boolean | undefined },
-): string {
-  const { codegenResult, fallbackEntries } = schema;
-  const fnName = extractFunctionName(codegenResult.functionName);
-
-  // Collect preamble lines (skip empty and marker)
-  const preambleLines = codegenResult.code
-    .split("\n")
-    .filter((l) => l.trim() !== "" && l.trim() !== "/* zod-aot */");
-  const preambleStr = preambleLines.length > 0 ? `${preambleLines.join("\n")}\n` : "";
-
-  // Build __fb declaration for partial fallback
-  let fbDecl = "";
-  if (fallbackEntries.length > 0) {
-    const exprs = fallbackEntries.map((fb) => `${schemaArgName}${fb.accessPath}`);
-    fbDecl = `var __fb=[${exprs.join(",")}];\n`;
-  }
-
-  // Capture Zod's localeError for message generation inside the IIFE
-  const msgDecl = "var __msg=__zodAotConfig().localeError;\n";
-
-  const zodCompat = options?.zodCompat !== false;
-
-  if (zodCompat) {
-    return [
-      "/* @__PURE__ */ (() => {",
-      msgDecl + fbDecl + preambleStr + codegenResult.functionName,
-      `var __w=Object.create(${schemaArgName});`,
-      `__w.parse=function(input){const r=${fnName}(input);if(r.success)return r.data;throw Object.assign(new Error("Validation failed"),r.error);};`,
-      `__w.safeParse=${fnName};`,
-      `__w.safeParseAsync=function(input){return Promise.resolve(${fnName}(input));};`,
-      `__w.parseAsync=function(input){const r=${fnName}(input);if(r.success)return Promise.resolve(r.data);return Promise.reject(Object.assign(new Error("Validation failed"),r.error));};`,
-      `__w.is=function(input){return ${fnName}(input).success;};`,
-      `__w.schema=${schemaArgName};`,
-      "return __w;",
-      "})()",
-    ].join("\n");
-  }
-
-  return [
-    "/* @__PURE__ */ (() => {",
-    msgDecl + fbDecl + preambleStr + codegenResult.functionName,
-    "return {",
-    `parse(input){const r=${fnName}(input);if(r.success)return r.data;throw Object.assign(new Error("Validation failed"),r.error);},`,
-    `safeParse:${fnName},`,
-    `safeParseAsync(input){return Promise.resolve(${fnName}(input));},`,
-    `parseAsync(input){const r=${fnName}(input);if(r.success)return Promise.resolve(r.data);return Promise.reject(Object.assign(new Error("Validation failed"),r.error));},`,
-    `is(input){return ${fnName}(input).success;},`,
-    `schema:${schemaArgName},`,
-    "};",
-    "})()",
-  ].join("\n");
-}
-
-/**
  * Find the matching closing parenthesis for a compile() call,
  * handling nested parentheses like compile(z.object({...})).
  * Returns the index of the closing ')' or -1 if not found.
@@ -153,17 +93,15 @@ export function rewriteSource(
       .replace(/,\s*$/, "");
     const prefix = match[1] ?? "";
     const fullMatch = result.slice(match.index, closeParenIndex + 1);
-    const replacement = prefix + generateInlineReplacement(schemaArgName, schema, options);
+    const replacement = prefix + generateIIFE(schemaArgName, schema, options);
     result = result.replace(fullMatch, replacement);
   }
 
   result = removeCompileImport(result);
 
   // Add zod config import for __msg (localeError) used in IIFEs
-  if (!result.includes("__zodAotConfig")) return result;
-  result = `import { config as __zodAotConfig } from "zod";\n${result}`;
-
-  return result;
+  if (!result.includes("__msg")) return result;
+  return [ZOD_CONFIG_IMPORT, ZOD_MSG_DECLARATION, result].join("\n");
 }
 
 /**

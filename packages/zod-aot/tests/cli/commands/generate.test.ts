@@ -269,7 +269,7 @@ describe("generate E2E", () => {
     if (!schema) return;
     const ir = extractSchema(schema.schema);
     const result = generateValidator(ir, schema.exportName);
-    const safeParseFn = new Function(`${result.code}\nreturn ${result.functionName};`)() as (
+    const safeParseFn = new Function(`${result.code}\nreturn ${result.functionDef};`)() as (
       input: unknown,
     ) => SafeParseResult<unknown>;
 
@@ -319,7 +319,7 @@ describe("generate E2E", () => {
     const zodSchema = schema.schema as z.ZodType;
     const ir = extractSchema(schema.schema);
     const result = generateValidator(ir, schema.exportName);
-    const safeParseFn = new Function(`${result.code}\nreturn ${result.functionName};`)() as (
+    const safeParseFn = new Function(`${result.code}\nreturn ${result.functionDef};`)() as (
       input: unknown,
     ) => SafeParseResult<unknown>;
 
@@ -340,7 +340,7 @@ describe("generate E2E", () => {
     const zodSchema = schema.schema as z.ZodType;
     const ir = extractSchema(schema.schema);
     const result = generateValidator(ir, schema.exportName);
-    const safeParseFn = new Function(`${result.code}\nreturn ${result.functionName};`)() as (
+    const safeParseFn = new Function(`${result.code}\nreturn ${result.functionDef};`)() as (
       input: unknown,
     ) => SafeParseResult<unknown>;
 

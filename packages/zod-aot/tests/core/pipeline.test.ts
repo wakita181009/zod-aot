@@ -13,8 +13,8 @@ describe("compileSchemas", () => {
     expect(results).toHaveLength(2);
     expect(results[0]?.exportName).toBe("validateUser");
     expect(results[1]?.exportName).toBe("validatePost");
-    expect(results[0]?.codegenResult.functionName).toContain("safeParse_validateUser");
-    expect(results[1]?.codegenResult.functionName).toContain("safeParse_validatePost");
+    expect(results[0]?.codegenResult.functionDef).toContain("safeParse_validateUser");
+    expect(results[1]?.codegenResult.functionDef).toContain("safeParse_validatePost");
   });
 
   it("collects fallbackEntries independently per schema", () => {
@@ -61,7 +61,7 @@ describe("compileSchemas", () => {
     ];
     const results = compileSchemas(schemas);
     const code = results[0]?.codegenResult.code;
-    const fnName = results[0]?.codegenResult.functionName;
+    const fnName = results[0]?.codegenResult.functionDef;
 
     expect(code).toBeDefined();
     expect(fnName).toBeDefined();

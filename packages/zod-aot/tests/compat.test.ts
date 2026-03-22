@@ -30,8 +30,8 @@ function compileForErrorTest(schema: z.ZodType, name = "test") {
   const fallbackSchemas = fallbackEntries.map((e) => e.schema);
   const fn =
     fallbackSchemas.length > 0
-      ? new Function("__msg", "__fb", `${result.code}\nreturn ${result.functionName};`)
-      : new Function("__msg", `${result.code}\nreturn ${result.functionName};`);
+      ? new Function("__msg", "__fb", `${result.code}\nreturn ${result.functionDef};`)
+      : new Function("__msg", `${result.code}\nreturn ${result.functionDef};`);
   return (fallbackSchemas.length > 0 ? fn(__msg, fallbackSchemas) : fn(__msg)) as (
     input: unknown,
   ) => {
