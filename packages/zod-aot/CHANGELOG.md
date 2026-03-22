@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.7.0](https://github.com/wakita181009/zod-aot/compare/v0.6.0...v0.7.0) (2026-03-22)
+
+
+### ⚠ BREAKING CHANGES
+
+* `CompiledSchema.is()` has been removed. Use the underlying Zod schema's `is()` method instead.
+
+### Features
+
+* remove `is()` method from CompiledSchema ([#51](https://github.com/wakita181009/zod-aot/issues/51)) ([898ee5a](https://github.com/wakita181009/zod-aot/commit/898ee5a0cc5a5ba205ed4cd05ab44ed57462afc4))
+
 ## [0.6.0](https://github.com/wakita181009/zod-aot/compare/v0.5.1...v0.6.0) (2026-03-19)
 
 
