@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.1](https://github.com/wakita181009/zod-aot/compare/v0.7.0...v0.7.1) (2026-03-22)
+
+
+### Chore
+
+* update docs to remove 'is()' method references ([d14af20](https://github.com/wakita181009/zod-aot/commit/d14af2077b31779fcf865fa5589f6a667f6b3bcf))
+
 ## [0.7.0](https://github.com/wakita181009/zod-aot/compare/v0.6.0...v0.7.0) (2026-03-22)
 
 
