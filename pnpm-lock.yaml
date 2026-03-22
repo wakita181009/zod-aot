@@ -4,6 +4,30 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+catalogs:
+  default:
+    '@types/node':
+      specifier: ^25.5.0
+      version: 25.5.0
+    '@vitest/coverage-v8':
+      specifier: ^4.1.0
+      version: 4.1.0
+    tsx:
+      specifier: ^4.21.0
+      version: 4.21.0
+    typescript:
+      specifier: ^5.9.3
+      version: 5.9.3
+    vite:
+      specifier: ^8.0.1
+      version: 8.0.1
+    vitest:
+      specifier: ^4.1.0
+      version: 4.1.0
+    zod:
+      specifier: ^4.0.0
+      version: 4.3.6
+
 importers:
 
   .:
@@ -12,19 +36,19 @@ importers:
         specifier: ^2.4.8
         version: 2.4.8
       '@vitest/coverage-v8':
-        specifier: ^4.1.0
+        specifier: 'catalog:'
         version: 4.1.0(vitest@4.1.0(@types/node@25.5.0)(vite@8.0.1(@types/node@25.5.0)(esbuild@0.27.3)(tsx@4.21.0)))
       tsx:
-        specifier: ^4.21.0
+        specifier: 'catalog:'
         version: 4.21.0
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
       vitest:
-        specifier: ^4.1.0
+        specifier: 'catalog:'
         version: 4.1.0(@types/node@25.5.0)(vite@8.0.1(@types/node@25.5.0)(esbuild@0.27.3)(tsx@4.21.0))
       zod:
-        specifier: ^4.0.0
+        specifier: 'catalog:'
         version: 4.3.6
 
   apps/hono-api:
@@ -39,26 +63,26 @@ importers:
         specifier: ^4.12.8
         version: 4.12.8
       zod:
-        specifier: ^4.0.0
+        specifier: 'catalog:'
         version: 4.3.6
       zod-aot:
         specifier: workspace:*
         version: link:../../packages/zod-aot
     devDependencies:
       '@types/node':
-        specifier: ^25.5.0
+        specifier: 'catalog:'
         version: 25.5.0
       tsx:
-        specifier: ^4.0.0
+        specifier: 'catalog:'
         version: 4.21.0
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
       vite:
-        specifier: ^8.0.1
+        specifier: 'catalog:'
         version: 8.0.1(@types/node@25.5.0)(esbuild@0.27.3)(tsx@4.21.0)
       vitest:
-        specifier: ^4.1.0
+        specifier: 'catalog:'
         version: 4.1.0(@types/node@25.5.0)(vite@8.0.1(@types/node@25.5.0)(esbuild@0.27.3)(tsx@4.21.0))
 
   apps/nextjs:
@@ -73,14 +97,14 @@ importers:
         specifier: ^19.1.0
         version: 19.2.4(react@19.2.4)
       zod:
-        specifier: ^4.0.0
+        specifier: 'catalog:'
         version: 4.3.6
       zod-aot:
         specifier: workspace:*
         version: link:../../packages/zod-aot
     devDependencies:
       '@types/node':
-        specifier: ^25.5.0
+        specifier: 'catalog:'
         version: 25.5.0
       '@types/react':
         specifier: ^19.1.8
@@ -89,35 +113,35 @@ importers:
         specifier: ^19.1.6
         version: 19.2.3(@types/react@19.2.14)
       tsx:
-        specifier: ^4.0.0
+        specifier: 'catalog:'
         version: 4.21.0
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
       vitest:
-        specifier: ^4.1.0
+        specifier: 'catalog:'
         version: 4.1.0(@types/node@25.5.0)(vite@8.0.1(@types/node@25.5.0)(esbuild@0.27.3)(tsx@4.21.0))
 
   apps/sample:
     dependencies:
       zod:
-        specifier: ^4.0.0
+        specifier: 'catalog:'
         version: 4.3.6
       zod-aot:
         specifier: workspace:*
         version: link:../../packages/zod-aot
     devDependencies:
       '@types/node':
-        specifier: ^25.5.0
+        specifier: 'catalog:'
         version: 25.5.0
       tsx:
-        specifier: ^4.0.0
+        specifier: 'catalog:'
         version: 4.21.0
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
       vite:
-        specifier: ^8.0.1
+        specifier: 'catalog:'
         version: 8.0.1(@types/node@25.5.0)(esbuild@0.27.3)(tsx@4.21.0)
 
   benchmarks:
@@ -135,7 +159,7 @@ importers:
         specifier: ^12.0.1
         version: 12.0.1(@types/node@25.5.0)(typescript@5.9.3)
       zod:
-        specifier: ^4.0.0
+        specifier: 'catalog:'
         version: 4.3.6
       zod-aot:
         specifier: workspace:*
@@ -145,7 +169,7 @@ importers:
         version: zod@3.23.8
     devDependencies:
       '@types/node':
-        specifier: ^25.5.0
+        specifier: 'catalog:'
         version: 25.5.0
       '@typia/unplugin':
         specifier: ^12.0.1
@@ -158,16 +182,16 @@ importers:
         version: 3.0.0
     devDependencies:
       '@types/node':
-        specifier: ^25.5.0
+        specifier: 'catalog:'
         version: 25.5.0
       tsx:
-        specifier: ^4.21.0
+        specifier: 'catalog:'
         version: 4.21.0
       typescript:
-        specifier: ^5.7.0
+        specifier: 'catalog:'
         version: 5.9.3
       zod:
-        specifier: ^4.0.0
+        specifier: 'catalog:'
         version: 4.3.6
 
 packages:
@@ -252,9 +276,6 @@ packages:
 
   '@emnapi/core@1.9.1':
     resolution: {integrity: sha512-mukuNALVsoix/w1BJwFzwXBN/dHeejQtuVzcDsfOEsdpCumXb/E9j8w11h5S54tT1xhifGfbbSm/ICrObRb3KA==}
-
-  '@emnapi/runtime@1.9.0':
-    resolution: {integrity: sha512-QN75eB0IH2ywSpRpNddCRfQIhmJYBCJ1x5Lb3IscKAL8bMnVAKnRg8dCoXbHzVLLH7P38N2Z3mtulB7W0J0FKw==}
 
   '@emnapi/runtime@1.9.1':
     resolution: {integrity: sha512-VYi5+ZVLhpgK4hQ0TAjiQiZ6ol0oe4mBx7mVv7IflsiEp0OWoVsp/+f9Vc1hOhE0TtkORVrI1GvzyreqpgWtkA==}
@@ -1631,11 +1652,6 @@ snapshots:
   '@emnapi/core@1.9.1':
     dependencies:
       '@emnapi/wasi-threads': 1.2.0
-      tslib: 2.8.1
-    optional: true
-
-  '@emnapi/runtime@1.9.0':
-    dependencies:
       tslib: 2.8.1
     optional: true
 

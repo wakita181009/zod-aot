@@ -93,10 +93,10 @@
     }
   },
   "devDependencies": {
-    "@types/node": "^25.5.0",
-    "tsx": "^4.21.0",
-    "typescript": "^5.7.0",
-    "zod": "^4.0.0"
+    "@types/node": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "zod": "catalog:"
   },
   "license": "MIT"
 }
