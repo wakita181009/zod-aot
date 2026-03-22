@@ -37,18 +37,6 @@ describe("createFallback — wraps Zod schema as CompiledSchema via Object.creat
     }
   });
 
-  it("is() returns true for valid input", () => {
-    const compiled = createFallback(schema);
-    expect(compiled.is({ name: "Alice", age: 30 })).toBe(true);
-  });
-
-  it("is() returns false for invalid input", () => {
-    const compiled = createFallback(schema);
-    expect(compiled.is({ name: "", age: -1 })).toBe(false);
-    expect(compiled.is(null)).toBe(false);
-    expect(compiled.is("string")).toBe(false);
-  });
-
   it("preserves the original schema reference", () => {
     const compiled = createFallback(schema);
     expect(compiled.schema).toBe(schema);
@@ -81,17 +69,9 @@ describe("createFallback — Zod compatibility via Object.create", () => {
     expect("_zod" in compiled).toBe(true);
   });
 
-  it("preserves shape property via prototype", () => {
-    const compiled = createFallback(schema);
-    expect((compiled as Record<string, unknown>).shape).toBeDefined();
-    expect((compiled as Record<string, unknown>).shape).toBe(schema.shape);
-  });
-
   it("safeParseAsync works via prototype", async () => {
     const compiled = createFallback(schema);
-    const result = await (
-      compiled as Record<string, (...args: unknown[]) => unknown>
-    ).safeParseAsync({ name: "Alice", age: 30 });
+    const result = await compiled.safeParseAsync({ name: "Alice", age: 30 });
     expect(result).toHaveProperty("success", true);
   });
 

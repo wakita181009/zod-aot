@@ -132,13 +132,6 @@ describe("generateIIFE() — runtime execution", () => {
     expect(result.error).toBeDefined();
   });
 
-  it("is() returns correct boolean", () => {
-    const validator = executeIIFE(makeInfo("validateUser", simpleSchema));
-
-    expect(validator.is({ name: "Alice", age: 30 })).toBe(true);
-    expect(validator.is({ name: 123 })).toBe(false);
-  });
-
   it("parse throws on invalid input", () => {
     const validator = executeIIFE(makeInfo("validateUser", simpleSchema));
 
@@ -202,6 +195,5 @@ describe("generateIIFE() — runtime execution", () => {
 
     expect(validator.safeParse({ name: "Alice", age: 30 }).success).toBe(true);
     expect(validator.safeParse({ name: "", age: -1 }).success).toBe(false);
-    expect(validator.is({ name: "Alice", age: 30 })).toBe(true);
   });
 });

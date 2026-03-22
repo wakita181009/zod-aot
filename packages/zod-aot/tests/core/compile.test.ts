@@ -3,13 +3,12 @@ import { z } from "zod";
 import { compile, isCompiledSchema } from "#src/core/compile.js";
 
 describe("compile()", () => {
-  it("returns a CompiledSchema with parse/safeParse/is/schema", () => {
+  it("returns a CompiledSchema with parse/safeParse/schema", () => {
     const schema = z.string();
     const compiled = compile(schema);
 
     expect(compiled.parse).toBeTypeOf("function");
     expect(compiled.safeParse).toBeTypeOf("function");
-    expect(compiled.is).toBeTypeOf("function");
     expect(compiled.schema).toBe(schema);
   });
 
@@ -18,16 +17,14 @@ describe("compile()", () => {
     const compiled = compile(schema);
 
     expect("_zod" in compiled).toBe(true);
-    expect((compiled as Record<string, unknown>).shape).toBe(schema.shape);
+    expect(compiled.shape).toBe(schema.shape);
   });
 
   it("supports safeParseAsync via Zod prototype", async () => {
     const schema = z.object({ name: z.string() });
     const compiled = compile(schema);
 
-    const result = await (
-      compiled as Record<string, (...args: unknown[]) => unknown>
-    ).safeParseAsync({ name: "Alice" });
+    const result = await compiled.safeParseAsync({ name: "Alice" });
     expect(result).toHaveProperty("success", true);
   });
 });
