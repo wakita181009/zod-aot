@@ -44,7 +44,6 @@ export function generateIIFE(
     `__w.safeParse=${fnName};`,
     `__w.safeParseAsync=function(input){return Promise.resolve(${fnName}(input));};`,
     `__w.parseAsync=function(input){const r=${fnName}(input);if(r.success)return Promise.resolve(r.data);return Promise.reject(Object.assign(new Error("Validation failed"),r.error));};`,
-    `__w.is=function(input){return ${fnName}(input).success;};`,
     `__w.schema=${schemaExpr};`,
     "return __w;",
     "})()",
