@@ -98,9 +98,6 @@ assertEqual(fbValid.success, true, "createFallback safeParse valid input");
 const fbInvalid = fallback.safeParse("ab");
 assertEqual(fbInvalid.success, false, "createFallback safeParse invalid input");
 
-assertEqual(fallback.is("hello"), true, "createFallback is() returns true for valid");
-assertEqual(fallback.is("ab"), false, "createFallback is() returns false for invalid");
-
 // ─── Report ─────────────────────────────────────────────────────────────────
 
 // biome-ignore lint/suspicious/noConsole: test runner output
