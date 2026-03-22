@@ -277,7 +277,6 @@ describe("rewriteSource()", () => {
     // "revalidateUser" should NOT be replaced (still has compile())
     expect(result).toContain("revalidateUser = compile(OtherSchema)");
   });
-
 });
 
 describe("transformCode() E2E", () => {

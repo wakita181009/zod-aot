@@ -84,7 +84,6 @@ describe("generateCompiledFileContent()", () => {
     // Source schemas are always imported now (for Object.create)
     expect(content).toContain('import { validateTest as __src_validateTest } from "./test"');
   });
-
 });
 
 describe("generateCompiledFileContent() — zodCompat: false", () => {

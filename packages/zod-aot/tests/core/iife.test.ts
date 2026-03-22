@@ -103,7 +103,11 @@ describe("generateIIFE() — runtime execution", () => {
     const fn = new Function("Schema", "__msg", `return ${iife};`);
     return fn({}, __msg) as {
       parse: (input: unknown) => unknown;
-      safeParse: (input: unknown) => { success: boolean; data?: unknown; error?: { issues: unknown[] } };
+      safeParse: (input: unknown) => {
+        success: boolean;
+        data?: unknown;
+        error?: { issues: unknown[] };
+      };
       safeParseAsync: (
         input: unknown,
       ) => Promise<{ success: boolean; data?: unknown; error?: unknown }>;
