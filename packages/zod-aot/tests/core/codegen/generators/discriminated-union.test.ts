@@ -55,7 +55,7 @@ describe("codegen — discriminatedUnion", () => {
 
   it("generates switch-based code (not sequential union)", () => {
     const result = generateValidator(ir, "duTest");
-    expect(result.functionName).toContain("switch");
-    expect(result.functionName).not.toContain("__u_");
+    expect(result.functionDef).toContain("switch");
+    expect(result.functionDef).not.toContain("__u_");
   });
 });

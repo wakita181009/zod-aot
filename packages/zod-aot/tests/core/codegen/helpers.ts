@@ -14,8 +14,8 @@ export function compileIR(
   });
   const fn =
     fallbackSchemas && fallbackSchemas.length > 0
-      ? new Function("__fb", `${result.code}\nreturn ${result.functionName};`)
-      : new Function(`${result.code}\nreturn ${result.functionName};`);
+      ? new Function("__fb", `${result.code}\nreturn ${result.functionDef};`)
+      : new Function(`${result.code}\nreturn ${result.functionDef};`);
   return (fallbackSchemas && fallbackSchemas.length > 0 ? fn(fallbackSchemas) : fn()) as (
     input: unknown,
   ) => {

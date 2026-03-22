@@ -56,11 +56,11 @@ assertEqual(ir.type, "object", "IR type is object");
 const result = generateValidator(ir, "user");
 assert(typeof result.code === "string", "generateValidator produces code string");
 assert(result.code.length > 0, "generated code is non-empty");
-assert(typeof result.functionName === "string", "generateValidator produces function name");
+assert(typeof result.functionDef === "string", "generateValidator produces function def");
 
 // Compile and run the generated code (pass __msg for localeError message generation)
 const __msg = z.config().localeError;
-const fn = new Function("__msg", `${result.code}\nreturn ${result.functionName};`);
+const fn = new Function("__msg", `${result.code}\nreturn ${result.functionDef};`);
 const safeParse = fn(__msg);
 
 // Valid input

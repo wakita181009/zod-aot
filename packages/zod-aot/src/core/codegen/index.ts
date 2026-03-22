@@ -137,9 +137,9 @@ function generateValidation(
  * Generate optimized validation code from SchemaIR.
  *
  * - `code`: preamble declarations (Sets, RegExps, etc.) — deterministic for the same IR
- * - `functionName`: full function expression string referencing preamble vars via closure
+ * - `functionDef`: full function expression string referencing preamble vars via closure
  *
- * Usage: `new Function(code + "\nreturn " + functionName + ";")()`
+ * Usage: `new Function(code + "\nreturn " + functionDef + ";")()`
  */
 export function generateValidator(
   ir: SchemaIR,
@@ -151,7 +151,7 @@ export function generateValidator(
   const bodyCode = generateValidation(ir, "input", "[]", "__issues", ctx);
 
   const code = ["/* zod-aot */", ...ctx.preamble].join("\n");
-  const functionName = [
+  const functionDef = [
     `function ${fnName}(input){`,
     `var __issues=[];`,
     bodyCode,
@@ -166,5 +166,5 @@ export function generateValidator(
     `}`,
   ].join("\n");
 
-  return { code, functionName, fallbackCount: options?.fallbackCount ?? 0 };
+  return { code, functionDef, fallbackCount: options?.fallbackCount ?? 0 };
 }

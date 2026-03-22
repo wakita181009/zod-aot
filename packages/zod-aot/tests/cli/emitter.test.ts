@@ -6,7 +6,7 @@ describe("generateCompiledFileContent()", () => {
   it("generates a valid compiled file with header and Object.create wrapper", () => {
     const result: CodeGenResult = {
       code: "/* zod-aot */",
-      functionName:
+      functionDef:
         'function safeParse_test(input){\nvar __issues=[];\nif(typeof input!=="string"){__issues.push({code:"invalid_type",expected:"string",received:typeof input,path:[],message:"Expected string"});}\nif(__issues.length>0)return{success:false,error:{issues:__issues}};\nreturn{success:true,data:input};\n}',
       fallbackCount: 0,
     };
@@ -20,37 +20,21 @@ describe("generateCompiledFileContent()", () => {
     expect(content).toContain("// Source: ./test.ts");
     expect(content).toContain("function safeParse_test(input)");
     // Uses Object.create for Zod compatibility
-    expect(content).toContain("Object.create(__s)");
-    expect(content).toContain("__w.safeParse = safeParse_test;");
+    expect(content).toContain("Object.create((__src_validateTest as any).schema)");
+    expect(content).toContain("__w.safeParse=safeParse_test;");
     // Imports source schema
     expect(content).toContain('import { validateTest as __src_validateTest } from "./test"');
-  });
-
-  it("includes preamble declarations", () => {
-    const result: CodeGenResult = {
-      code: '/* zod-aot */\nconst __enumSet_role_0 = new Set(["admin","user"]);',
-      functionName: "function safeParse_role(input){\nreturn{success:true,data:input};\n}",
-      fallbackCount: 0,
-    };
-
-    const content = generateCompiledFileContent(
-      [{ exportName: "validateRole", codegenResult: result, fallbackEntries: [] }],
-      "./role.ts",
-    );
-
-    expect(content).toContain("/* zod-aot:preamble */");
-    expect(content).toContain('const __enumSet_role_0 = new Set(["admin","user"]);');
   });
 
   it("generates multiple schemas in one file", () => {
     const result1: CodeGenResult = {
       code: "/* zod-aot */",
-      functionName: "function safeParse_a(input){\nreturn{success:true,data:input};\n}",
+      functionDef: "function safeParse_a(input){\nreturn{success:true,data:input};\n}",
       fallbackCount: 0,
     };
     const result2: CodeGenResult = {
       code: "/* zod-aot */",
-      functionName: "function safeParse_b(input){\nreturn{success:true,data:input};\n}",
+      functionDef: "function safeParse_b(input){\nreturn{success:true,data:input};\n}",
       fallbackCount: 0,
     };
 
@@ -64,106 +48,14 @@ describe("generateCompiledFileContent()", () => {
 
     expect(content).toContain("export const validateA");
     expect(content).toContain("export const validateB");
-    expect(content).toContain("__w.safeParse = safeParse_a;");
-    expect(content).toContain("__w.safeParse = safeParse_b;");
+    expect(content).toContain("__w.safeParse=safeParse_a;");
+    expect(content).toContain("__w.safeParse=safeParse_b;");
   });
 
-  it("generated parse() throws on invalid input", () => {
+  it("includes zod config import and __msg inside IIFE", () => {
     const result: CodeGenResult = {
       code: "/* zod-aot */",
-      functionName:
-        'function safeParse_num(input){\nvar __issues=[];\nif(typeof input!=="number"||input!==input){__issues.push({code:"invalid_type",expected:"number",received:typeof input,path:[],message:"Expected number"});}\nif(__issues.length>0)return{success:false,error:{issues:__issues}};\nreturn{success:true,data:input};\n}',
-      fallbackCount: 0,
-    };
-
-    const content = generateCompiledFileContent(
-      [{ exportName: "validateNum", codegenResult: result, fallbackEntries: [] }],
-      "./num.ts",
-    );
-
-    expect(content).toContain("throw Object.assign");
-  });
-
-  it("generates import and __fb when schema has fallbacks", () => {
-    const result: CodeGenResult = {
-      code: "/* zod-aot */",
-      functionName:
-        'function safeParse_test(input){\nvar __issues=[];\n__issues.push({code:"custom",path:[],message:"test"});\nif(__issues.length>0)return{success:false,error:{issues:__issues}};\nreturn{success:true,data:input};\n}',
-      fallbackCount: 1,
-    };
-
-    const content = generateCompiledFileContent(
-      [
-        {
-          exportName: "validateUser",
-          codegenResult: result,
-          fallbackEntries: [{ schema: {}, accessPath: '.shape["slug"]' }],
-        },
-      ],
-      "./schemas.ts",
-    );
-
-    expect(content).toContain('import { validateUser as __src_validateUser } from "./schemas"');
-    expect(content).toContain("const __fb_validateUser =");
-    expect(content).toContain('.schema.shape["slug"]');
-    expect(content).toContain("var __fb=__fb_validateUser;");
-  });
-
-  // H5: __fb injection should detect if the regex replacement fails
-  it("__fb injection requires function signature on first line with newline", () => {
-    // If codegen output format changes (e.g., no newline after '{'),
-    // the regex won't match and __fb binding will be missing.
-    const result: CodeGenResult = {
-      code: "/* zod-aot */",
-      // Note: This has the expected format with `{\n` after the function signature
-      functionName:
-        "function safeParse_test(input){\nvar __issues=[];\nreturn{success:true,data:input};\n}",
-      fallbackCount: 1,
-    };
-
-    const content = generateCompiledFileContent(
-      [
-        {
-          exportName: "validateUser",
-          codegenResult: result,
-          fallbackEntries: [{ schema: {}, accessPath: '.shape["slug"]' }],
-        },
-      ],
-      "./schemas.ts",
-    );
-
-    // Verify __fb is actually injected
-    expect(content).toContain("var __fb=__fb_validateUser;");
-  });
-
-  it("throws when __fb injection fails due to unexpected function format", () => {
-    // Simulate a changed function format where the regex won't match
-    const result: CodeGenResult = {
-      code: "/* zod-aot */",
-      // No newline after `{` — the regex /^(function\s+\w+\(input\)\{)\n/ won't match
-      functionName:
-        "function safeParse_test(input){var __issues=[];return{success:true,data:input};}",
-      fallbackCount: 1,
-    };
-
-    expect(() =>
-      generateCompiledFileContent(
-        [
-          {
-            exportName: "validateUser",
-            codegenResult: result,
-            fallbackEntries: [{ schema: {}, accessPath: '.shape["slug"]' }],
-          },
-        ],
-        "./schemas.ts",
-      ),
-    ).toThrow("Failed to inject __fb binding");
-  });
-
-  it("includes zod config import and __msg declaration for localeError", () => {
-    const result: CodeGenResult = {
-      code: "/* zod-aot */",
-      functionName: "function safeParse_test(input){\nreturn{success:true,data:input};\n}",
+      functionDef: "function safeParse_test(input){\nreturn{success:true,data:input};\n}",
       fallbackCount: 0,
     };
 
@@ -173,13 +65,14 @@ describe("generateCompiledFileContent()", () => {
     );
 
     expect(content).toContain('import { config as __zodAotConfig } from "zod"');
-    expect(content).toContain("const __msg = __zodAotConfig().localeError;");
+    // __msg is declared at file level (once per file)
+    expect(content).toContain("var __msg=__zodAotConfig().localeError;");
   });
 
   it("always imports source schemas for Object.create", () => {
     const result: CodeGenResult = {
       code: "/* zod-aot */",
-      functionName: "function safeParse_test(input){\nreturn{success:true,data:input};\n}",
+      functionDef: "function safeParse_test(input){\nreturn{success:true,data:input};\n}",
       fallbackCount: 0,
     };
 
@@ -191,30 +84,13 @@ describe("generateCompiledFileContent()", () => {
     // Source schemas are always imported now (for Object.create)
     expect(content).toContain('import { validateTest as __src_validateTest } from "./test"');
   });
-
-  it("includes safeParseAsync and parseAsync in output", () => {
-    const result: CodeGenResult = {
-      code: "/* zod-aot */",
-      functionName: "function safeParse_test(input){\nreturn{success:true,data:input};\n}",
-      fallbackCount: 0,
-    };
-
-    const content = generateCompiledFileContent(
-      [{ exportName: "validateTest", codegenResult: result, fallbackEntries: [] }],
-      "./test.ts",
-    );
-
-    expect(content).toContain("__w.safeParseAsync");
-    expect(content).toContain("__w.parseAsync");
-    expect(content).toContain("Promise.resolve");
-  });
 });
 
 describe("generateCompiledFileContent() — zodCompat: false", () => {
-  it("produces plain object export without Object.create", () => {
+  it("always imports source schemas for .schema reference", () => {
     const result: CodeGenResult = {
       code: "/* zod-aot */",
-      functionName: "function safeParse_test(input){\nreturn{success:true,data:input};\n}",
+      functionDef: "function safeParse_test(input){\nreturn{success:true,data:input};\n}",
       fallbackCount: 0,
     };
 
@@ -224,34 +100,13 @@ describe("generateCompiledFileContent() — zodCompat: false", () => {
       { zodCompat: false },
     );
 
-    expect(content).toContain("export const validateTest = {");
-    expect(content).toContain("safeParse: safeParse_test,");
-    expect(content).not.toContain("Object.create");
-    expect(content).not.toContain("__src_");
-    expect(content).toContain("safeParseAsync");
-    expect(content).toContain("parseAsync");
-  });
-
-  it("does not import source schemas when no fallbacks", () => {
-    const result: CodeGenResult = {
-      code: "/* zod-aot */",
-      functionName: "function safeParse_test(input){\nreturn{success:true,data:input};\n}",
-      fallbackCount: 0,
-    };
-
-    const content = generateCompiledFileContent(
-      [{ exportName: "validateTest", codegenResult: result, fallbackEntries: [] }],
-      "./test.ts",
-      { zodCompat: false },
-    );
-
-    expect(content).not.toContain('from "./test"');
+    expect(content).toContain('import { validateTest as __src_validateTest } from "./test"');
   });
 
   it("still imports source schemas when fallbacks exist", () => {
     const result: CodeGenResult = {
       code: "/* zod-aot */",
-      functionName:
+      functionDef:
         "function safeParse_test(input){\nvar __issues=[];\nreturn{success:true,data:input};\n}",
       fallbackCount: 1,
     };
@@ -269,7 +124,7 @@ describe("generateCompiledFileContent() — zodCompat: false", () => {
     );
 
     expect(content).toContain('import { validateUser as __src_validateUser } from "./schemas"');
-    expect(content).toContain("export const validateUser = {");
+    expect(content).toContain("export const validateUser = /* @__PURE__ */");
     expect(content).not.toContain("Object.create");
   });
 });

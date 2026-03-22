@@ -12,7 +12,7 @@ import type { SafeParseResult, SchemaIR } from "#src/core/types.js";
 function compileZodSchema(schema: z.ZodType, name = "test") {
   const ir = extractSchema(schema);
   const result = generateValidator(ir, name);
-  const fn = new Function(`${result.code}\nreturn ${result.functionName};`);
+  const fn = new Function(`${result.code}\nreturn ${result.functionDef};`);
   return fn() as (input: unknown) => {
     success: boolean;
     data?: unknown;
@@ -845,10 +845,10 @@ function compileWithFallbacks(schema: z.ZodType, name = "test") {
   const result = generateValidator(ir, name, { fallbackCount: fallbackEntries.length });
   const fallbackSchemas = fallbackEntries.map((e) => e.schema);
   return fallbackSchemas.length > 0
-    ? (new Function("__fb", `${result.code}\nreturn ${result.functionName};`)(fallbackSchemas) as (
+    ? (new Function("__fb", `${result.code}\nreturn ${result.functionDef};`)(fallbackSchemas) as (
         input: unknown,
       ) => SafeParseResult<unknown>)
-    : (new Function(`${result.code}\nreturn ${result.functionName};`)() as (
+    : (new Function(`${result.code}\nreturn ${result.functionDef};`)() as (
         input: unknown,
       ) => SafeParseResult<unknown>);
 }

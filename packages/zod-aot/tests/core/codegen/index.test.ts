@@ -16,18 +16,18 @@ describe("codegen — code quality", () => {
     const ir: StringIR = { type: "string", checks: [] };
     const result = generateValidator(ir, "myValidator");
     expect(result).toHaveProperty("code");
-    expect(result).toHaveProperty("functionName");
+    expect(result).toHaveProperty("functionDef");
     expect(typeof result.code).toBe("string");
-    expect(typeof result.functionName).toBe("string");
+    expect(typeof result.functionDef).toBe("string");
     expect(result.code.length).toBeGreaterThan(0);
-    expect(result.functionName).toContain("myValidator");
+    expect(result.functionDef).toContain("myValidator");
   });
 
   it("generates unique function names", () => {
     const ir: StringIR = { type: "string", checks: [] };
     const result1 = generateValidator(ir, "schemaA");
     const result2 = generateValidator(ir, "schemaB");
-    expect(result1.functionName).not.toBe(result2.functionName);
+    expect(result1.functionDef).not.toBe(result2.functionDef);
   });
 
   it("generates syntactically valid JavaScript", () => {
@@ -231,7 +231,7 @@ describe("codegen — partial fallback", () => {
       },
     };
     const result = generateValidator(ir, "test", { fallbackCount: 1 });
-    expect(result.functionName).toContain("__fb[0].safeParse");
+    expect(result.functionDef).toContain("__fb[0].safeParse");
     expect(result.fallbackCount).toBe(1);
   });
 
@@ -244,8 +244,8 @@ describe("codegen — partial fallback", () => {
       },
     };
     const result = generateValidator(ir, "test");
-    expect(result.functionName).toContain("Fallback schema: transform");
-    expect(result.functionName).not.toContain("__fb");
+    expect(result.functionDef).toContain("Fallback schema: transform");
+    expect(result.functionDef).not.toContain("__fb");
   });
 
   it("delegates to Zod and validates correctly at runtime", () => {
