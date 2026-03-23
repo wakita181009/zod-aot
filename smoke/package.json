@@ -1,0 +1,13 @@
+{
+  "name": "zod-aot-e2e",
+  "private": true,
+  "scripts": {
+    "test": "npm run check && npm run generate",
+    "check": "zod-aot check src/schema.ts",
+    "generate": "zod-aot generate src/schema.ts -o src/schema.compiled.ts"
+  },
+  "dependencies": {
+    "tsx": "^4.0.0",
+    "zod": "^4.0.0"
+  }
+}

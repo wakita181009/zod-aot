@@ -6,11 +6,13 @@
     "build": "pnpm -r build",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "test:smoke": "pnpm run pack && cd smoke && npm install ../zod-aot-*.tgz --silent && npm test",
     "bench": "vitest bench --config benchmarks/vitest.config.ts",
     "check": "biome check .",
     "check:fix": "biome check --fix .",
     "format": "biome format --write .",
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "pnpm -r typecheck",
+    "pack": "pnpm --filter zod-aot pack"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.8",

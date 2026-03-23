@@ -89,8 +89,9 @@ describe("codegen — record", () => {
     expect(issue["origin"]).toBe("record");
     expect(issue["path"]).toEqual(["ab"]);
     expect(Array.isArray(issue["issues"])).toBe(true);
-    const inner = (issue["issues"] as Record<string, unknown>[])[0]!;
-    expect(inner["code"]).toBe("too_small");
+    const inner = (issue["issues"] as Record<string, unknown>[])[0];
+    expect(inner).toBeDefined();
+    expect(inner?.["code"]).toBe("too_small");
   });
 
   it("short-circuits on key error — does not validate value (matches Zod)", () => {
