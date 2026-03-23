@@ -593,6 +593,24 @@ describe("integration — record match Zod", () => {
       assertSameResult(schema, input, "recordStr");
     }
   });
+
+  it("key constraint record produces invalid_key like Zod", () => {
+    const schema = z.record(z.string().min(3), z.number());
+    const safeParse = compileZodSchema(schema, "recordKeyMin");
+
+    // Invalid key
+    const aotResult = safeParse({ ab: 1 });
+    const zodResult = schema.safeParse({ ab: 1 });
+    expect(aotResult.success).toBe(zodResult.success);
+    expect(aotResult.error?.issues.length).toBe(zodResult.error?.issues.length);
+    expect((aotResult.error?.issues[0] as Record<string, unknown>)?.["code"]).toBe("invalid_key");
+
+    // Invalid key + invalid value: Zod short-circuits (only key error)
+    const aotResult2 = safeParse({ ab: "not-number" });
+    const zodResult2 = schema.safeParse({ ab: "not-number" });
+    expect(aotResult2.success).toBe(zodResult2.success);
+    expect(aotResult2.error?.issues.length).toBe(zodResult2.error?.issues.length);
+  });
 });
 
 // ─── Tier 2: default Compatibility ──────────────────────────────────────────

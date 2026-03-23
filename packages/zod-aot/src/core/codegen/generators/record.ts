@@ -18,6 +18,7 @@ export function generateRecordValidation(
   const keysVar = `__rk_${ctx.counter++}`;
   const idxVar = `__ri_${ctx.counter++}`;
   const keyVar = `__rkey_${ctx.counter++}`;
+  const keyIssuesVar = `__rki_${ctx.counter++}`;
   const keyPath = `${pathExpr}.concat(${keyVar})`;
   const valExpr = `${inputExpr}[${keyVar}]`;
 
@@ -25,8 +26,13 @@ export function generateRecordValidation(
     var ${keysVar}=Object.keys(${inputExpr});
     for(var ${idxVar}=0;${idxVar}<${keysVar}.length;${idxVar}++){
       var ${keyVar}=${keysVar}[${idxVar}];
-      ${generateFn(ir.keyType, keyVar, keyPath, issuesVar, ctx)}
-      ${generateFn(ir.valueType, valExpr, keyPath, issuesVar, ctx)}
+      var ${keyIssuesVar}=[];
+      ${generateFn(ir.keyType, keyVar, keyPath, keyIssuesVar, ctx)}
+      if(${keyIssuesVar}.length>0){
+        ${issuesVar}.push({code:"invalid_key",origin:"record",path:${keyPath},issues:${keyIssuesVar}});
+      }else{
+        ${generateFn(ir.valueType, valExpr, keyPath, issuesVar, ctx)}
+      }
     }
   }`;
   return `${code}\n`;
