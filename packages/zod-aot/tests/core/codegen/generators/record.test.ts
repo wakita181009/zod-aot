@@ -45,7 +45,7 @@ describe("codegen — record", () => {
     expect(safeParse({ a: "not number" }).success).toBe(false);
   });
 
-  // M2: Key and value validation errors should have correct paths
+  // Value error should have path pointing to the key
   it("reports value error path pointing to the key", () => {
     const ir: RecordIR = {
       type: "record",
@@ -55,12 +55,11 @@ describe("codegen — record", () => {
     const safeParse = compileIR(ir);
     const result = safeParse({ myKey: "not-a-number" });
     expect(result.success).toBe(false);
-    // Value error should have path pointing to the key
     const valueIssue = result.error?.issues.find(
-      (i) => (i as Record<string, unknown>).expected === "number",
+      (i) => (i as Record<string, unknown>)["expected"] === "number",
     ) as Record<string, unknown> | undefined;
     expect(valueIssue).toBeDefined();
-    expect(valueIssue?.path).toEqual(["myKey"]);
+    expect(valueIssue?.["path"]).toEqual(["myKey"]);
   });
 
   it("validates key type constraints", () => {
@@ -76,7 +75,25 @@ describe("codegen — record", () => {
     expect(safeParse({ abc: 1 }).success).toBe(true);
   });
 
-  it("reports both key and value errors for the same entry", () => {
+  it("wraps key errors in invalid_key issue (matches Zod)", () => {
+    const ir: RecordIR = {
+      type: "record",
+      keyType: { type: "string", checks: [{ kind: "min_length", minimum: 5 }] },
+      valueType: { type: "number", checks: [] },
+    };
+    const safeParse = compileIR(ir);
+    const result = safeParse({ ab: 1 });
+    expect(result.success).toBe(false);
+    const issue = result.error?.issues[0] as Record<string, unknown>;
+    expect(issue["code"]).toBe("invalid_key");
+    expect(issue["origin"]).toBe("record");
+    expect(issue["path"]).toEqual(["ab"]);
+    expect(Array.isArray(issue["issues"])).toBe(true);
+    const inner = (issue["issues"] as Record<string, unknown>[])[0]!;
+    expect(inner["code"]).toBe("too_small");
+  });
+
+  it("short-circuits on key error — does not validate value (matches Zod)", () => {
     const ir: RecordIR = {
       type: "record",
       keyType: { type: "string", checks: [{ kind: "min_length", minimum: 5 }] },
@@ -86,7 +103,8 @@ describe("codegen — record", () => {
     // Key "ab" is too short AND value is wrong type
     const result = safeParse({ ab: "not-a-number" });
     expect(result.success).toBe(false);
-    // Should have at least 2 issues: one for key, one for value
-    expect(result.error?.issues.length).toBeGreaterThanOrEqual(2);
+    // Zod only reports the key error (short-circuits)
+    expect(result.error?.issues.length).toBe(1);
+    expect((result.error?.issues[0] as Record<string, unknown>)["code"]).toBe("invalid_key");
   });
 });
