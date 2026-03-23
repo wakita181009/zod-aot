@@ -9,6 +9,10 @@ function detectRuntime(): Runtime {
   return "node";
 }
 
+async function importModule(absPath: string, suffix: string): Promise<Record<string, unknown>> {
+  return (await import(pathToFileURL(absPath).href + suffix)) as Record<string, unknown>;
+}
+
 export interface LoadOptions {
   /** Append a cache-busting query parameter to bypass Node.js module cache (useful for HMR). */
   cacheBust?: boolean;
@@ -17,7 +21,8 @@ export interface LoadOptions {
 /**
  * Dynamically import a source file (.ts or .js).
  * - Bun/Deno: native TypeScript support, direct import
- * - Node.js: uses tsx's register API for TypeScript files
+ * - Node.js 22+: native type stripping, direct import
+ * - Node.js <22: uses tsx's register API for TypeScript files
  */
 export async function loadSourceFile(
   filePath: string,
@@ -28,28 +33,25 @@ export async function loadSourceFile(
   const runtime = detectRuntime();
   const suffix = options?.cacheBust ? `?t=${Date.now()}` : "";
 
-  // Bun and Deno can import TypeScript natively
-  if (runtime === "bun" || runtime === "deno") {
-    return (await import(pathToFileURL(absPath).href + suffix)) as Record<string, unknown>;
-  }
+  // Node.js < 22 needs tsx for TypeScript files.
+  // Node.js 22+ has native type stripping; tsx's register hook causes
+  // ERR_REQUIRE_CYCLE_MODULE due to stricter CJS/ESM interop cycle enforcement.
+  const needsTsx =
+    runtime === "node" &&
+    (ext === ".ts" || ext === ".tsx" || ext === ".mts") &&
+    parseInt(process.versions.node, 10) < 22;
 
-  // Node.js: TypeScript files need tsx
-  if (ext === ".ts" || ext === ".tsx" || ext === ".mts") {
-    return loadTypeScriptFileWithTsx(absPath, suffix);
+  const unregister = needsTsx ? await registerTsx(absPath) : undefined;
+  try {
+    return await importModule(absPath, suffix);
+  } finally {
+    unregister?.();
   }
-
-  // Node.js: .js / .mjs — direct import
-  return (await import(pathToFileURL(absPath).href + suffix)) as Record<string, unknown>;
 }
 
-async function loadTypeScriptFileWithTsx(
-  absPath: string,
-  suffix = "",
-): Promise<Record<string, unknown>> {
+async function registerTsx(absPath: string): Promise<() => void> {
   let tsxModule: { register: () => () => void };
   try {
-    // Dynamic import — tsx may or may not be installed
-    // Use variable to prevent TypeScript from resolving the module statically
     const tsxSpecifier = "tsx/esm/api";
     tsxModule = (await import(tsxSpecifier)) as typeof tsxModule;
   } catch {
@@ -59,11 +61,5 @@ async function loadTypeScriptFileWithTsx(
         `File: ${absPath}`,
     );
   }
-
-  const unregister = tsxModule.register();
-  try {
-    return (await import(pathToFileURL(absPath).href + suffix)) as Record<string, unknown>;
-  } finally {
-    unregister();
-  }
+  return tsxModule.register();
 }
