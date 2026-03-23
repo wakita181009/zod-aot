@@ -46,6 +46,13 @@ async function loadTypeScriptFileWithTsx(
   absPath: string,
   suffix = "",
 ): Promise<Record<string, unknown>> {
+  // Node.js 24+ has native type stripping enabled by default.
+  // tsx's register hook causes ERR_REQUIRE_CYCLE_MODULE on Node 24+
+  // due to stricter CJS/ESM interop cycle enforcement.
+  if (parseInt(process.versions.node, 10) >= 24) {
+    return (await import(pathToFileURL(absPath).href + suffix)) as Record<string, unknown>;
+  }
+
   let tsxModule: { register: () => () => void };
   try {
     // Dynamic import — tsx may or may not be installed

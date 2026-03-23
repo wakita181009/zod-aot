@@ -42,12 +42,32 @@ describe("loadSourceFile", () => {
   });
 
   it("throws on non-existent file", async () => {
-    await expect(loadSourceFile("/nonexistent/file.ts")).rejects.toThrow();
+    expect(loadSourceFile("/nonexistent/file.ts")).rejects.toThrow();
   });
 });
 
-// tsx path is Node.js-only; Bun/Deno use native TS imports
-describe.skipIf(!isNodeRuntime)("loadSourceFile — tsx unavailable", () => {
+const nodeMajor = parseInt(process.versions.node, 10);
+
+// Node.js 24+ uses native type stripping instead of tsx
+describe.skipIf(!isNodeRuntime || nodeMajor < 24)(
+  "loadSourceFile — Node.js 24+ native import",
+  () => {
+    it("loads TypeScript files without tsx on Node.js 24+", async () => {
+      const mod = await loadSourceFile(path.join(fixturesDir, "simple-schema.ts"));
+      expect(mod).toHaveProperty("validateUser");
+    });
+
+    it("loads TypeScript files with cacheBust on Node.js 24+", async () => {
+      const mod = await loadSourceFile(path.join(fixturesDir, "simple-schema.ts"), {
+        cacheBust: true,
+      });
+      expect(mod).toHaveProperty("validateUser");
+    });
+  },
+);
+
+// tsx path is Node.js-only and only used on Node < 24; Node 24+ uses native type stripping
+describe.skipIf(!isNodeRuntime || nodeMajor >= 24)("loadSourceFile — tsx unavailable", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.resetModules();
@@ -60,7 +80,7 @@ describe.skipIf(!isNodeRuntime)("loadSourceFile — tsx unavailable", () => {
 
     const { loadSourceFile: loadFn } = await import("#src/loader.js");
 
-    await expect(loadFn(path.join(fixturesDir, "simple-schema.ts"))).rejects.toThrow(
+    expect(loadFn(path.join(fixturesDir, "simple-schema.ts"))).rejects.toThrow(
       "Cannot load TypeScript file without tsx",
     );
   });
