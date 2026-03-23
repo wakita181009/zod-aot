@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.2](https://github.com/wakita181009/zod-aot/compare/v0.7.1...v0.7.2) (2026-03-23)
+
+
+### Bug Fixes
+
+* wrap record key errors in invalid_key issue to match Zod behavior ([#55](https://github.com/wakita181009/zod-aot/issues/55)) ([ba8e9e6](https://github.com/wakita181009/zod-aot/commit/ba8e9e603b6d45f764236f3db85e75ae9add4c79))
+
 ## [0.7.1](https://github.com/wakita181009/zod-aot/compare/v0.7.0...v0.7.1) (2026-03-22)
 
 
