@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.3](https://github.com/wakita181009/zod-aot/compare/v0.7.2...v0.7.3) (2026-03-23)
+
+
+### Bug Fixes
+
+* use native type stripping on Node.js 22+ instead of tsx ([#58](https://github.com/wakita181009/zod-aot/issues/58)) ([5fbb87d](https://github.com/wakita181009/zod-aot/commit/5fbb87df74c9585c9f031d3aa322d170a27431ff)), closes [#54](https://github.com/wakita181009/zod-aot/issues/54)
+
 ## [0.7.2](https://github.com/wakita181009/zod-aot/compare/v0.7.1...v0.7.2) (2026-03-23)
 
 
