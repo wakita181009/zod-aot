@@ -12,6 +12,8 @@ import type {
   FallbackIR,
   IntersectionIR,
   LiteralIR,
+  NanIR,
+  NeverIR,
   NullableIR,
   NullIR,
   NumberIR,
@@ -20,10 +22,12 @@ import type {
   ReadonlyIR,
   RecordIR,
   StringIR,
+  SymbolIR,
   TupleIR,
   UndefinedIR,
   UnionIR,
   UnknownIR,
+  VoidIR,
 } from "#src/core/types.js";
 
 // ─── Primitive Types ────────────────────────────────────────────────────────
@@ -63,6 +67,34 @@ describe("extractSchema — primitives", () => {
     const ir = extractSchema(z.undefined());
     expect(ir).toEqual<UndefinedIR>({
       type: "undefined",
+    });
+  });
+
+  it("extracts a symbol schema", () => {
+    const ir = extractSchema(z.symbol());
+    expect(ir).toEqual<SymbolIR>({
+      type: "symbol",
+    });
+  });
+
+  it("extracts a void schema", () => {
+    const ir = extractSchema(z.void());
+    expect(ir).toEqual<VoidIR>({
+      type: "void",
+    });
+  });
+
+  it("extracts a nan schema", () => {
+    const ir = extractSchema(z.nan());
+    expect(ir).toEqual<NanIR>({
+      type: "nan",
+    });
+  });
+
+  it("extracts a never schema", () => {
+    const ir = extractSchema(z.never());
+    expect(ir).toEqual<NeverIR>({
+      type: "never",
     });
   });
 });

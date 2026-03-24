@@ -16,6 +16,8 @@ import {
   generateIntersectionValidation,
   generateLiteralValidation,
   generateMapValidation,
+  generateNanValidation,
+  generateNeverValidation,
   generateNullableValidation,
   generateNullValidation,
   generateNumberValidation,
@@ -27,10 +29,12 @@ import {
   generateRecursiveRefValidation,
   generateSetValidation,
   generateStringValidation,
+  generateSymbolValidation,
   generateTupleValidation,
   generateUndefinedValidation,
   generateUnionValidation,
   generateUnknownValidation,
+  generateVoidValidation,
 } from "./generators/index.js";
 
 function generateValidation(
@@ -130,6 +134,14 @@ function generateValidation(
       return generatePipeValidation(ir, inputExpr, pathExpr, issuesVar, ctx, generateValidation);
     case "recursiveRef":
       return generateRecursiveRefValidation(inputExpr, pathExpr, issuesVar, ctx);
+    case "symbol":
+      return generateSymbolValidation(inputExpr, pathExpr, issuesVar);
+    case "void":
+      return generateVoidValidation(inputExpr, pathExpr, issuesVar);
+    case "nan":
+      return generateNanValidation(inputExpr, pathExpr, issuesVar);
+    case "never":
+      return generateNeverValidation(inputExpr, pathExpr, issuesVar);
   }
 }
 
