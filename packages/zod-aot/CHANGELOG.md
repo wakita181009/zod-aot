@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/wakita181009/zod-aot/compare/v0.8.0...v0.9.0) (2026-03-24)
+
+
+### Features
+
+* add support for symbol, void, nan, and never types ([#65](https://github.com/wakita181009/zod-aot/issues/65)) ([c803f88](https://github.com/wakita181009/zod-aot/commit/c803f8857fb24ef57a9af89152eaed4fdda7693e))
+
 ## [0.8.0](https://github.com/wakita181009/zod-aot/compare/v0.7.3...v0.8.0) (2026-03-24)
 
 
