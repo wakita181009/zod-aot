@@ -74,6 +74,12 @@
       "source": "./src/unplugin/bun.ts",
       "import": "./dist/unplugin/bun.js",
       "default": "./dist/unplugin/bun.js"
+    },
+    "./rspack": {
+      "types": "./dist/unplugin/rspack.d.ts",
+      "source": "./src/unplugin/rspack.ts",
+      "import": "./dist/unplugin/rspack.js",
+      "default": "./dist/unplugin/rspack.js"
     }
   },
   "scripts": {
