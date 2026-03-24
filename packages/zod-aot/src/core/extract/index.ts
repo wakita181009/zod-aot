@@ -67,6 +67,18 @@ function extractSchemaInner(
     case "unknown":
       return { type: "unknown" };
 
+    case "symbol":
+      return { type: "symbol" };
+
+    case "void":
+      return { type: "void" };
+
+    case "nan":
+      return { type: "nan" };
+
+    case "never":
+      return { type: "never" };
+
     case "literal":
       return { type: "literal", values: def.values };
 

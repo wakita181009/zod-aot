@@ -44,6 +44,10 @@ describe("integration — primitive schemas match Zod", () => {
     ["boolean", z.boolean(), [true, false, 0, 1, "true", null, undefined]],
     ["null", z.null(), [null, undefined, 0, "", false]],
     ["undefined", z.undefined(), [undefined, null, 0, "", false]],
+    ["void", z.void(), [undefined, null, 0, "", false]],
+    ["nan", z.nan(), [NaN, 0, 42, Infinity, "NaN", null, undefined]],
+    ["never", z.never(), [undefined, null, 0, "", true, {}, []]],
+    ["symbol", z.symbol(), [Symbol("test"), Symbol.for("x"), "symbol", 42, null, undefined]],
   ];
 
   for (const [label, schema, inputs] of primitiveTests) {
