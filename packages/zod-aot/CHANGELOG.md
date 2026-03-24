@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/wakita181009/zod-aot/compare/v0.7.3...v0.8.0) (2026-03-24)
+
+
+### Features
+
+* add rspack support via unplugin ([#63](https://github.com/wakita181009/zod-aot/issues/63)) ([cbc2273](https://github.com/wakita181009/zod-aot/commit/cbc22738beaf94637faa08a1cc5d90f81a23840e))
+
 ## [0.7.3](https://github.com/wakita181009/zod-aot/compare/v0.7.2...v0.7.3) (2026-03-23)
 
 
