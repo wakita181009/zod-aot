@@ -23,7 +23,7 @@ npm install zod-aot zod@^4
 
 ### Build Plugin (Recommended)
 
-zod-aot provides build plugins for Vite, webpack, esbuild, Rollup, and Rolldown via [unplugin](https://github.com/unjs/unplugin). The plugin automatically detects `compile()` calls and replaces them with optimized inline validators at build time.
+zod-aot provides build plugins for Vite, webpack, esbuild, Rollup, Rolldown, and rspack via [unplugin](https://github.com/unjs/unplugin). The plugin automatically detects `compile()` calls and replaces them with optimized inline validators at build time.
 
 ```typescript
 // vite.config.ts
@@ -62,6 +62,7 @@ Available plugins:
 | esbuild | `import zodAot from "zod-aot/esbuild"` |
 | Rollup | `import zodAot from "zod-aot/rollup"` |
 | Rolldown | `import zodAot from "zod-aot/rolldown"` |
+| rspack | `import zodAot from "zod-aot/rspack"` |
 | Bun | `import zodAot from "zod-aot/bun"` |
 
 ### Zod Ecosystem Compatibility

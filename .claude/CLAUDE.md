@@ -126,7 +126,7 @@ Plugin entries: `zod-aot/vite`, `zod-aot/webpack`, `zod-aot/esbuild`, `zod-aot/r
 
 ## Schema Coverage
 
-string, number, int, boolean, object, array, literal, enum, union, optional, nullable, null, undefined, tuple, record, intersection, discriminatedUnion, date, any, unknown, default, readonly, bigint, set, map, pipe (non-transform), lazy (self-recursive via recursiveRef)
+string, number, int, boolean, object, array, literal, enum, union, optional, nullable, null, undefined, tuple, record, intersection, discriminatedUnion, date, any, unknown, default, readonly, bigint, set, map, symbol, void, nan, never, pipe (non-transform), lazy (self-recursive via recursiveRef)
 
 ### Fallback to Zod
 transform, refine, superRefine, custom, preprocess, lazy (non-recursive only — self-recursive lazy schemas are compiled via `recursiveRef`)
@@ -157,7 +157,7 @@ zod-aot/
 │       │   │   └── codegen/
 │       │   │       ├── index.ts  # generateValidator() — SchemaIR → JS code
 │       │   │       ├── context.ts # CodeGenContext, CodeGenResult, utils
-│       │   │       └── generators/ # 27 type-specific code generators
+│       │   │       └── generators/ # 31 type-specific code generators
 │       │   ├── cli/              # CLI-specific (no unplugin deps)
 │       │   │   ├── index.ts      # CLI entry point (command parser)
 │       │   │   ├── logger.ts     # Logging utility

@@ -102,7 +102,7 @@ const result = validateUser.safeParse(data);    // { success, data/error }
 
 Choose one of these approaches:
 
-**Option A: Build plugin (Vite / webpack / esbuild / Rollup / Rolldown)**
+**Option A: Build plugin (Vite / webpack / esbuild / Rollup / Rolldown / rspack)**
 
 ```typescript
 // vite.config.ts
@@ -113,7 +113,7 @@ export default defineConfig({
 });
 ```
 
-Also available: `zod-aot/webpack`, `zod-aot/esbuild`, `zod-aot/rollup`, `zod-aot/rolldown`, `zod-aot/bun`
+Also available: `zod-aot/webpack`, `zod-aot/esbuild`, `zod-aot/rollup`, `zod-aot/rolldown`, `zod-aot/rspack`, `zod-aot/bun`
 
 **Option B: CLI**
 
@@ -327,6 +327,10 @@ interface CompiledSchema<T> {
 | `nullable` | wraps any supported type |
 | `readonly` | validates inner type (TS-only concept) |
 | `default` | replaces `undefined` with default value, then validates inner |
+| `symbol` | — (typeof check) |
+| `void` | — (accepts `undefined`) |
+| `nan` | — (Number.isNaN check) |
+| `never` | — (always fails) |
 | `lazy` (self-recursive) | cycle detection → self-recursive codegen |
 
 ### Automatic Fallback to Zod
@@ -383,7 +387,7 @@ zod-aot/
 │   │   │   ├── extract/      # _zod.def → SchemaIR (extractors per type)
 │   │   │   └── codegen/      # SchemaIR → optimized JS
 │   │   ├── cli/              # CLI commands (generate, check, watch)
-│   │   └── unplugin/         # Build plugin (Vite/webpack/esbuild/Rollup/Rolldown/Bun)
+│   │   └── unplugin/         # Build plugin (Vite/webpack/esbuild/Rollup/Rolldown/rspack/Bun)
 │   └── tests/
 ├── benchmarks/               # vitest bench (zod v3 vs v4 vs zod-aot vs ajv vs typia)
 └── .github/workflows/        # CI + release automation
