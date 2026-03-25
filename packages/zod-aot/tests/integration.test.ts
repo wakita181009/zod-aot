@@ -35,7 +35,41 @@ function assertSameResult(schema: z.ZodType, input: unknown, name = "test") {
   }
 }
 
-// ─── Primitive Compatibility ────────────────────────────────────────────────
+/**
+ * Strip the `message` field from each Zod issue for comparison,
+ * since AOT does not generate user-facing messages.
+ */
+function stripMessage(issue: Record<string, unknown>): Record<string, unknown> {
+  const { message: _, input: _input, ...rest } = issue;
+  return rest;
+}
+
+function stripInput(issue: Record<string, unknown>): Record<string, unknown> {
+  const { input: _, ...rest } = issue;
+  return rest;
+}
+
+/**
+ * Assert that error issues from AOT match Zod structurally (same fields except `message`).
+ */
+function assertSameIssues(schema: z.ZodType, input: unknown, name = "test") {
+  const zodResult = schema.safeParse(input);
+  const safeParse = compileZodSchema(schema, name);
+  const aotResult = safeParse(input);
+
+  expect(aotResult.success).toBe(zodResult.success);
+  if (!zodResult.success && !aotResult.success) {
+    const zodIssues = zodResult.error.issues.map((i) =>
+      stripMessage(i as unknown as Record<string, unknown>),
+    );
+    const aotIssues = aotResult.error?.issues.map((i) => stripInput(i as Record<string, unknown>));
+    expect(aotIssues).toMatchObject(zodIssues);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 1. Primitive Types
+// ═══════════════════════════════════════════════════════════════════════════════
 
 describe("integration — primitive schemas match Zod", () => {
   const primitiveTests: [string, z.ZodType, unknown[]][] = [
@@ -62,7 +96,25 @@ describe("integration — primitive schemas match Zod", () => {
   }
 });
 
-// ─── String Checks Compatibility ────────────────────────────────────────────
+describe("integration — any/unknown match Zod", () => {
+  it("any accepts everything", () => {
+    const schema = z.any();
+    for (const input of ["hello", 42, null, undefined, {}, [], true]) {
+      assertSameResult(schema, input, "anySchema");
+    }
+  });
+
+  it("unknown accepts everything", () => {
+    const schema = z.unknown();
+    for (const input of ["hello", 42, null, undefined, {}, [], true]) {
+      assertSameResult(schema, input, "unknownSchema");
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 2. Type Checks
+// ═══════════════════════════════════════════════════════════════════════════════
 
 describe("integration — string check schemas match Zod", () => {
   it("min(3) boundary values", () => {
@@ -110,8 +162,6 @@ describe("integration — string check schemas match Zod", () => {
   });
 });
 
-// ─── Number Checks Compatibility ────────────────────────────────────────────
-
 describe("integration — number check schemas match Zod", () => {
   it("int() boundary values", () => {
     const schema = z.number().int();
@@ -149,7 +199,108 @@ describe("integration — number check schemas match Zod", () => {
   });
 });
 
-// ─── Object Compatibility ───────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// 3. Modifiers
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("integration — literal schemas match Zod", () => {
+  it("string literal", () => {
+    const schema = z.literal("hello");
+    for (const input of ["hello", "world", "", 42, null, undefined]) {
+      assertSameResult(schema, input, "strLit");
+    }
+  });
+
+  it("number literal", () => {
+    const schema = z.literal(42);
+    for (const input of [42, 43, 0, "42", null]) {
+      assertSameResult(schema, input, "numLit");
+    }
+  });
+
+  it("boolean literal", () => {
+    const schema = z.literal(true);
+    for (const input of [true, false, 1, "true", null]) {
+      assertSameResult(schema, input, "boolLit");
+    }
+  });
+});
+
+describe("integration — enum schemas match Zod", () => {
+  it("string enum", () => {
+    const schema = z.enum(["admin", "user", "guest"]);
+    const inputs = ["admin", "user", "guest", "superadmin", "", 42, null, undefined];
+    for (const input of inputs) {
+      assertSameResult(schema, input, "strEnum");
+    }
+  });
+});
+
+describe("integration — optional/nullable match Zod", () => {
+  it("optional string", () => {
+    const schema = z.string().optional();
+    for (const input of ["hello", "", undefined, null, 42]) {
+      assertSameResult(schema, input, "optStr");
+    }
+  });
+
+  it("nullable string", () => {
+    const schema = z.string().nullable();
+    for (const input of ["hello", "", null, undefined, 42]) {
+      assertSameResult(schema, input, "nullStr");
+    }
+  });
+
+  it("optional nullable string", () => {
+    const schema = z.string().nullable().optional();
+    for (const input of ["hello", "", null, undefined, 42]) {
+      assertSameResult(schema, input, "optNullStr");
+    }
+  });
+});
+
+describe("integration — readonly match Zod", () => {
+  it("readonly string", () => {
+    const schema = z.string().readonly();
+    for (const input of ["hello", "", 42, null, undefined]) {
+      assertSameResult(schema, input, "roStr");
+    }
+  });
+
+  it("readonly object", () => {
+    const schema = z.object({ name: z.string() }).readonly();
+    for (const input of [{ name: "Alice" }, {}, null, "not object"]) {
+      assertSameResult(schema, input, "roObj");
+    }
+  });
+});
+
+describe("integration — default match Zod", () => {
+  it("standalone default", () => {
+    const schema = z.string().default("fallback");
+    for (const input of [undefined, "hello", ""]) {
+      assertSameResult(schema, input, "defaultStr");
+    }
+  });
+
+  it("default in object property", () => {
+    const schema = z.object({
+      name: z.string(),
+      role: z.string().default("user"),
+    });
+    for (const input of [
+      { name: "Alice", role: "admin" },
+      { name: "Bob" },
+      { name: "Carol", role: undefined },
+    ]) {
+      assertSameResult(schema, input, "defaultObj");
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 4. Composite Types
+// ═══════════════════════════════════════════════════════════════════════════════
 
 describe("integration — object schemas match Zod", () => {
   it("simple object", () => {
@@ -227,8 +378,6 @@ describe("integration — object schemas match Zod", () => {
   });
 });
 
-// ─── Array Compatibility ────────────────────────────────────────────────────
-
 describe("integration — array schemas match Zod", () => {
   it("basic array", () => {
     const schema = z.array(z.string());
@@ -264,44 +413,126 @@ describe("integration — array schemas match Zod", () => {
   });
 });
 
-// ─── Enum Compatibility ─────────────────────────────────────────────────────
+describe("integration — tuple match Zod", () => {
+  it("basic tuple", () => {
+    const schema = z.tuple([z.string(), z.number()]);
+    for (const input of [["hello", 42], ["a", 1], [42, "hello"], ["a"], "not array", null]) {
+      assertSameResult(schema, input, "tupleBasic");
+    }
+  });
 
-describe("integration — enum schemas match Zod", () => {
-  it("string enum", () => {
-    const schema = z.enum(["admin", "user", "guest"]);
-    const inputs = ["admin", "user", "guest", "superadmin", "", 42, null, undefined];
-    for (const input of inputs) {
-      assertSameResult(schema, input, "strEnum");
+  it("tuple with rest", () => {
+    const schema = z.tuple([z.string()]).rest(z.number());
+    for (const input of [["a"], ["a", 1], ["a", 1, 2, 3], ["a", "b"]]) {
+      assertSameResult(schema, input, "tupleRest");
     }
   });
 });
 
-// ─── Literal Compatibility ──────────────────────────────────────────────────
-
-describe("integration — literal schemas match Zod", () => {
-  it("string literal", () => {
-    const schema = z.literal("hello");
-    for (const input of ["hello", "world", "", 42, null, undefined]) {
-      assertSameResult(schema, input, "strLit");
+describe("integration — record match Zod", () => {
+  it("string key record", () => {
+    const schema = z.record(z.string(), z.number());
+    for (const input of [{}, { a: 1 }, { a: 1, b: 2 }, { a: "not number" }, null, "not object"]) {
+      assertSameResult(schema, input, "recordStr");
     }
   });
 
-  it("number literal", () => {
-    const schema = z.literal(42);
-    for (const input of [42, 43, 0, "42", null]) {
-      assertSameResult(schema, input, "numLit");
+  it("key constraint record produces invalid_key like Zod", () => {
+    const schema = z.record(z.string().min(3), z.number());
+    const safeParse = compileZodSchema(schema, "recordKeyMin");
+
+    // Invalid key
+    const aotResult = safeParse({ ab: 1 });
+    const zodResult = schema.safeParse({ ab: 1 });
+    expect(aotResult.success).toBe(zodResult.success);
+    expect(aotResult.error?.issues.length).toBe(zodResult.error?.issues.length);
+    expect((aotResult.error?.issues[0] as Record<string, unknown>)?.["code"]).toBe("invalid_key");
+
+    // Invalid key + invalid value: Zod short-circuits (only key error)
+    const aotResult2 = safeParse({ ab: "not-number" });
+    const zodResult2 = schema.safeParse({ ab: "not-number" });
+    expect(aotResult2.success).toBe(zodResult2.success);
+    expect(aotResult2.error?.issues.length).toBe(zodResult2.error?.issues.length);
+  });
+});
+
+describe("integration — set match Zod", () => {
+  it("plain set of strings", () => {
+    const schema = z.set(z.string());
+    for (const input of [
+      new Set(["a", "b"]),
+      new Set(),
+      new Set([1, 2]),
+      ["a", "b"],
+      null,
+      "not a set",
+    ]) {
+      assertSameResult(schema, input, "setStr");
     }
   });
 
-  it("boolean literal", () => {
-    const schema = z.literal(true);
-    for (const input of [true, false, 1, "true", null]) {
-      assertSameResult(schema, input, "boolLit");
+  it("set with min/max size", () => {
+    const schema = z.set(z.number()).min(1).max(3);
+    for (const input of [
+      new Set([1]),
+      new Set([1, 2, 3]),
+      new Set<number>(),
+      new Set([1, 2, 3, 4]),
+    ]) {
+      assertSameResult(schema, input, "setMinMax");
+    }
+  });
+
+  it("set of objects", () => {
+    const schema = z.set(z.object({ id: z.number() }));
+    for (const input of [new Set([{ id: 1 }]), new Set([{ id: "bad" }])]) {
+      assertSameResult(schema, input, "setObj");
     }
   });
 });
 
-// ─── Union Compatibility ────────────────────────────────────────────────────
+describe("integration — map match Zod", () => {
+  it("plain map string→number", () => {
+    const schema = z.map(z.string(), z.number());
+    for (const input of [
+      new Map([
+        ["a", 1],
+        ["b", 2],
+      ]),
+      new Map(),
+      new Map([["a", "bad"]]) as unknown,
+      { a: 1 },
+      null,
+      "not a map",
+    ]) {
+      assertSameResult(schema, input, "mapStrNum");
+    }
+  });
+
+  it("map with number keys", () => {
+    const schema = z.map(z.number(), z.string());
+    for (const input of [
+      new Map([
+        [1, "a"],
+        [2, "b"],
+      ]),
+      new Map([["bad", "a"]]) as unknown,
+    ]) {
+      assertSameResult(schema, input, "mapNumStr");
+    }
+  });
+
+  it("map with object values", () => {
+    const schema = z.map(z.string(), z.object({ id: z.number() }));
+    for (const input of [new Map([["x", { id: 1 }]]), new Map([["x", { id: "bad" }]]) as unknown]) {
+      assertSameResult(schema, input, "mapObj");
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 5. Combinators
+// ═══════════════════════════════════════════════════════════════════════════════
 
 describe("integration — union schemas match Zod", () => {
   it("string | number union", () => {
@@ -319,32 +550,237 @@ describe("integration — union schemas match Zod", () => {
   });
 });
 
-// ─── Optional / Nullable Compatibility ──────────────────────────────────────
-
-describe("integration — optional/nullable match Zod", () => {
-  it("optional string", () => {
-    const schema = z.string().optional();
-    for (const input of ["hello", "", undefined, null, 42]) {
-      assertSameResult(schema, input, "optStr");
+describe("integration — discriminatedUnion match Zod", () => {
+  it("basic discriminated union", () => {
+    const schema = z.discriminatedUnion("type", [
+      z.object({ type: z.literal("a"), value: z.string() }),
+      z.object({ type: z.literal("b"), count: z.number() }),
+    ]);
+    for (const input of [
+      { type: "a", value: "hello" },
+      { type: "b", count: 42 },
+      { type: "a", value: 42 },
+      { type: "c" },
+      { value: "no type" },
+      null,
+      "not object",
+    ]) {
+      assertSameResult(schema, input, "discUnion");
     }
   });
 
-  it("nullable string", () => {
-    const schema = z.string().nullable();
-    for (const input of ["hello", "", null, undefined, 42]) {
-      assertSameResult(schema, input, "nullStr");
-    }
-  });
-
-  it("optional nullable string", () => {
-    const schema = z.string().nullable().optional();
-    for (const input of ["hello", "", null, undefined, 42]) {
-      assertSameResult(schema, input, "optNullStr");
+  it("discriminated union with 3 options", () => {
+    const schema = z.discriminatedUnion("kind", [
+      z.object({ kind: z.literal("circle"), radius: z.number() }),
+      z.object({ kind: z.literal("square"), size: z.number() }),
+      z.object({ kind: z.literal("rect"), w: z.number(), h: z.number() }),
+    ]);
+    for (const input of [
+      { kind: "circle", radius: 5 },
+      { kind: "square", size: 10 },
+      { kind: "rect", w: 3, h: 4 },
+      { kind: "triangle" },
+      { kind: "circle", radius: "not number" },
+    ]) {
+      assertSameResult(schema, input, "discUnion3");
     }
   });
 });
 
-// ─── Real-World Schema Compatibility ────────────────────────────────────────
+describe("integration — intersection match Zod", () => {
+  it("object intersection", () => {
+    const schema = z.intersection(z.object({ a: z.string() }), z.object({ b: z.number() }));
+    for (const input of [{ a: "hello", b: 42 }, { a: "hello" }, { b: 42 }, {}, null]) {
+      assertSameResult(schema, input, "intersect");
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 6. Other Types
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("integration — date match Zod", () => {
+  it("plain date", () => {
+    const schema = z.date();
+    for (const input of [new Date(), new Date("2024-01-01"), "2024-01-01", 123, null]) {
+      assertSameResult(schema, input, "dateSchema");
+    }
+  });
+
+  it("date with min/max", () => {
+    const schema = z.date().min(new Date("2020-01-01")).max(new Date("2030-01-01"));
+    for (const input of [
+      new Date("2025-01-01"),
+      new Date("2020-01-01"),
+      new Date("2030-01-01"),
+      new Date("2019-12-31"),
+      new Date("2030-01-02"),
+    ]) {
+      assertSameResult(schema, input, "dateMinMax");
+    }
+  });
+
+  it("rejects invalid date", () => {
+    const schema = z.date();
+    assertSameResult(schema, new Date("invalid"), "dateInvalid");
+  });
+});
+
+describe("integration — bigint match Zod", () => {
+  it("plain bigint", () => {
+    const schema = z.bigint();
+    for (const input of [0n, 42n, -1n, 42, "42", null, undefined, true]) {
+      assertSameResult(schema, input, "bigintSchema");
+    }
+  });
+
+  it("bigint with min/max", () => {
+    const schema = z.bigint().min(10n).max(100n);
+    for (const input of [10n, 50n, 100n, 9n, 101n, 0n]) {
+      assertSameResult(schema, input, "bigintMinMax");
+    }
+  });
+
+  it("bigint positive", () => {
+    const schema = z.bigint().positive();
+    for (const input of [1n, 100n, 0n, -1n]) {
+      assertSameResult(schema, input, "bigintPos");
+    }
+  });
+
+  it("bigint negative", () => {
+    const schema = z.bigint().negative();
+    for (const input of [-1n, -100n, 0n, 1n]) {
+      assertSameResult(schema, input, "bigintNeg");
+    }
+  });
+
+  it("bigint nonnegative", () => {
+    const schema = z.bigint().nonnegative();
+    for (const input of [0n, 1n, -1n]) {
+      assertSameResult(schema, input, "bigintNonneg");
+    }
+  });
+
+  it("bigint multipleOf", () => {
+    const schema = z.bigint().multipleOf(3n);
+    for (const input of [0n, 3n, 6n, 9n, 1n, 2n, 7n]) {
+      assertSameResult(schema, input, "bigintMul");
+    }
+  });
+});
+
+describe("integration — pipe (non-transform) match Zod", () => {
+  it("string pipe to string with min length", () => {
+    const schema = z.string().pipe(z.string().min(3));
+    for (const input of ["hello", "ab", "", 42, null]) {
+      assertSameResult(schema, input, "pipeStrMin");
+    }
+  });
+
+  it("number pipe to number with range", () => {
+    const schema = z.number().pipe(z.number().min(0).max(100));
+    for (const input of [50, 0, 100, -1, 101, "not number"]) {
+      assertSameResult(schema, input, "pipeNumRange");
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 7. Error Issue Comparison
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("integration — bigint error issues match Zod", () => {
+  it("too_small issue for min()", () => {
+    assertSameIssues(z.bigint().min(10n), 5n, "bigintMin");
+  });
+
+  it("too_big issue for max()", () => {
+    assertSameIssues(z.bigint().max(100n), 200n, "bigintMax");
+  });
+
+  it("too_small issue for positive()", () => {
+    assertSameIssues(z.bigint().positive(), 0n, "bigintPos");
+  });
+
+  it("too_big issue for negative()", () => {
+    assertSameIssues(z.bigint().negative(), 0n, "bigintNeg");
+  });
+
+  it("not_multiple_of issue for multipleOf()", () => {
+    assertSameIssues(z.bigint().multipleOf(3n), 7n, "bigintMul");
+  });
+
+  it("invalid_type issue for non-bigint input", () => {
+    assertSameIssues(z.bigint(), 42, "bigintType");
+  });
+
+  it("multiple issues for combined checks", () => {
+    assertSameIssues(z.bigint().min(10n).max(100n), 5n, "bigintRange");
+  });
+});
+
+describe("integration — set error issues match Zod", () => {
+  it("too_small issue for min()", () => {
+    assertSameIssues(z.set(z.number()).min(2), new Set([1]), "setMin");
+  });
+
+  it("too_big issue for max()", () => {
+    assertSameIssues(z.set(z.number()).max(2), new Set([1, 2, 3]), "setMax");
+  });
+
+  it("invalid_type issue for non-Set input", () => {
+    assertSameIssues(z.set(z.string()), ["a", "b"], "setType");
+  });
+
+  it("element validation issues have same code as Zod", () => {
+    const schema = z.set(z.number());
+    const input = new Set([1, "bad", 3]);
+    const zodResult = schema.safeParse(input);
+    const safeParse = compileZodSchema(schema, "setElem");
+    const aotResult = safeParse(input);
+    expect(aotResult.success).toBe(false);
+    expect(zodResult.success).toBe(false);
+    if (!aotResult.success && !zodResult.success) {
+      // Both report invalid_type for element; AOT includes element index in path
+      expect(aotResult.error?.issues[0]).toMatchObject({
+        code: zodResult.error.issues[0]?.code,
+        expected: (zodResult.error.issues[0] as unknown as Record<string, unknown>)?.["expected"],
+      });
+    }
+  });
+});
+
+describe("integration — pipe error issues match Zod", () => {
+  it("too_small issue from output schema check", () => {
+    assertSameIssues(z.string().pipe(z.string().min(3)), "ab", "pipeMin");
+  });
+
+  it("invalid_type issue from input schema has same code as Zod", () => {
+    const schema = z.string().pipe(z.string().min(3));
+    const zodResult = schema.safeParse(42);
+    const safeParse = compileZodSchema(schema, "pipeType");
+    const aotResult = safeParse(42);
+    expect(aotResult.success).toBe(false);
+    expect(zodResult.success).toBe(false);
+    if (!aotResult.success && !zodResult.success) {
+      // Zod short-circuits on input failure (1 issue); AOT validates both in+out (2 issues)
+      // First issue should match
+      expect(stripInput(aotResult.error?.issues[0] as Record<string, unknown>)).toEqual(
+        stripMessage(zodResult.error.issues[0] as unknown as Record<string, unknown>),
+      );
+    }
+  });
+
+  it("too_big issue from output number range", () => {
+    assertSameIssues(z.number().pipe(z.number().max(100)), 200, "pipeMax");
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 8. Real-World & Infrastructure
+// ═══════════════════════════════════════════════════════════════════════════════
 
 describe("integration — real-world schemas match Zod", () => {
   it("user registration form", () => {
@@ -474,7 +910,28 @@ describe("integration — real-world schemas match Zod", () => {
   });
 });
 
-// ─── Fallback Behavior ──────────────────────────────────────────────────────
+describe("integration — SchemaIR is JSON-serializable", () => {
+  it("extracted IR survives JSON roundtrip", () => {
+    const schema = z.object({
+      name: z.string().min(1).max(100),
+      age: z.number().int().positive(),
+      role: z.enum(["admin", "user"]),
+      tags: z.array(z.string()),
+      active: z.boolean(),
+      extra: z.string().optional(),
+    });
+
+    const ir = extractSchema(schema);
+    const serialized = JSON.stringify(ir);
+    const deserialized = JSON.parse(serialized) as SchemaIR;
+    expect(deserialized).toEqual(ir);
+
+    // The deserialized IR should produce the same validator
+    const result1 = generateValidator(ir, "original");
+    const result2 = generateValidator(deserialized, "roundtrip");
+    expect(result1.code).toBe(result2.code);
+  });
+});
 
 describe("integration — fallback for non-compilable schemas", () => {
   it("transform schema produces fallback IR", () => {
@@ -504,362 +961,6 @@ describe("integration — fallback for non-compilable schemas", () => {
     expect(ir.type).toBe("object");
   });
 });
-
-// ─── Tier 2: any / unknown Compatibility ────────────────────────────────────
-
-describe("integration — any/unknown match Zod", () => {
-  it("any accepts everything", () => {
-    const schema = z.any();
-    for (const input of ["hello", 42, null, undefined, {}, [], true]) {
-      assertSameResult(schema, input, "anySchema");
-    }
-  });
-
-  it("unknown accepts everything", () => {
-    const schema = z.unknown();
-    for (const input of ["hello", 42, null, undefined, {}, [], true]) {
-      assertSameResult(schema, input, "unknownSchema");
-    }
-  });
-});
-
-// ─── Tier 2: readonly Compatibility ─────────────────────────────────────────
-
-describe("integration — readonly match Zod", () => {
-  it("readonly string", () => {
-    const schema = z.string().readonly();
-    for (const input of ["hello", "", 42, null, undefined]) {
-      assertSameResult(schema, input, "roStr");
-    }
-  });
-
-  it("readonly object", () => {
-    const schema = z.object({ name: z.string() }).readonly();
-    for (const input of [{ name: "Alice" }, {}, null, "not object"]) {
-      assertSameResult(schema, input, "roObj");
-    }
-  });
-});
-
-// ─── Tier 2: date Compatibility ─────────────────────────────────────────────
-
-describe("integration — date match Zod", () => {
-  it("plain date", () => {
-    const schema = z.date();
-    for (const input of [new Date(), new Date("2024-01-01"), "2024-01-01", 123, null]) {
-      assertSameResult(schema, input, "dateSchema");
-    }
-  });
-
-  it("date with min/max", () => {
-    const schema = z.date().min(new Date("2020-01-01")).max(new Date("2030-01-01"));
-    for (const input of [
-      new Date("2025-01-01"),
-      new Date("2020-01-01"),
-      new Date("2030-01-01"),
-      new Date("2019-12-31"),
-      new Date("2030-01-02"),
-    ]) {
-      assertSameResult(schema, input, "dateMinMax");
-    }
-  });
-
-  it("rejects invalid date", () => {
-    const schema = z.date();
-    assertSameResult(schema, new Date("invalid"), "dateInvalid");
-  });
-});
-
-// ─── Tier 2: tuple Compatibility ────────────────────────────────────────────
-
-describe("integration — tuple match Zod", () => {
-  it("basic tuple", () => {
-    const schema = z.tuple([z.string(), z.number()]);
-    for (const input of [["hello", 42], ["a", 1], [42, "hello"], ["a"], "not array", null]) {
-      assertSameResult(schema, input, "tupleBasic");
-    }
-  });
-
-  it("tuple with rest", () => {
-    const schema = z.tuple([z.string()]).rest(z.number());
-    for (const input of [["a"], ["a", 1], ["a", 1, 2, 3], ["a", "b"]]) {
-      assertSameResult(schema, input, "tupleRest");
-    }
-  });
-});
-
-// ─── Tier 2: record Compatibility ───────────────────────────────────────────
-
-describe("integration — record match Zod", () => {
-  it("string key record", () => {
-    const schema = z.record(z.string(), z.number());
-    for (const input of [{}, { a: 1 }, { a: 1, b: 2 }, { a: "not number" }, null, "not object"]) {
-      assertSameResult(schema, input, "recordStr");
-    }
-  });
-
-  it("key constraint record produces invalid_key like Zod", () => {
-    const schema = z.record(z.string().min(3), z.number());
-    const safeParse = compileZodSchema(schema, "recordKeyMin");
-
-    // Invalid key
-    const aotResult = safeParse({ ab: 1 });
-    const zodResult = schema.safeParse({ ab: 1 });
-    expect(aotResult.success).toBe(zodResult.success);
-    expect(aotResult.error?.issues.length).toBe(zodResult.error?.issues.length);
-    expect((aotResult.error?.issues[0] as Record<string, unknown>)?.["code"]).toBe("invalid_key");
-
-    // Invalid key + invalid value: Zod short-circuits (only key error)
-    const aotResult2 = safeParse({ ab: "not-number" });
-    const zodResult2 = schema.safeParse({ ab: "not-number" });
-    expect(aotResult2.success).toBe(zodResult2.success);
-    expect(aotResult2.error?.issues.length).toBe(zodResult2.error?.issues.length);
-  });
-});
-
-// ─── Tier 2: default Compatibility ──────────────────────────────────────────
-
-describe("integration — default match Zod", () => {
-  it("standalone default", () => {
-    const schema = z.string().default("fallback");
-    for (const input of [undefined, "hello", ""]) {
-      assertSameResult(schema, input, "defaultStr");
-    }
-  });
-
-  it("default in object property", () => {
-    const schema = z.object({
-      name: z.string(),
-      role: z.string().default("user"),
-    });
-    for (const input of [
-      { name: "Alice", role: "admin" },
-      { name: "Bob" },
-      { name: "Carol", role: undefined },
-    ]) {
-      assertSameResult(schema, input, "defaultObj");
-    }
-  });
-});
-
-// ─── Tier 2: intersection Compatibility ─────────────────────────────────────
-
-describe("integration — intersection match Zod", () => {
-  it("object intersection", () => {
-    const schema = z.intersection(z.object({ a: z.string() }), z.object({ b: z.number() }));
-    for (const input of [{ a: "hello", b: 42 }, { a: "hello" }, { b: 42 }, {}, null]) {
-      assertSameResult(schema, input, "intersect");
-    }
-  });
-});
-
-// ─── Tier 2: discriminatedUnion Compatibility ───────────────────────────────
-
-describe("integration — discriminatedUnion match Zod", () => {
-  it("basic discriminated union", () => {
-    const schema = z.discriminatedUnion("type", [
-      z.object({ type: z.literal("a"), value: z.string() }),
-      z.object({ type: z.literal("b"), count: z.number() }),
-    ]);
-    for (const input of [
-      { type: "a", value: "hello" },
-      { type: "b", count: 42 },
-      { type: "a", value: 42 },
-      { type: "c" },
-      { value: "no type" },
-      null,
-      "not object",
-    ]) {
-      assertSameResult(schema, input, "discUnion");
-    }
-  });
-
-  it("discriminated union with 3 options", () => {
-    const schema = z.discriminatedUnion("kind", [
-      z.object({ kind: z.literal("circle"), radius: z.number() }),
-      z.object({ kind: z.literal("square"), size: z.number() }),
-      z.object({ kind: z.literal("rect"), w: z.number(), h: z.number() }),
-    ]);
-    for (const input of [
-      { kind: "circle", radius: 5 },
-      { kind: "square", size: 10 },
-      { kind: "rect", w: 3, h: 4 },
-      { kind: "triangle" },
-      { kind: "circle", radius: "not number" },
-    ]) {
-      assertSameResult(schema, input, "discUnion3");
-    }
-  });
-});
-
-// ─── Tier 3: bigint Compatibility ────────────────────────────────────────────
-
-describe("integration — bigint match Zod", () => {
-  it("plain bigint", () => {
-    const schema = z.bigint();
-    for (const input of [0n, 42n, -1n, 42, "42", null, undefined, true]) {
-      assertSameResult(schema, input, "bigintSchema");
-    }
-  });
-
-  it("bigint with min/max", () => {
-    const schema = z.bigint().min(10n).max(100n);
-    for (const input of [10n, 50n, 100n, 9n, 101n, 0n]) {
-      assertSameResult(schema, input, "bigintMinMax");
-    }
-  });
-
-  it("bigint positive", () => {
-    const schema = z.bigint().positive();
-    for (const input of [1n, 100n, 0n, -1n]) {
-      assertSameResult(schema, input, "bigintPos");
-    }
-  });
-
-  it("bigint negative", () => {
-    const schema = z.bigint().negative();
-    for (const input of [-1n, -100n, 0n, 1n]) {
-      assertSameResult(schema, input, "bigintNeg");
-    }
-  });
-
-  it("bigint nonnegative", () => {
-    const schema = z.bigint().nonnegative();
-    for (const input of [0n, 1n, -1n]) {
-      assertSameResult(schema, input, "bigintNonneg");
-    }
-  });
-
-  it("bigint multipleOf", () => {
-    const schema = z.bigint().multipleOf(3n);
-    for (const input of [0n, 3n, 6n, 9n, 1n, 2n, 7n]) {
-      assertSameResult(schema, input, "bigintMul");
-    }
-  });
-});
-
-// ─── Tier 3: set Compatibility ───────────────────────────────────────────────
-
-describe("integration — set match Zod", () => {
-  it("plain set of strings", () => {
-    const schema = z.set(z.string());
-    for (const input of [
-      new Set(["a", "b"]),
-      new Set(),
-      new Set([1, 2]),
-      ["a", "b"],
-      null,
-      "not a set",
-    ]) {
-      assertSameResult(schema, input, "setStr");
-    }
-  });
-
-  it("set with min/max size", () => {
-    const schema = z.set(z.number()).min(1).max(3);
-    for (const input of [
-      new Set([1]),
-      new Set([1, 2, 3]),
-      new Set<number>(),
-      new Set([1, 2, 3, 4]),
-    ]) {
-      assertSameResult(schema, input, "setMinMax");
-    }
-  });
-
-  it("set of objects", () => {
-    const schema = z.set(z.object({ id: z.number() }));
-    for (const input of [new Set([{ id: 1 }]), new Set([{ id: "bad" }])]) {
-      assertSameResult(schema, input, "setObj");
-    }
-  });
-});
-
-// ─── Tier 3: map Compatibility ──────────────────────────────────────────────
-
-describe("integration — map match Zod", () => {
-  it("plain map string→number", () => {
-    const schema = z.map(z.string(), z.number());
-    for (const input of [
-      new Map([
-        ["a", 1],
-        ["b", 2],
-      ]),
-      new Map(),
-      new Map([["a", "bad"]]) as unknown,
-      { a: 1 },
-      null,
-      "not a map",
-    ]) {
-      assertSameResult(schema, input, "mapStrNum");
-    }
-  });
-
-  it("map with number keys", () => {
-    const schema = z.map(z.number(), z.string());
-    for (const input of [
-      new Map([
-        [1, "a"],
-        [2, "b"],
-      ]),
-      new Map([["bad", "a"]]) as unknown,
-    ]) {
-      assertSameResult(schema, input, "mapNumStr");
-    }
-  });
-
-  it("map with object values", () => {
-    const schema = z.map(z.string(), z.object({ id: z.number() }));
-    for (const input of [new Map([["x", { id: 1 }]]), new Map([["x", { id: "bad" }]]) as unknown]) {
-      assertSameResult(schema, input, "mapObj");
-    }
-  });
-});
-
-// ─── Tier 3: pipe (non-transform) Compatibility ─────────────────────────────
-
-describe("integration — pipe (non-transform) match Zod", () => {
-  it("string pipe to string with min length", () => {
-    const schema = z.string().pipe(z.string().min(3));
-    for (const input of ["hello", "ab", "", 42, null]) {
-      assertSameResult(schema, input, "pipeStrMin");
-    }
-  });
-
-  it("number pipe to number with range", () => {
-    const schema = z.number().pipe(z.number().min(0).max(100));
-    for (const input of [50, 0, 100, -1, 101, "not number"]) {
-      assertSameResult(schema, input, "pipeNumRange");
-    }
-  });
-});
-
-// ─── SchemaIR Roundtrip ─────────────────────────────────────────────────────
-
-describe("integration — SchemaIR is JSON-serializable", () => {
-  it("extracted IR survives JSON roundtrip", () => {
-    const schema = z.object({
-      name: z.string().min(1).max(100),
-      age: z.number().int().positive(),
-      role: z.enum(["admin", "user"]),
-      tags: z.array(z.string()),
-      active: z.boolean(),
-      extra: z.string().optional(),
-    });
-
-    const ir = extractSchema(schema);
-    const serialized = JSON.stringify(ir);
-    const deserialized = JSON.parse(serialized) as SchemaIR;
-    expect(deserialized).toEqual(ir);
-
-    // The deserialized IR should produce the same validator
-    const result1 = generateValidator(ir, "original");
-    const result2 = generateValidator(deserialized, "roundtrip");
-    expect(result1.code).toBe(result2.code);
-  });
-});
-
-// ─── Partial Fallback E2E ──────────────────────────────────────────────────
 
 function compileWithFallbacks(schema: z.ZodType, name = "test") {
   const fallbackEntries: FallbackEntry[] = [];

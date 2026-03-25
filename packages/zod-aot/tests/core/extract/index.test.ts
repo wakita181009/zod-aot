@@ -313,7 +313,7 @@ describe("extractSchema — optional + nullable combined", () => {
   });
 });
 
-// ─── Tier 2: any / unknown ─────────────────────────────────────────────────
+// ─── any / unknown ─────────────────────────────────────────────────────────
 
 describe("extractSchema — any", () => {
   it("extracts z.any()", () => {
@@ -329,7 +329,7 @@ describe("extractSchema — unknown", () => {
   });
 });
 
-// ─── Tier 2: readonly ──────────────────────────────────────────────────────
+// ─── readonly ──────────────────────────────────────────────────────────────
 
 describe("extractSchema — readonly", () => {
   it("extracts readonly string", () => {
@@ -345,7 +345,7 @@ describe("extractSchema — readonly", () => {
   });
 });
 
-// ─── Tier 2: tuple ─────────────────────────────────────────────────────────
+// ─── tuple ─────────────────────────────────────────────────────────────────
 
 describe("extractSchema — tuple", () => {
   it("extracts basic tuple", () => {
@@ -372,7 +372,7 @@ describe("extractSchema — tuple", () => {
   });
 });
 
-// ─── Tier 2: record ────────────────────────────────────────────────────────
+// ─── record ────────────────────────────────────────────────────────────────
 
 describe("extractSchema — record", () => {
   it("extracts string key record", () => {
@@ -390,7 +390,7 @@ describe("extractSchema — record", () => {
   });
 });
 
-// ─── Tier 2: intersection ──────────────────────────────────────────────────
+// ─── intersection ──────────────────────────────────────────────────────────
 
 describe("extractSchema — intersection", () => {
   it("extracts object intersection", () => {

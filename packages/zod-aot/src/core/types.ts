@@ -119,7 +119,21 @@ export interface CheckBigIntMultipleOf {
 
 export type BigIntCheckIR = CheckBigIntGreaterThan | CheckBigIntLessThan | CheckBigIntMultipleOf;
 
-// ─── Schema IR ──────────────────────────────────────────────────────────────
+// ─── Set Check IR ──────────────────────────────────────────────────────────
+
+export interface CheckMinSize {
+  kind: "min_size";
+  minimum: number;
+}
+
+export interface CheckMaxSize {
+  kind: "max_size";
+  maximum: number;
+}
+
+export type SetCheckIR = CheckMinSize | CheckMaxSize;
+
+// ─── Schema IR: Primitives ─────────────────────────────────────────────────
 
 export interface StringIR {
   type: "string";
@@ -135,102 +149,26 @@ export interface BooleanIR {
   type: "boolean";
 }
 
+export interface BigIntIR {
+  type: "bigint";
+  checks: BigIntCheckIR[];
+}
+
+export interface DateIR {
+  type: "date";
+  checks: DateCheckIR[];
+}
+
+export interface SymbolIR {
+  type: "symbol";
+}
+
 export interface NullIR {
   type: "null";
 }
 
 export interface UndefinedIR {
   type: "undefined";
-}
-
-export interface LiteralIR {
-  type: "literal";
-  values: (string | number | boolean | null)[];
-}
-
-export interface EnumIR {
-  type: "enum";
-  values: string[];
-}
-
-export interface ObjectIR {
-  type: "object";
-  properties: Record<string, SchemaIR>;
-}
-
-export interface ArrayIR {
-  type: "array";
-  element: SchemaIR;
-  checks: CheckIR[];
-}
-
-export interface UnionIR {
-  type: "union";
-  options: SchemaIR[];
-}
-
-export interface OptionalIR {
-  type: "optional";
-  inner: SchemaIR;
-}
-
-export interface NullableIR {
-  type: "nullable";
-  inner: SchemaIR;
-}
-
-export interface FallbackIR {
-  type: "fallback";
-  reason: "transform" | "refine" | "superRefine" | "custom" | "lazy" | "unsupported";
-  /** Index into the __fb[] fallback schemas array. Present when partial fallback is used. */
-  fallbackIndex?: number;
-}
-
-// ─── Tier 3 Schema IR ───────────────────────────────────────────────────────
-
-export interface BigIntIR {
-  type: "bigint";
-  checks: BigIntCheckIR[];
-}
-
-// ─── Set Check IR ──────────────────────────────────────────────────────────
-
-export interface CheckMinSize {
-  kind: "min_size";
-  minimum: number;
-}
-
-export interface CheckMaxSize {
-  kind: "max_size";
-  maximum: number;
-}
-
-export type SetCheckIR = CheckMinSize | CheckMaxSize;
-
-export interface SetIR {
-  type: "set";
-  valueType: SchemaIR;
-  checks?: SetCheckIR[];
-}
-
-export interface MapIR {
-  type: "map";
-  keyType: SchemaIR;
-  valueType: SchemaIR;
-}
-
-export interface PipeIR {
-  type: "pipe";
-  in: SchemaIR;
-  out: SchemaIR;
-}
-
-export interface RecursiveRefIR {
-  type: "recursiveRef";
-}
-
-export interface SymbolIR {
-  type: "symbol";
 }
 
 export interface VoidIR {
@@ -245,8 +183,6 @@ export interface NeverIR {
   type: "never";
 }
 
-// ─── Tier 2 Schema IR ───────────────────────────────────────────────────────
-
 export interface AnyIR {
   type: "any";
 }
@@ -255,14 +191,27 @@ export interface UnknownIR {
   type: "unknown";
 }
 
-export interface ReadonlyIR {
-  type: "readonly";
-  inner: SchemaIR;
+export interface LiteralIR {
+  type: "literal";
+  values: (string | number | boolean | null)[];
 }
 
-export interface DateIR {
-  type: "date";
-  checks: DateCheckIR[];
+export interface EnumIR {
+  type: "enum";
+  values: string[];
+}
+
+// ─── Schema IR: Containers ─────────────────────────────────────────────────
+
+export interface ObjectIR {
+  type: "object";
+  properties: Record<string, SchemaIR>;
+}
+
+export interface ArrayIR {
+  type: "array";
+  element: SchemaIR;
+  checks: CheckIR[];
 }
 
 export interface TupleIR {
@@ -277,16 +226,23 @@ export interface RecordIR {
   valueType: SchemaIR;
 }
 
-export interface DefaultIR {
-  type: "default";
-  inner: SchemaIR;
-  defaultValue: unknown;
+export interface SetIR {
+  type: "set";
+  valueType: SchemaIR;
+  checks?: SetCheckIR[];
 }
 
-export interface IntersectionIR {
-  type: "intersection";
-  left: SchemaIR;
-  right: SchemaIR;
+export interface MapIR {
+  type: "map";
+  keyType: SchemaIR;
+  valueType: SchemaIR;
+}
+
+// ─── Schema IR: Unions & Intersections ─────────────────────────────────────
+
+export interface UnionIR {
+  type: "union";
+  options: SchemaIR[];
 }
 
 export interface DiscriminatedUnionIR {
@@ -296,38 +252,93 @@ export interface DiscriminatedUnionIR {
   mapping: Record<string, number>;
 }
 
+export interface IntersectionIR {
+  type: "intersection";
+  left: SchemaIR;
+  right: SchemaIR;
+}
+
+// ─── Schema IR: Modifiers ──────────────────────────────────────────────────
+
+export interface OptionalIR {
+  type: "optional";
+  inner: SchemaIR;
+}
+
+export interface NullableIR {
+  type: "nullable";
+  inner: SchemaIR;
+}
+
+export interface ReadonlyIR {
+  type: "readonly";
+  inner: SchemaIR;
+}
+
+export interface DefaultIR {
+  type: "default";
+  inner: SchemaIR;
+  defaultValue: unknown;
+}
+
+export interface PipeIR {
+  type: "pipe";
+  in: SchemaIR;
+  out: SchemaIR;
+}
+
+// ─── Schema IR: Special ────────────────────────────────────────────────────
+
+export interface FallbackIR {
+  type: "fallback";
+  reason: "transform" | "refine" | "superRefine" | "custom" | "lazy" | "unsupported";
+  /** Index into the __fb[] fallback schemas array. Present when partial fallback is used. */
+  fallbackIndex?: number;
+}
+
+export interface RecursiveRefIR {
+  type: "recursiveRef";
+}
+
+// ─── Schema IR Union ───────────────────────────────────────────────────────
+
 export type SchemaIR =
+  // Primitives
   | StringIR
   | NumberIR
   | BooleanIR
+  | BigIntIR
+  | DateIR
+  | SymbolIR
   | NullIR
   | UndefinedIR
-  | LiteralIR
-  | EnumIR
-  | ObjectIR
-  | ArrayIR
-  | UnionIR
-  | OptionalIR
-  | NullableIR
-  | FallbackIR
-  | AnyIR
-  | UnknownIR
-  | ReadonlyIR
-  | DateIR
-  | TupleIR
-  | RecordIR
-  | DefaultIR
-  | IntersectionIR
-  | DiscriminatedUnionIR
-  | BigIntIR
-  | SetIR
-  | MapIR
-  | PipeIR
-  | RecursiveRefIR
-  | SymbolIR
   | VoidIR
   | NanIR
-  | NeverIR;
+  | NeverIR
+  | AnyIR
+  | UnknownIR
+  | LiteralIR
+  | EnumIR
+  // Containers
+  | ObjectIR
+  | ArrayIR
+  | TupleIR
+  | RecordIR
+  | SetIR
+  | MapIR
+  // Unions & Intersections
+  | UnionIR
+  | DiscriminatedUnionIR
+  | IntersectionIR
+  // Modifiers
+  | OptionalIR
+  | NullableIR
+  | ReadonlyIR
+  | DefaultIR
+  | PipeIR
+  // Special
+  | FallbackIR
+  | RecursiveRefIR;
 
 // ─── Compiled Schema Interface ──────────────────────────────────────────────
 
