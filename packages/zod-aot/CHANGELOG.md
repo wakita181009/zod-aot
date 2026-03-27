@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/wakita181009/zod-aot/compare/v0.9.0...v0.9.1) (2026-03-27)
+
+
+### Bug Fixes
+
+* resolve #src/* type declarations to dist/ instead of unpublished src/ ([0d92d81](https://github.com/wakita181009/zod-aot/commit/0d92d81f3d19c0533e6872bd167f85bf856cbb0c)), closes [#68](https://github.com/wakita181009/zod-aot/issues/68)
+
 ## [0.9.0](https://github.com/wakita181009/zod-aot/compare/v0.8.0...v0.9.0) (2026-03-24)
 
 
