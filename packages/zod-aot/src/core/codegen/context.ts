@@ -9,8 +9,23 @@ export interface CodeGenResult {
 
 export interface CodeGenContext {
   preamble: string[];
+  /** Cache for preamble deduplication: maps value expression → variable name */
+  preambleCache: Map<string, string>;
   counter: number;
   fnName: string;
+}
+
+/**
+ * Add a variable declaration to the preamble, deduplicating identical values.
+ * Returns the variable name (reused if the same value expression was already added).
+ */
+export function addPreambleVar(ctx: CodeGenContext, prefix: string, value: string): string {
+  const existing = ctx.preambleCache.get(value);
+  if (existing) return existing;
+  const varName = `${prefix}${ctx.counter++}`;
+  ctx.preamble.push(`var ${varName}=${value};`);
+  ctx.preambleCache.set(value, varName);
+  return varName;
 }
 
 export type GenerateValidationFn = (

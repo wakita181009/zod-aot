@@ -159,7 +159,7 @@ export function generateValidator(
   options?: { fallbackCount?: number },
 ): CodeGenResult {
   const fnName = `safeParse_${name}`;
-  const ctx: CodeGenContext = { preamble: [], counter: 0, fnName };
+  const ctx: CodeGenContext = { preamble: [], preambleCache: new Map(), counter: 0, fnName };
   const bodyCode = generateValidation(ir, "input", "[]", "__issues", ctx);
 
   const code = ["/* zod-aot */", ...ctx.preamble].join("\n");

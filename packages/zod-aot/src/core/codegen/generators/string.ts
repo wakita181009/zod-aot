@@ -1,6 +1,12 @@
 import type { SchemaIR } from "../../types.js";
 import type { CodeGenContext } from "../context.js";
-import { EMAIL_REGEX_SOURCE, emit, escapeString, UUID_REGEX_SOURCE } from "../context.js";
+import {
+  addPreambleVar,
+  EMAIL_REGEX_SOURCE,
+  emit,
+  escapeString,
+  UUID_REGEX_SOURCE,
+} from "../context.js";
 
 export function generateStringValidation(
   ir: SchemaIR & { type: "string" },
@@ -59,11 +65,13 @@ export function generateStringValidation(
         case "string_format": {
           let regexVar: string;
           if (check.format === "email") {
-            regexVar = `__re_email_${ctx.counter++}`;
-            ctx.preamble.push(`var ${regexVar}=new RegExp(${escapeString(EMAIL_REGEX_SOURCE)});`);
+            regexVar = addPreambleVar(
+              ctx,
+              "__re_",
+              `new RegExp(${escapeString(EMAIL_REGEX_SOURCE)})`,
+            );
           } else if (check.format === "regex" && check.pattern) {
-            regexVar = `__re_${ctx.counter++}`;
-            ctx.preamble.push(`var ${regexVar}=new RegExp(${escapeString(check.pattern)});`);
+            regexVar = addPreambleVar(ctx, "__re_", `new RegExp(${escapeString(check.pattern)})`);
           } else if (check.format === "url") {
             code += emit`
               if(!(function(s){try{new URL(s);return true;}catch(e){return false;}})(${inputExpr})){
@@ -71,13 +79,11 @@ export function generateStringValidation(
               }`;
             continue;
           } else if (check.format === "uuid") {
-            regexVar = `__re_uuid_${ctx.counter++}`;
             const uuidPattern = check.pattern ?? UUID_REGEX_SOURCE;
-            ctx.preamble.push(`var ${regexVar}=new RegExp(${escapeString(uuidPattern)});`);
+            regexVar = addPreambleVar(ctx, "__re_", `new RegExp(${escapeString(uuidPattern)})`);
           } else {
-            regexVar = `__re_${ctx.counter++}`;
             if (check.pattern) {
-              ctx.preamble.push(`var ${regexVar}=new RegExp(${escapeString(check.pattern)});`);
+              regexVar = addPreambleVar(ctx, "__re_", `new RegExp(${escapeString(check.pattern)})`);
             } else {
               continue;
             }

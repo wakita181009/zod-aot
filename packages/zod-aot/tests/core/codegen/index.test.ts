@@ -3,6 +3,7 @@ import { extractFunctionName } from "#src/core/codegen/context.js";
 import { generateValidator } from "#src/core/codegen/index.js";
 import type {
   AnyIR,
+  EnumIR,
   FallbackIR,
   ObjectIR,
   ReadonlyIR,
@@ -216,6 +217,94 @@ describe("extractFunctionName", () => {
     expect(() => extractFunctionName("")).toThrow(
       "Cannot extract function name from generated code",
     );
+  });
+});
+
+// ─── Preamble Deduplication ──────────────────────────────────────────────────
+
+describe("codegen — preamble deduplication", () => {
+  it("deduplicates identical regex patterns across string fields", () => {
+    const ir: ObjectIR = {
+      type: "object",
+      properties: {
+        email1: {
+          type: "string",
+          checks: [{ kind: "string_format", format: "email" }],
+        },
+        email2: {
+          type: "string",
+          checks: [{ kind: "string_format", format: "email" }],
+        },
+      },
+    };
+    const result = generateValidator(ir, "emailDedup");
+    const regexDecls = result.code.split("\n").filter((l) => l.startsWith("var __re_"));
+    expect(regexDecls).toHaveLength(1);
+  });
+
+  it("deduplicates identical enum Sets", () => {
+    const ir: ObjectIR = {
+      type: "object",
+      properties: {
+        role1: { type: "enum", values: ["a", "b", "c"] } satisfies EnumIR,
+        role2: { type: "enum", values: ["a", "b", "c"] } satisfies EnumIR,
+      },
+    };
+    const result = generateValidator(ir, "enumDedup");
+    const setDecls = result.code.split("\n").filter((l) => l.startsWith("var __enumSet_"));
+    expect(setDecls).toHaveLength(1);
+  });
+
+  it("does not deduplicate different regex patterns", () => {
+    const ir: ObjectIR = {
+      type: "object",
+      properties: {
+        email: {
+          type: "string",
+          checks: [{ kind: "string_format", format: "email" }],
+        },
+        uuid: {
+          type: "string",
+          checks: [{ kind: "string_format", format: "uuid" }],
+        },
+      },
+    };
+    const result = generateValidator(ir, "diffRegex");
+    const regexDecls = result.code.split("\n").filter((l) => l.startsWith("var __re_"));
+    expect(regexDecls).toHaveLength(2);
+  });
+
+  it("does not deduplicate different enum Sets", () => {
+    const ir: ObjectIR = {
+      type: "object",
+      properties: {
+        status: { type: "enum", values: ["active", "inactive"] } satisfies EnumIR,
+        role: { type: "enum", values: ["admin", "user"] } satisfies EnumIR,
+      },
+    };
+    const result = generateValidator(ir, "diffEnum");
+    const setDecls = result.code.split("\n").filter((l) => l.startsWith("var __enumSet_"));
+    expect(setDecls).toHaveLength(2);
+  });
+
+  it("deduplication still produces correct validation", () => {
+    const ir: ObjectIR = {
+      type: "object",
+      properties: {
+        email1: {
+          type: "string",
+          checks: [{ kind: "string_format", format: "email" }],
+        },
+        email2: {
+          type: "string",
+          checks: [{ kind: "string_format", format: "email" }],
+        },
+      },
+    };
+    const safeParse = compileIR(ir);
+    expect(safeParse({ email1: "a@b.com", email2: "c@d.com" }).success).toBe(true);
+    expect(safeParse({ email1: "invalid", email2: "c@d.com" }).success).toBe(false);
+    expect(safeParse({ email1: "a@b.com", email2: "invalid" }).success).toBe(false);
   });
 });
 
