@@ -120,7 +120,7 @@ Plugin entries: `zod-aot/vite`, `zod-aot/webpack`, `zod-aot/esbuild`, `zod-aot/r
 - `enforce: "pre"` — runs before other plugins
 - `/* @__PURE__ */` annotation enables tree-shaking
 - IIFE wraps preamble (regex/Set) + safeParse function + CompiledSchema object
-- `loadSourceFile()` uses `tsx` on Node.js, native import on Bun/Deno
+- `loadSourceFile()` uses `jiti` on Node.js, native import on Bun/Deno
 - `cacheBust: true` (`?t=${Date.now()}`) for HMR support
 - Options: `include?: string[]`, `exclude?: string[]` (path substring matching)
 
