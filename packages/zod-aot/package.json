@@ -27,7 +27,7 @@
   ],
   "imports": {
     "#src/*": {
-      "types": "./src/*",
+      "types": "./dist/*",
       "source": "./src/*",
       "default": "./dist/*"
     }
