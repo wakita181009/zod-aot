@@ -1,4 +1,4 @@
-import type { SchemaIR } from "../../types.js";
+import type { CheckNumberFormat, SchemaIR } from "../../types.js";
 import { extractChecks } from "../checks.js";
 import { makeFallback } from "../fallback.js";
 import type { FallbackEntry, ZodDef } from "../types.js";
@@ -9,6 +9,12 @@ export function extractNumber(
   p: string,
   fallbacks: FallbackEntry[] | undefined,
 ): SchemaIR {
+  if (def.check === "number_format" && def.format) {
+    return {
+      type: "number",
+      checks: [{ kind: "number_format", format: def.format as CheckNumberFormat["format"] }],
+    };
+  }
   if (!def.checks || def.checks.length === 0) {
     return { type: "number", checks: [] };
   }

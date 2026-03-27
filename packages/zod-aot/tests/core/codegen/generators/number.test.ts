@@ -93,14 +93,61 @@ describe("codegen — number", () => {
     expect(safeParse(7).success).toBe(false);
   });
 
-  it("skips non-safeint number_format (no validation generated)", () => {
+  it("generates number_format (int32) check", () => {
     const ir: NumberIR = {
       type: "number",
       checks: [{ kind: "number_format", format: "int32" }],
     };
     const safeParse = compileIR(ir);
     expect(safeParse(42).success).toBe(true);
+    expect(safeParse(0).success).toBe(true);
+    expect(safeParse(-2147483648).success).toBe(true);
+    expect(safeParse(2147483647).success).toBe(true);
+    expect(safeParse(3.14).success).toBe(false);
+    expect(safeParse(-2147483649).success).toBe(false);
+    expect(safeParse(2147483648).success).toBe(false);
+  });
+
+  it("generates number_format (uint32) check", () => {
+    const ir: NumberIR = {
+      type: "number",
+      checks: [{ kind: "number_format", format: "uint32" }],
+    };
+    const safeParse = compileIR(ir);
+    expect(safeParse(0).success).toBe(true);
+    expect(safeParse(42).success).toBe(true);
+    expect(safeParse(4294967295).success).toBe(true);
+    expect(safeParse(3.14).success).toBe(false);
+    expect(safeParse(-1).success).toBe(false);
+    expect(safeParse(4294967296).success).toBe(false);
+  });
+
+  it("generates number_format (float32) check", () => {
+    const ir: NumberIR = {
+      type: "number",
+      checks: [{ kind: "number_format", format: "float32" }],
+    };
+    const safeParse = compileIR(ir);
+    expect(safeParse(0).success).toBe(true);
     expect(safeParse(3.14).success).toBe(true);
+    expect(safeParse(-3.4028234663852886e38).success).toBe(true);
+    expect(safeParse(3.4028234663852886e38).success).toBe(true);
+    expect(safeParse(-3.5e38).success).toBe(false);
+    expect(safeParse(3.5e38).success).toBe(false);
+  });
+
+  it("generates number_format (float64) — no extra checks beyond isFinite", () => {
+    const ir: NumberIR = {
+      type: "number",
+      checks: [{ kind: "number_format", format: "float64" }],
+    };
+    const safeParse = compileIR(ir);
+    expect(safeParse(0).success).toBe(true);
+    expect(safeParse(3.14).success).toBe(true);
+    expect(safeParse(Number.MAX_VALUE).success).toBe(true);
+    expect(safeParse(-Number.MAX_VALUE).success).toBe(true);
+    expect(safeParse(Infinity).success).toBe(false);
+    expect(safeParse(NaN).success).toBe(false);
   });
 
   it("generates range check (min + max)", () => {
