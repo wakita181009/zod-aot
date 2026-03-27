@@ -39,6 +39,26 @@ describe("extractSchema — number checks", () => {
     expect(ir.checks).toContainEqual({ kind: "multiple_of", value: 5 });
   });
 
+  it("extracts int32 format check", () => {
+    const ir = extractSchema(z.int32()) as NumberIR;
+    expect(ir.checks).toContainEqual({ kind: "number_format", format: "int32" });
+  });
+
+  it("extracts uint32 format check", () => {
+    const ir = extractSchema(z.uint32()) as NumberIR;
+    expect(ir.checks).toContainEqual({ kind: "number_format", format: "uint32" });
+  });
+
+  it("extracts float32 format check", () => {
+    const ir = extractSchema(z.float32()) as NumberIR;
+    expect(ir.checks).toContainEqual({ kind: "number_format", format: "float32" });
+  });
+
+  it("extracts float64 format check", () => {
+    const ir = extractSchema(z.float64()) as NumberIR;
+    expect(ir.checks).toContainEqual({ kind: "number_format", format: "float64" });
+  });
+
   it("extracts combined int + positive checks", () => {
     const ir = extractSchema(z.number().int().positive()) as NumberIR;
     expect(ir.checks).toContainEqual({ kind: "number_format", format: "safeint" });

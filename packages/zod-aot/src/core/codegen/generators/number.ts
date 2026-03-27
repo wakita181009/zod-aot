@@ -54,7 +54,33 @@ export function generateNumberValidation(
               if(!Number.isSafeInteger(${inputExpr})){
                 ${issuesVar}.push({code:"invalid_type",expected:"int",format:"safeint",input:${inputExpr},path:${pathExpr}});
               }`;
+          } else if (check.format === "int32") {
+            code += emit`
+              if(!Number.isInteger(${inputExpr})){
+                ${issuesVar}.push({code:"invalid_type",expected:"int",format:"int32",input:${inputExpr},path:${pathExpr}});
+              }else if(${inputExpr}<-2147483648){
+                ${issuesVar}.push({code:"too_small",minimum:-2147483648,origin:"number",inclusive:true,input:${inputExpr},path:${pathExpr}});
+              }else if(${inputExpr}>2147483647){
+                ${issuesVar}.push({code:"too_big",maximum:2147483647,origin:"number",inclusive:true,input:${inputExpr},path:${pathExpr}});
+              }`;
+          } else if (check.format === "uint32") {
+            code += emit`
+              if(!Number.isInteger(${inputExpr})){
+                ${issuesVar}.push({code:"invalid_type",expected:"int",format:"uint32",input:${inputExpr},path:${pathExpr}});
+              }else if(${inputExpr}<0){
+                ${issuesVar}.push({code:"too_small",minimum:0,origin:"number",inclusive:true,input:${inputExpr},path:${pathExpr}});
+              }else if(${inputExpr}>4294967295){
+                ${issuesVar}.push({code:"too_big",maximum:4294967295,origin:"number",inclusive:true,input:${inputExpr},path:${pathExpr}});
+              }`;
+          } else if (check.format === "float32") {
+            code += emit`
+              if(${inputExpr}<-3.4028234663852886e+38){
+                ${issuesVar}.push({code:"too_small",minimum:-3.4028234663852886e+38,origin:"number",inclusive:true,input:${inputExpr},path:${pathExpr}});
+              }else if(${inputExpr}>3.4028234663852886e+38){
+                ${issuesVar}.push({code:"too_big",maximum:3.4028234663852886e+38,origin:"number",inclusive:true,input:${inputExpr},path:${pathExpr}});
+              }`;
           }
+          // float64 range is [-Number.MAX_VALUE, Number.MAX_VALUE], already covered by the isFinite check above
           break;
         case "multiple_of":
           code += emit`
