@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import type { WatchDeps } from "#src/cli/commands/watch.js";
 import { debounce, isWatchTarget, resolveWatchDirs, runWatch } from "#src/cli/commands/watch.js";
 import { resolveOutputPath } from "#src/cli/emitter.js";
@@ -161,21 +161,21 @@ describe("debounce", () => {
 describe("runWatch", () => {
   let logSpy: ReturnType<typeof vi.spyOn>;
   let mockLogger: {
-    info: ReturnType<typeof vi.fn>;
-    success: ReturnType<typeof vi.fn>;
-    warn: ReturnType<typeof vi.fn>;
-    error: ReturnType<typeof vi.fn>;
-    dim: ReturnType<typeof vi.fn>;
+    info: Mock<(msg: string) => void>;
+    success: Mock<(msg: string) => void>;
+    warn: Mock<(msg: string) => void>;
+    error: Mock<(msg: string) => void>;
+    dim: Mock<(msg: string) => void>;
   };
 
   beforeEach(async () => {
     const loggerMod = await import("#src/cli/logger.js");
     mockLogger = {
-      info: vi.fn(),
-      success: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-      dim: vi.fn(),
+      info: vi.fn<(msg: string) => void>(),
+      success: vi.fn<(msg: string) => void>(),
+      warn: vi.fn<(msg: string) => void>(),
+      error: vi.fn<(msg: string) => void>(),
+      dim: vi.fn<(msg: string) => void>(),
     };
     logSpy = vi.spyOn(loggerMod, "logger", "get").mockReturnValue(mockLogger);
   });

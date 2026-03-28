@@ -72,13 +72,38 @@ describe("extractSchema — catch", () => {
     const ir = extractSchema(schema);
     expect(ir.type).toBe("object");
     if (ir.type === "object") {
-      const nameIR = ir.properties.name as CatchIR;
+      const nameIR = ir.properties["name"] as CatchIR;
       expect(nameIR.type).toBe("catch");
       expect(nameIR.defaultValue).toBe("anonymous");
 
-      const ageIR = ir.properties.age as CatchIR;
+      const ageIR = ir.properties["age"] as CatchIR;
       expect(ageIR.type).toBe("catch");
       expect(ageIR.defaultValue).toBe(0);
     }
+  });
+
+  it("falls back when catchValue function throws", () => {
+    const schema = z.string().catch((() => {
+      throw new Error("fail");
+    }) as unknown as string);
+    const ir = extractSchema(schema);
+    expect(ir.type).toBe("fallback");
+    expect((ir as FallbackIR).reason).toBe("unsupported");
+  });
+
+  it("falls back for non-JSON-serializable catch value (circular ref)", () => {
+    const circular: Record<string, unknown> = {};
+    circular["self"] = circular;
+    const schema = z.string().catch(circular as unknown as string);
+    const ir = extractSchema(schema);
+    expect(ir.type).toBe("fallback");
+    expect((ir as FallbackIR).reason).toBe("unsupported");
+  });
+
+  it("extracts catch with undefined default value (skips JSON.stringify)", () => {
+    const ir = extractSchema(z.string().catch(undefined as unknown as string)) as CatchIR;
+    expect(ir.type).toBe("catch");
+    expect(ir.inner.type).toBe("string");
+    expect(ir.defaultValue).toBeUndefined();
   });
 });

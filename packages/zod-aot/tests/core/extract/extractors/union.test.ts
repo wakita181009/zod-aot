@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
+import { extractUnion } from "#src/core/extract/extractors/union.js";
 import { extractSchema } from "#src/core/extract/index.js";
 import type { DiscriminatedUnionIR, UnionIR } from "#src/core/types.js";
 
@@ -71,5 +72,50 @@ describe("extractSchema — discriminatedUnion", () => {
     for (let i = 0; i < ir.options.length; i++) {
       expect(mappedIndices.has(i)).toBe(true);
     }
+  });
+
+  it("mapping omits options whose discriminator is not a literal", () => {
+    const ir = extractSchema(
+      z.discriminatedUnion("type", [
+        z.object({ type: z.enum(["a", "c"]), value: z.string() }),
+        z.object({ type: z.literal("b"), count: z.number() }),
+      ]),
+    ) as DiscriminatedUnionIR;
+    expect(ir.type).toBe("discriminatedUnion");
+    expect(ir.options).toHaveLength(2);
+    // Only the literal option is mapped
+    expect(ir.mapping).toEqual({ b: 1 });
+  });
+
+  it("mapping skips non-object options in discriminated union", () => {
+    // Directly call extractUnion with a synthetic def containing a non-object option
+    const ir = extractUnion(
+      {
+        discriminator: "type",
+        options: [
+          { _zod: { def: { type: "string" } } },
+          {
+            _zod: {
+              def: {
+                type: "object",
+                shape: {
+                  type: { _zod: { def: { type: "literal", values: ["b"] } } },
+                },
+              },
+            },
+          },
+        ],
+      } as never,
+      "test",
+      undefined,
+      ((opt: unknown) => {
+        const o = opt as { _zod: { def: { type: string } } };
+        return o._zod.def.type === "object"
+          ? { type: "object" as const, properties: {} }
+          : { type: o._zod.def.type as "string", checks: [] };
+      }) as never,
+    ) as DiscriminatedUnionIR;
+    expect(ir.type).toBe("discriminatedUnion");
+    expect(ir.mapping).toEqual({ b: 1 });
   });
 });

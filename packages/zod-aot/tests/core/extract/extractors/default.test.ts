@@ -31,4 +31,12 @@ describe("extractSchema — default", () => {
     expect(ir.type).toBe("fallback");
     expect((ir as FallbackIR).reason).toBe("unsupported");
   });
+
+  it("falls back for non-JSON-serializable default (circular ref)", () => {
+    const circular: Record<string, unknown> = {};
+    circular["self"] = circular;
+    const ir = extractSchema(z.string().default(circular as unknown as string));
+    expect(ir.type).toBe("fallback");
+    expect((ir as FallbackIR).reason).toBe("unsupported");
+  });
 });

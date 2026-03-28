@@ -41,7 +41,7 @@ describe("loadSourceFile", () => {
   });
 
   it("throws on non-existent file", async () => {
-    expect(loadSourceFile("/nonexistent/file.ts")).rejects.toThrow();
+    await expect(loadSourceFile("/nonexistent/file.ts")).rejects.toThrow();
   });
 
   it("loads TypeScript files with extensionless imports", async () => {
