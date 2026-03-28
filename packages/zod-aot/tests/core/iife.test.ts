@@ -28,10 +28,10 @@ describe("generateIIFE()", () => {
   });
 
   it("includes preamble declarations", () => {
-    const info = makeInfo("validateRole", z.enum(["admin", "user"]));
+    const info = makeInfo("validateRole", z.enum(["admin", "user", "editor", "viewer"]));
     const iife = generateIIFE("RoleSchema", info);
 
-    expect(iife).toContain('new Set(["admin","user"])');
+    expect(iife).toContain('new Set(["admin","user","editor","viewer"])');
     expect(iife).toContain("/* @__PURE__ */");
   });
 

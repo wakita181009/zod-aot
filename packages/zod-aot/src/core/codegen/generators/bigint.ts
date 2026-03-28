@@ -1,6 +1,6 @@
 import type { SchemaIR } from "../../types.js";
 import type { CodeGenContext } from "../context.js";
-import { emit } from "../context.js";
+import { checkPriority, emit } from "../context.js";
 
 export function generateBigIntValidation(
   ir: SchemaIR & { type: "bigint" },
@@ -20,7 +20,7 @@ export function generateBigIntValidation(
 
   if (ir.checks.length > 0) {
     code += `else{`;
-    for (const check of ir.checks) {
+    for (const check of [...ir.checks].sort(checkPriority)) {
       switch (check.kind) {
         case "bigint_greater_than":
           if (check.inclusive) {

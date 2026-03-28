@@ -7,7 +7,7 @@
 [![npm](https://img.shields.io/npm/v/zod-aot)](https://www.npmjs.com/package/zod-aot)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-No code changes required — keep your existing Zod schemas and get **2-64x faster** validation.
+No code changes required — keep your existing Zod schemas and get **2-60x faster** validation.
 
 ## Packages
 
@@ -110,17 +110,30 @@ See the [full documentation](./packages/zod-aot/README.md) for API reference, be
 
 | Scenario | Zod v3 | Zod v4 | **Zod AOT** | Typia | AJV | vs Zod v4 |
 |---|---|---|---|---|---|---|
-| string (min/max) | 8.3M | 6.0M | **11.1M** | 11.3M | 9.5M | 1.8x |
-| number (int+positive) | 8.2M | 5.8M | **10.9M** | 10.7M | 10.9M | 1.9x |
-| tuple [string, int, bool] | 4.0M | 4.4M | **10.5M** | 10.8M | 10.5M | 2.4x |
-| discriminatedUnion (3) | 2.3M | 2.9M | **9.8M** | 10.4M | 5.6M | 3.4x |
-| medium object (valid) | 1.3M | 1.7M | **5.4M** | 7.3M | 5.0M | 3.1x |
-| large object (10 items) | 82K | 111K | **4.0M** | 4.1M | 834K | **36x** |
-| large object (100 items) | 9.0K | 11.6K | **676K** | 808K | 89K | **58x** |
-| recursive tree (121 nodes) | 24K | 101K | **741K** | 1.4M | 250K | 7.4x |
-| event log (combined) | 260K | 479K | **4.5M** | — | — | 9.4x |
+| simple string | 9.0M | 9.7M | **11.5M** | 11.0M | 10.8M | 1.2x |
+| string (min/max) | 8.2M | 5.5M | **10.9M** | 10.3M | 9.1M | 2.0x |
+| number (int+positive) | 8.4M | 5.8M | **10.3M** | 11.4M | 10.5M | 1.8x |
+| tuple [string, int, bool] | 4.0M | 4.5M | **10.1M** | 10.5M | 9.9M | 2.2x |
+| discriminatedUnion (3) | 2.3M | 2.8M | **9.9M** | 10.1M | 5.6M | 3.5x |
+| medium object (valid) | 1.2M | 1.7M | **5.3M** | 7.2M | 4.5M | 3.1x |
+| large object (10 items) | 81K | 106K | **3.9M** | 4.1M | 820K | **37x** |
+| large object (100 items) | 8.6K | 11.3K | **684K** | 818K | 86K | **60x** |
+| recursive tree (121 nodes) | 23K | 102K | **714K** | 1.4M | 249K | 7.0x |
+| event log (combined) | 270K | 474K | **4.4M** | — | — | 9.2x |
 
 *ops/s, higher is better. Measured with `vitest bench` on Apple M-series. Full results in [packages/zod-aot](./packages/zod-aot/README.md#benchmarks).*
+
+### Performance Architecture
+
+zod-aot uses a **two-phase validation** strategy for eligible schemas:
+
+1. **Fast Path**: A single boolean expression chain (`&&`) that validates the entire input with zero allocations. On valid input, returns `{success: true, data: input}` immediately.
+2. **Slow Path**: Falls back to the existing error-collecting validation if the fast check fails.
+
+Additional optimizations:
+- **Check ordering**: Cheapest checks (length comparisons) run before expensive ones (regex)
+- **Small enum inlining**: Enums with 1-3 values use direct `===` comparisons instead of `Set.has()`
+- **Pre-compiled regex + Set**: Shared across fast and slow paths via preamble declarations
 
 ## Runtime Support
 

@@ -24,7 +24,7 @@ Zod compatibility: v4.0.0, v4.1.0, v4.2.0, v4.3.0, latest
 
 1. **Discovery**: AST detection of `compile()` calls in source files
 2. **Extraction**: Execute schema file in Node.js → recursively traverse `_zod.def` → produce SchemaIR
-3. **CodeGen**: SchemaIR → JS/TS code with inline type checks, early returns, pre-compiled regexes
+3. **CodeGen**: SchemaIR → JS/TS code with Fast Path (boolean expression chain) + Slow Path (error collecting), inline type checks, early returns, pre-compiled regexes
 4. **Emit**: Write generated code to files
 
 ### Shared Pipeline across CLI / unplugin / Benchmark
@@ -49,6 +49,8 @@ Output          emitter.ts                  rewriteSource()          IIFE inline
 Key files:
 - `core/compile.ts`: `compile()` is NOT the optimizer — it's a Zod fallback + `COMPILED_MARKER` symbol for discovery
 - `core/pipeline.ts`: `compileSchemas()` — shared extract → generate pipeline, `CompiledSchemaInfo` type
+- `core/codegen/fast-check.ts`: `generateFastCheck()` — Fast Path boolean expression generator for eligible schemas
+- `core/iife.ts`: `generateIIFE()` — shared IIFE generation for CLI emitter and unplugin transform
 - `discovery.ts`: `discoverSchemas()` loads file → scans exports with `isCompiledSchema()`
 - `cli/commands/generate.ts`: discovery → `compileSchemas()` → `emitter.ts` writes `.compiled.ts`
 - `unplugin/transform.ts`: discovery → `compileSchemas()` → `rewriteSource()` replaces `compile()` with IIFE
@@ -126,10 +128,13 @@ Plugin entries: `zod-aot/vite`, `zod-aot/webpack`, `zod-aot/esbuild`, `zod-aot/r
 
 ## Schema Coverage
 
-string, number (int32, uint32, float32, float64), int, boolean, object, array, literal, enum, union, optional, nullable, null, undefined, tuple, record, intersection, discriminatedUnion, date, any, unknown, default, readonly, bigint, set, map, symbol, void, nan, never, pipe (non-transform), lazy (self-recursive via recursiveRef)
+string, number (int32, uint32, float32, float64), int, boolean, object, array, literal, enum, union, optional, nullable, null, undefined, tuple, record, intersection, discriminatedUnion, date, any, unknown, default, readonly, bigint, set, map, symbol, void, nan, never, pipe (non-transform), lazy (self-recursive via recursiveRef), templateLiteral, catch, coerce (string, number, boolean, bigint, date)
 
 ### Fallback to Zod
 transform, refine, superRefine, custom, preprocess, lazy (non-recursive only — self-recursive lazy schemas are compiled via `recursiveRef`)
+
+### Fast Path Eligibility
+Schemas without coerce, default, catch, date, set/map, transform, or refine are eligible for Fast Path (two-phase validation). The Fast Path generates a single boolean `&&` expression chain. If any nested part of a schema is ineligible, the entire schema falls back to Slow Path only (all-or-nothing).
 
 **Partial fallback strategy:** Even schemas containing transform etc. optimize compilable parts and delegate only incompilable parts to Zod.
 
@@ -155,9 +160,10 @@ zod-aot/
 │       │   │   │   ├── types.ts  # Extractor types
 │       │   │   │   └── extractors/ # Per-type extractors (bigint, date, default, lazy (with cycle detection → recursiveRef), number, pipe, set, string, union)
 │       │   │   └── codegen/
-│       │   │       ├── index.ts  # generateValidator() — SchemaIR → JS code
-│       │   │       ├── context.ts # CodeGenContext, CodeGenResult, utils
-│       │   │       └── generators/ # 31 type-specific code generators
+│       │   │       ├── index.ts  # generateValidator() — SchemaIR → JS code (Fast Path + Slow Path)
+│       │   │       ├── fast-check.ts # generateFastCheck() — boolean expression generator for Fast Path
+│       │   │       ├── context.ts # CodeGenContext, CodeGenResult, checkPriority(), utils
+│       │   │       └── generators/ # 34 type-specific code generators
 │       │   ├── cli/              # CLI-specific (no unplugin deps)
 │       │   │   ├── index.ts      # CLI entry point (command parser)
 │       │   │   ├── logger.ts     # Logging utility
@@ -234,6 +240,9 @@ Source files to reference during implementation:
 2. **Runtime extraction** — Execute schema files to get `_zod.def` rather than static AST analysis
 3. **transform/refine out of scope** — JS closures cannot be compiled. Fall back to Zod
 4. **Pre-compiled regex + Set for enums** — These optimizations create the performance gap
+5. **Two-phase validation (Fast Path)** — For eligible schemas, generate a boolean `&&` chain that short-circuits on valid input with zero allocations. Falls back to Slow Path (error collecting) on failure. Schemas containing coerce/default/catch/date/set/map are not eligible.
+6. **Check ordering** — Sort validation checks by cost: typeof → length → range → regex. Cheapest checks run first for earlier short-circuit.
+7. **Small enum inlining** — Enums with 1-3 values use direct `===` comparisons instead of `Set.has()` for both Fast Path and Slow Path
 
 ## Development Tools
 
