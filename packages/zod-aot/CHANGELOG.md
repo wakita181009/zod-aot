@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.1](https://github.com/wakita181009/zod-aot/compare/v0.11.0...v0.11.1) (2026-03-28)
+
+
+### Bug Fixes
+
+* **test:** use assertSameResult for date range issue tests ([19e6e11](https://github.com/wakita181009/zod-aot/commit/19e6e115f07d2b7cb16b6b8443f41f8d595a08f7))
+
 ## [0.11.0](https://github.com/wakita181009/zod-aot/compare/v0.10.0...v0.11.0) (2026-03-28)
 
 
