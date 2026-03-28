@@ -30,6 +30,9 @@ jobs:
       - name: Typecheck
         run: pnpm -r typecheck
 
+      - name: Build
+        run: pnpm -r build
+
       - name: Test
         run: pnpm test:coverage
 
@@ -38,9 +41,6 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-
-      - name: Build
-        run: pnpm -r build
 
       - name: CLI smoke test (standalone)
         run: pnpm run test:smoke
@@ -106,6 +106,9 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm -r build
 
       - name: Override Zod to ${{ matrix.zod-version }}
         run: pnpm --filter zod-aot exec pnpm add -D zod@${{ matrix.zod-version }} --no-lockfile
