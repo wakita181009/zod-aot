@@ -1,8 +1,20 @@
 import type { output, ZodType } from "zod";
-import { createFallback } from "./runtime.js";
 import type { CompiledSchema } from "./types.js";
 
 const COMPILED_MARKER = Symbol.for("zod-aot:compiled");
+
+/**
+ * Dev-time fallback: wraps Zod schema via Object.create to provide the CompiledSchema interface
+ * while preserving full Zod compatibility (e.g. `_zod`, `shape`, `safeParseAsync`).
+ *
+ * parse/safeParse/parseAsync/safeParseAsync fall through to the original Zod schema via prototype.
+ * Only `schema` is added as an own property.
+ */
+function createFallback<T>(zodSchema: unknown): CompiledSchema<T> {
+  const facade = Object.create(zodSchema as object) as CompiledSchema<T>;
+  facade.schema = zodSchema;
+  return facade;
+}
 
 /**
  * Compile a Zod schema into an optimized validator.

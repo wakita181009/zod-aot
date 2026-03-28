@@ -1,5 +1,5 @@
 import type { SchemaIR } from "../../types.js";
-import { emit } from "../context.js";
+import { emit } from "../emit.js";
 
 export function generateDateValidation(
   ir: SchemaIR & { type: "date" },

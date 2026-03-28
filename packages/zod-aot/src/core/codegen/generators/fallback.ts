@@ -1,5 +1,5 @@
 import type { FallbackIR } from "../../types.js";
-import { emit } from "../context.js";
+import { emit } from "../emit.js";
 
 export function generateFallbackValidation(
   ir: FallbackIR,

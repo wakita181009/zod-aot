@@ -1,4 +1,4 @@
-import { emit } from "../context.js";
+import { emit } from "../emit.js";
 
 export function generateNeverValidation(
   inputExpr: string,

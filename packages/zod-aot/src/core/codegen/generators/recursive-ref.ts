@@ -1,5 +1,5 @@
 import type { CodeGenContext } from "../context.js";
-import { emit } from "../context.js";
+import { emit } from "../emit.js";
 
 export function generateRecursiveRefValidation(
   inputExpr: string,

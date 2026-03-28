@@ -1,5 +1,6 @@
 import type { SchemaIR } from "../../types.js";
-import { emit, escapeString } from "../context.js";
+import { escapeString } from "../context.js";
+import { emit } from "../emit.js";
 
 export function generateLiteralValidation(
   ir: SchemaIR & { type: "literal" },
