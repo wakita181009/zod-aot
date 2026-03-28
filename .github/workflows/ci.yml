@@ -107,11 +107,11 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Override Zod to ${{ matrix.zod-version }}
-        run: pnpm --filter zod-aot exec pnpm add -D zod@${{ matrix.zod-version }} --no-lockfile
-
       - name: Build
         run: pnpm -r build
+
+      - name: Override Zod to ${{ matrix.zod-version }}
+        run: pnpm --filter zod-aot exec pnpm add -D zod@${{ matrix.zod-version }} --no-lockfile
 
       - name: Test
         run: pnpm test
