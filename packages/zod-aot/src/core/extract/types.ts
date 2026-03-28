@@ -43,6 +43,8 @@ export interface ZodDef {
   right: ZodSchema;
   discriminator: string;
   defaultValue: unknown;
+  coerce?: boolean;
+  catchValue?: (ctx: unknown) => unknown;
 }
 
 export interface ZodSchema {
@@ -51,6 +53,8 @@ export interface ZodSchema {
     bag?: Record<string, unknown>;
     /** Resolved inner type for lazy schemas. */
     innerType?: ZodSchema;
+    /** Pre-compiled pattern for templateLiteral schemas. */
+    pattern?: RegExp;
   };
 }
 
