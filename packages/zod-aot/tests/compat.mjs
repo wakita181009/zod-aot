@@ -13,7 +13,7 @@
 import { z } from "zod";
 import { generateValidator } from "../dist/core/codegen/index.js";
 import { extractSchema } from "../dist/core/extract/index.js";
-import { createFallback } from "../dist/core/runtime.js";
+import { compile } from "../dist/index.js";
 
 let passed = 0;
 let failed = 0;
@@ -88,15 +88,15 @@ const badChecks = { name: "", age: -1, role: "admin", tags: [], active: true };
 const badChecksResult = safeParse(badChecks);
 assertEqual(badChecksResult.success, false, "check failures are caught");
 
-// ─── createFallback ─────────────────────────────────────────────────────────
+// ─── compile (dev-time fallback) ────────────────────────────────────────────
 
-const fallback = createFallback(z.string().min(3));
+const compiled = compile(z.string().min(3));
 
-const fbValid = fallback.safeParse("hello");
-assertEqual(fbValid.success, true, "createFallback safeParse valid input");
+const fbValid = compiled.safeParse("hello");
+assertEqual(fbValid.success, true, "compile safeParse valid input");
 
-const fbInvalid = fallback.safeParse("ab");
-assertEqual(fbInvalid.success, false, "createFallback safeParse invalid input");
+const fbInvalid = compiled.safeParse("ab");
+assertEqual(fbInvalid.success, false, "compile safeParse invalid input");
 
 // ─── Report ─────────────────────────────────────────────────────────────────
 

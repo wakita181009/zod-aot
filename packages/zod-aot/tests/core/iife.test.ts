@@ -91,6 +91,38 @@ describe("generateIIFE()", () => {
   });
 });
 
+describe("generateIIFE() — error handling", () => {
+  it("throws when functionDef is malformed", () => {
+    const info: CompiledSchemaInfo = {
+      exportName: "test",
+      codegenResult: {
+        code: "/* zod-aot */",
+        functionDef: "const x = 1;",
+        fallbackCount: 0,
+      },
+      fallbackEntries: [],
+    };
+    expect(() => generateIIFE("Schema", info)).toThrow(
+      "Cannot extract function name from generated code",
+    );
+  });
+
+  it("throws when functionDef is empty", () => {
+    const info: CompiledSchemaInfo = {
+      exportName: "test",
+      codegenResult: {
+        code: "/* zod-aot */",
+        functionDef: "",
+        fallbackCount: 0,
+      },
+      fallbackEntries: [],
+    };
+    expect(() => generateIIFE("Schema", info)).toThrow(
+      "Cannot extract function name from generated code",
+    );
+  });
+});
+
 describe("generateIIFE() — runtime execution", () => {
   const simpleSchema = z.object({
     name: z.string().min(1),

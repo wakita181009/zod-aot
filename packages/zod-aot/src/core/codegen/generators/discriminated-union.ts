@@ -1,6 +1,7 @@
 import type { SchemaIR } from "../../types.js";
 import type { CodeGenContext, GenerateValidationFn } from "../context.js";
-import { emit, escapeString } from "../context.js";
+import { escapeString } from "../context.js";
+import { emit } from "../emit.js";
 
 export function generateDiscriminatedUnionValidation(
   ir: SchemaIR & { type: "discriminatedUnion" },

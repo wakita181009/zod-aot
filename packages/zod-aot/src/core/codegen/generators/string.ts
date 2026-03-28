@@ -1,12 +1,7 @@
 import type { SchemaIR } from "../../types.js";
 import type { CodeGenContext } from "../context.js";
-import {
-  checkPriority,
-  EMAIL_REGEX_SOURCE,
-  emit,
-  escapeString,
-  UUID_REGEX_SOURCE,
-} from "../context.js";
+import { checkPriority, EMAIL_REGEX_SOURCE, escapeString, UUID_REGEX_SOURCE } from "../context.js";
+import { emit } from "../emit.js";
 
 export function generateStringValidation(
   ir: SchemaIR & { type: "string" },

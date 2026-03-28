@@ -1,6 +1,7 @@
 import type { SchemaIR } from "../../types.js";
 import type { CodeGenContext } from "../context.js";
-import { emit, escapeString } from "../context.js";
+import { ENUM_INLINE_THRESHOLD, escapeString } from "../context.js";
+import { emit } from "../emit.js";
 
 export function generateEnumValidation(
   ir: SchemaIR & { type: "enum" },
@@ -9,7 +10,7 @@ export function generateEnumValidation(
   issuesVar: string,
   ctx: CodeGenContext,
 ): string {
-  if (ir.values.length <= 3) {
+  if (ir.values.length <= ENUM_INLINE_THRESHOLD) {
     // Inline equality checks for small enums (avoids Set allocation in preamble)
     const condition = ir.values.map((v) => `${inputExpr}!==${escapeString(v)}`).join("&&");
     return `${emit`

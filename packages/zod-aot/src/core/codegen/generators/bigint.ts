@@ -1,6 +1,7 @@
 import type { SchemaIR } from "../../types.js";
 import type { CodeGenContext } from "../context.js";
-import { checkPriority, emit } from "../context.js";
+import { checkPriority } from "../context.js";
+import { emit } from "../emit.js";
 
 export function generateBigIntValidation(
   ir: SchemaIR & { type: "bigint" },

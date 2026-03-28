@@ -49,8 +49,10 @@ Output          emitter.ts                  rewriteSource()          IIFE inline
 Key files:
 - `core/compile.ts`: `compile()` is NOT the optimizer — it's a Zod fallback + `COMPILED_MARKER` symbol for discovery
 - `core/pipeline.ts`: `compileSchemas()` — shared extract → generate pipeline, `CompiledSchemaInfo` type
-- `core/codegen/fast-check.ts`: `generateFastCheck()` — Fast Path boolean expression generator for eligible schemas
-- `core/iife.ts`: `generateIIFE()` — shared IIFE generation for CLI emitter and unplugin transform
+- `core/codegen/fast-check/index.ts`: `generateFastCheck()` — Fast Path dispatcher + trivial inline cases
+- `core/codegen/generators/index.ts`: `generateValidation()` — Slow Path dispatcher
+- `core/codegen/emit.ts`: `emit()` — tagged template for Slow Path code generation
+- `core/iife.ts`: `generateIIFE()` — shared IIFE generation for CLI emitter and unplugin transform (owns `extractFunctionName()`)
 - `discovery.ts`: `discoverSchemas()` loads file → scans exports with `isCompiledSchema()`
 - `cli/commands/generate.ts`: discovery → `compileSchemas()` → `emitter.ts` writes `.compiled.ts`
 - `unplugin/transform.ts`: discovery → `compileSchemas()` → `rewriteSource()` replaces `compile()` with IIFE
@@ -150,8 +152,7 @@ zod-aot/
 │       │   ├── loader.ts         # loadSourceFile() — runtime-aware file loader
 │       │   ├── core/             # Pure logic (no cli/unplugin/discovery/loader deps)
 │       │   │   ├── types.ts      # SchemaIR, CompiledSchema, CheckIR
-│       │   │   ├── compile.ts    # compile() marker + isCompiledSchema()
-│       │   │   ├── runtime.ts    # Dev-time fallback (createFallback)
+│       │   │   ├── compile.ts    # compile() marker + isCompiledSchema() + createFallback()
 │       │   │   ├── pipeline.ts   # compileSchemas() — shared extract→generate pipeline
 │       │   │   ├── extract/      # extractSchema() — _zod.def → SchemaIR
 │       │   │   │   ├── index.ts  # extractSchema() main entry
@@ -160,10 +161,15 @@ zod-aot/
 │       │   │   │   ├── types.ts  # Extractor types
 │       │   │   │   └── extractors/ # Per-type extractors (bigint, date, default, lazy (with cycle detection → recursiveRef), number, pipe, set, string, union)
 │       │   │   └── codegen/
-│       │   │       ├── index.ts  # generateValidator() — SchemaIR → JS code (Fast Path + Slow Path)
-│       │   │       ├── fast-check.ts # generateFastCheck() — boolean expression generator for Fast Path
-│       │   │       ├── context.ts # CodeGenContext, CodeGenResult, checkPriority(), utils
-│       │   │       └── generators/ # 34 type-specific code generators
+│       │   │       ├── index.ts  # generateValidator() — orchestrator (Fast Path + Slow Path)
+│       │   │       ├── context.ts # CodeGenContext, CodeGenResult, GenerateFastCheckFn, checkPriority(), shared constants
+│       │   │       ├── emit.ts   # emit() tagged template — Slow Path utility
+│       │   │       ├── fast-check/ # Fast Path (per-type boolean expression generators)
+│       │   │       │   ├── index.ts # generateFastCheck() dispatcher + trivial inline cases
+│       │   │       │   └── string.ts, number.ts, ... # 16 per-type fast-check helpers
+│       │   │       └── generators/ # Slow Path (per-type error-collecting code generators)
+│       │   │           ├── index.ts # generateValidation() dispatcher
+│       │   │           └── string.ts, number.ts, ... # 33 per-type generators
 │       │   ├── cli/              # CLI-specific (no unplugin deps)
 │       │   │   ├── index.ts      # CLI entry point (command parser)
 │       │   │   ├── logger.ts     # Logging utility
@@ -185,7 +191,7 @@ zod-aot/
 │       │   ├── discovery.test.ts
 │       │   ├── fixtures/         # Shared test fixtures (simple-schema, multi-schema, etc.)
 │       │   ├── core/
-│       │   │   ├── types.test.ts, compile.test.ts, runtime.test.ts
+│       │   │   ├── types.test.ts, compile.test.ts
 │       │   │   ├── extract/
 │       │   │   │   ├── index.test.ts
 │       │   │   │   └── extractors/*.test.ts

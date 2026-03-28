@@ -3,8 +3,15 @@
  * Used by both CLI emitter and unplugin transform.
  */
 
-import { extractFunctionName } from "./codegen/context.js";
 import type { CompiledSchemaInfo } from "./pipeline.js";
+
+function extractFunctionName(functionDef: string): string {
+  const match = /^function\s+(\w+)\s*\(/.exec(functionDef);
+  if (!match?.[1]) {
+    throw new Error("Cannot extract function name from generated code");
+  }
+  return match[1];
+}
 
 /** Import statement required by generateIIFE output (references __zodAotConfig). */
 export const ZOD_CONFIG_IMPORT = 'import { config as __zodAotConfig } from "zod";';

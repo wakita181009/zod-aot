@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { extractFunctionName } from "#src/core/codegen/context.js";
 import { generateValidator } from "#src/core/codegen/index.js";
 import type {
   AnyIR,
@@ -198,24 +197,6 @@ describe("codegen — readonly", () => {
     const safeParse = compileIR(ir);
     expect(safeParse({ x: 1 }).success).toBe(true);
     expect(safeParse({ x: "a" }).success).toBe(false);
-  });
-});
-
-describe("extractFunctionName", () => {
-  it("extracts name from a function definition", () => {
-    expect(extractFunctionName("function safeParse_User(input){")).toBe("safeParse_User");
-  });
-
-  it("throws on invalid function definition", () => {
-    expect(() => extractFunctionName("const x = 1;")).toThrow(
-      "Cannot extract function name from generated code",
-    );
-  });
-
-  it("throws on empty string", () => {
-    expect(() => extractFunctionName("")).toThrow(
-      "Cannot extract function name from generated code",
-    );
   });
 });
 

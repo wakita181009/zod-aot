@@ -1,4 +1,4 @@
-import { emit } from "../context.js";
+import { emit } from "../emit.js";
 
 export function generateVoidValidation(
   inputExpr: string,

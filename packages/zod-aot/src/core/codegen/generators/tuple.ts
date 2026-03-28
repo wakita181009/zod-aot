@@ -1,6 +1,6 @@
 import type { SchemaIR } from "../../types.js";
 import type { CodeGenContext, GenerateValidationFn } from "../context.js";
-import { emit } from "../context.js";
+import { emit } from "../emit.js";
 
 export function generateTupleValidation(
   ir: SchemaIR & { type: "tuple" },

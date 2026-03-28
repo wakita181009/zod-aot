@@ -1,6 +1,7 @@
 import type { SchemaIR } from "../../types.js";
 import type { CodeGenContext } from "../context.js";
-import { emit, escapeString } from "../context.js";
+import { escapeString } from "../context.js";
+import { emit } from "../emit.js";
 
 export function generateTemplateLiteralValidation(
   ir: SchemaIR & { type: "templateLiteral" },
