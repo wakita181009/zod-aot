@@ -7,7 +7,7 @@
 [![npm](https://img.shields.io/npm/v/zod-aot)](https://www.npmjs.com/package/zod-aot)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-No code changes required — keep your existing Zod schemas and get **2-80x faster** validation.
+No code changes required — keep your existing Zod schemas and get **2-64x faster** validation.
 
 ## Why
 
@@ -32,27 +32,35 @@ pnpm bench
 
 ### safeParse
 
-| Scenario | Zod v3 | Zod v4 | Zod AOT   | vs v3 | vs v4 |
-|---|---|---|-----------|---|---|
-| simple string | 8.2M ops/s | 9.6M ops/s | 10.4M ops/s | **1.3x** | **1.1x** |
-| string (min/max) | 7.8M ops/s | 5.4M ops/s | 10.5M ops/s | **1.4x** | **2.0x** |
-| number (int+positive) | 7.8M ops/s | 5.7M ops/s | 10.5M ops/s | **1.3x** | **1.8x** |
-| enum | 7.5M ops/s | 9.1M ops/s | 10.0M ops/s | **1.3x** | **1.1x** |
-| tuple [string, int, boolean] | 4.2M ops/s | 4.6M ops/s | 10.5M ops/s | **2.5x** | **2.3x** |
-| record\<string, number\> (5 keys) | 2.3M ops/s | 1.9M ops/s | 5.6M ops/s | **2.4x** | **2.9x** |
-| discriminatedUnion (3 variants) | 2.3M ops/s | 2.9M ops/s | 9.3M ops/s | **4.1x** | **3.3x** |
-| medium object (7 props, valid) | 1.3M ops/s | 1.7M ops/s | 5.2M ops/s | **4.0x** | **3.0x** |
-| medium object (7 props, invalid) | 346K ops/s | 62K ops/s | 467K ops/s | **1.4x** | **7.5x** |
-| large object (10 nested items) | 83K ops/s | 110K ops/s | 4.0M ops/s | **48x** | **36x** |
-| large object (100 nested items) | 8.5K ops/s | 11.3K ops/s | 680K ops/s | **80x** | **60x** |
-| recursive tree (7 nodes) | 398K ops/s | 1.5M ops/s | 6.3M ops/s | **16x** | **4.2x** |
-| recursive tree (121 nodes) | 23K ops/s | 101K ops/s | 749K ops/s | **33x** | **7.4x** |
-| event log (combined) | 265K ops/s | 440K ops/s | 4.4M ops/s | **17x** | **10x** |
-| partial fallback object (transform) | 822K ops/s | 1.4M ops/s | 3.5M ops/s | **4.2x** | **2.4x** |
-| partial fallback array 10 (transform) | 85K ops/s | 144K ops/s | 1.1M ops/s | **13x** | **7.7x** |
-| partial fallback array 50 (transform) | 18K ops/s | 30K ops/s | 237K ops/s | **13x** | **7.8x** |
+| Scenario | Zod v3 | Zod v4 | **Zod AOT** | Typia | AJV | vs Zod v4 |
+|---|---|---|---|---|---|---|
+| simple string | 8.7M | 10.0M | **11.0M** | 11.0M | 11.1M | 1.1x |
+| string (min/max) | 8.3M | 6.0M | **11.1M** | 11.3M | 9.5M | 1.8x |
+| number (int+positive) | 8.2M | 5.8M | **10.9M** | 10.7M | 10.9M | 1.9x |
+| enum | 8.0M | 9.5M | **10.6M** | 10.6M | 10.5M | 1.1x |
+| bigint (min/max) | 8.0M | 6.0M | **10.9M** | — | — | 1.8x |
+| tuple [string, int, bool] | 4.0M | 4.4M | **10.5M** | 10.8M | 10.5M | 2.4x |
+| record\<string, number\> | 2.3M | 1.9M | **5.4M** | 7.5M | 9.4M | 2.8x |
+| set\<string\> (5 items) | 2.7M | 1.6M | **9.8M** | — | — | 6.3x |
+| set\<string\> (20 items) | 1.0M | 475K | **7.7M** | — | — | **16x** |
+| map\<string, number\> (5 entries) | 1.5M | 946K | **8.5M** | — | — | 9.0x |
+| map\<string, number\> (20 entries) | 490K | 238K | **5.2M** | — | — | **22x** |
+| pipe (non-transform) | 6.3M | 3.8M | **10.8M** | — | — | 2.8x |
+| discriminatedUnion (3 variants) | 2.3M | 2.9M | **9.8M** | 10.4M | 5.6M | 3.4x |
+| medium object (valid) | 1.3M | 1.7M | **5.4M** | 7.3M | 5.0M | 3.1x |
+| medium object (invalid) | 351K | 65K | **471K** | 2.1M | 5.6M | 7.3x |
+| large object (10 items) | 82K | 111K | **4.0M** | 4.1M | 834K | **36x** |
+| large object (100 items) | 9.0K | 11.6K | **676K** | 808K | 89K | **58x** |
+| recursive tree (7 nodes) | 424K | 1.5M | **6.4M** | 8.1M | 3.1M | 4.1x |
+| recursive tree (121 nodes) | 24K | 101K | **741K** | 1.4M | 250K | 7.4x |
+| event log (combined) | 260K | 479K | **4.5M** | — | — | 9.4x |
+| partial fallback obj (transform) | 817K | 1.4M | **3.3M** | — | — | 2.3x |
+| partial fallback arr 10 (transform) | 88K | 139K | **841K** | — | — | 6.1x |
+| partial fallback arr 50 (transform) | 18K | 28K | **175K** | — | — | 6.3x |
 
-Performance gains scale with schema complexity. The `discriminatedUnion` optimization uses an O(1) `switch` dispatch instead of Zod's sequential trial approach. Partial fallback schemas (containing `transform`/`refine`) still show 2-8x speedups by compiling the optimizable portions.
+*ops/s, higher is better. "—" = not supported by the library. Measured with `vitest bench` on Apple M-series.*
+
+Performance gains scale with schema complexity. The `discriminatedUnion` optimization uses an O(1) `switch` dispatch instead of Zod's sequential trial approach. Partial fallback schemas (containing `transform`/`refine`) still show 2-6x speedups by compiling the optimizable portions. Set/Map/BigInt are only benchmarked among Zod variants as AJV and Typia lack native support for these types.
 
 ## Runtime Support
 
@@ -303,7 +311,7 @@ interface CompiledSchema<T> {
 | Type | Supported Checks |
 |---|---|
 | `string` | `min`, `max`, `length`, `email`, `url`, `uuid`, `regex`, `includes`, `startsWith`, `endsWith` |
-| `number` | `int`, `positive`, `negative`, `nonnegative`, `nonpositive`, `min`, `max`, `multipleOf` |
+| `number` | `int`, `positive`, `negative`, `nonnegative`, `nonpositive`, `min`, `max`, `multipleOf`, `int32`, `uint32`, `float32`, `float64` |
 | `bigint` | `min`, `max`, `positive`, `negative`, `nonnegative`, `nonpositive`, `multipleOf` |
 | `boolean` | — |
 | `null` | — |

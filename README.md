@@ -104,6 +104,24 @@ npx zod-aot generate src/ --watch
 
 See the [full documentation](./packages/zod-aot/README.md) for API reference, benchmarks, and usage details.
 
+## Benchmarks
+
+5-way comparison: **Zod v3** vs **Zod v4** vs **Zod AOT** vs **[Typia](https://typia.io/)** vs **[AJV](https://ajv.js.org/)**
+
+| Scenario | Zod v3 | Zod v4 | **Zod AOT** | Typia | AJV | vs Zod v4 |
+|---|---|---|---|---|---|---|
+| string (min/max) | 8.3M | 6.0M | **11.1M** | 11.3M | 9.5M | 1.8x |
+| number (int+positive) | 8.2M | 5.8M | **10.9M** | 10.7M | 10.9M | 1.9x |
+| tuple [string, int, bool] | 4.0M | 4.4M | **10.5M** | 10.8M | 10.5M | 2.4x |
+| discriminatedUnion (3) | 2.3M | 2.9M | **9.8M** | 10.4M | 5.6M | 3.4x |
+| medium object (valid) | 1.3M | 1.7M | **5.4M** | 7.3M | 5.0M | 3.1x |
+| large object (10 items) | 82K | 111K | **4.0M** | 4.1M | 834K | **36x** |
+| large object (100 items) | 9.0K | 11.6K | **676K** | 808K | 89K | **58x** |
+| recursive tree (121 nodes) | 24K | 101K | **741K** | 1.4M | 250K | 7.4x |
+| event log (combined) | 260K | 479K | **4.5M** | — | — | 9.4x |
+
+*ops/s, higher is better. Measured with `vitest bench` on Apple M-series. Full results in [packages/zod-aot](./packages/zod-aot/README.md#benchmarks).*
+
 ## Runtime Support
 
 | Runtime | Version | Status |

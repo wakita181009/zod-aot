@@ -126,7 +126,7 @@ Plugin entries: `zod-aot/vite`, `zod-aot/webpack`, `zod-aot/esbuild`, `zod-aot/r
 
 ## Schema Coverage
 
-string, number, int, boolean, object, array, literal, enum, union, optional, nullable, null, undefined, tuple, record, intersection, discriminatedUnion, date, any, unknown, default, readonly, bigint, set, map, symbol, void, nan, never, pipe (non-transform), lazy (self-recursive via recursiveRef)
+string, number (int32, uint32, float32, float64), int, boolean, object, array, literal, enum, union, optional, nullable, null, undefined, tuple, record, intersection, discriminatedUnion, date, any, unknown, default, readonly, bigint, set, map, symbol, void, nan, never, pipe (non-transform), lazy (self-recursive via recursiveRef)
 
 ### Fallback to Zod
 transform, refine, superRefine, custom, preprocess, lazy (non-recursive only — self-recursive lazy schemas are compiled via `recursiveRef`)
@@ -255,7 +255,7 @@ pnpm -r build       # tsc
 
 ### Biome (Linter & Formatter)
 
-Config: `biome.json` (v2.4.7+)
+Config: `biome.json` (v2.4.8+)
 
 Key rules:
 - `noUnusedVariables`, `noUnusedImports`, `noUndeclaredVariables`: error
@@ -274,8 +274,8 @@ Key rules:
 
 ## CI/CD
 
-- **CI** (`.github/workflows/ci.yml`): Runs on push to main and PRs. Lint → typecheck → test → build on Node 20/22/24, Bun 1.3, Deno v2.x. Also tests Zod v4.0.0–latest compatibility.
-- **Release** (`.github/workflows/release.yml`): Triggered by `v*` tags. Runs full checks, then publishes to npm with provenance.
+- **CI** (`.github/workflows/ci.yml`): Runs on push to main and PRs. Lint → typecheck → build → test on Node 20/22/24, Bun 1.3, Deno v2.x. Also tests Zod v4.0.0–latest compatibility.
+- **Release** (`.github/workflows/release-please.yml`): Triggered by push to main via [release-please](https://github.com/googleapis/release-please). Creates release PRs automatically, then publishes to npm with provenance on release creation.
 
 ## Verification
 
