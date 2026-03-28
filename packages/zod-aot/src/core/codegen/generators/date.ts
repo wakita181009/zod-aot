@@ -7,7 +7,11 @@ export function generateDateValidation(
   pathExpr: string,
   issuesVar: string,
 ): string {
-  let code = emit`
+  let code = "";
+  if (ir.coerce) {
+    code += emit`${inputExpr}=new Date(${inputExpr});`;
+  }
+  code += emit`
     if(!(${inputExpr} instanceof Date)){
       ${issuesVar}.push({code:"invalid_type",expected:"date",input:${inputExpr},path:${pathExpr}});
     }else if(isNaN(${inputExpr}.getTime())){

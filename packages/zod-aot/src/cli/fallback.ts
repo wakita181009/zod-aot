@@ -20,8 +20,11 @@ export function hasFallback(ir: SchemaIR): string | null {
   if (ir.type === "optional" || ir.type === "nullable" || ir.type === "readonly") {
     return hasFallback(ir.inner);
   }
-  if (ir.type === "default") {
+  if (ir.type === "default" || ir.type === "catch") {
     return hasFallback(ir.inner);
+  }
+  if (ir.type === "templateLiteral") {
+    return null;
   }
   if (ir.type === "union" || ir.type === "discriminatedUnion") {
     for (const opt of ir.options) {

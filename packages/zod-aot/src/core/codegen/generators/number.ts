@@ -9,7 +9,11 @@ export function generateNumberValidation(
   issuesVar: string,
   _ctx: CodeGenContext,
 ): string {
-  let code = emit`
+  let code = "";
+  if (ir.coerce) {
+    code += emit`${inputExpr}=Number(${inputExpr});`;
+  }
+  code += emit`
     if(typeof ${inputExpr}!=="number"){
       ${issuesVar}.push({code:"invalid_type",expected:"number",input:${inputExpr},path:${pathExpr}});
     }else if(Number.isNaN(${inputExpr})){

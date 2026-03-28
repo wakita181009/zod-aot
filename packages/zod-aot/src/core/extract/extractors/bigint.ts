@@ -31,5 +31,5 @@ export function extractBigint(def: ZodDef): SchemaIR {
       }
     }
   }
-  return { type: "bigint", checks: bigintChecks };
+  return { type: "bigint", checks: bigintChecks, ...(def.coerce ? { coerce: true } : {}) };
 }
