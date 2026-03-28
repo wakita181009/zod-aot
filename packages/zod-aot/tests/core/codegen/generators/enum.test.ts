@@ -21,9 +21,25 @@ describe("codegen — enum", () => {
     expect(safeParse(null).success).toBe(false);
   });
 
-  it("generates Set-based lookup for enums", () => {
-    const ir: EnumIR = { type: "enum", values: ["a", "b", "c"] };
+  it("generates Set-based lookup for enums with 4+ values", () => {
+    const ir: EnumIR = { type: "enum", values: ["a", "b", "c", "d"] };
     const result = generateValidator(ir, "enumTest");
     expect(result.code).toContain("Set");
+  });
+
+  it("generates inline equality checks for enums with 1-3 values", () => {
+    const ir: EnumIR = { type: "enum", values: ["admin", "user"] };
+    const result = generateValidator(ir, "enumSmall");
+    expect(result.code).not.toContain("Set");
+    expect(result.functionDef).toContain('!=="admin"');
+    expect(result.functionDef).toContain('!=="user"');
+  });
+
+  it("inline enum accepts valid values", () => {
+    const ir: EnumIR = { type: "enum", values: ["yes", "no"] };
+    const safeParse = compileIR(ir);
+    expect(safeParse("yes").success).toBe(true);
+    expect(safeParse("no").success).toBe(true);
+    expect(safeParse("maybe").success).toBe(false);
   });
 });

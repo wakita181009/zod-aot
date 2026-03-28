@@ -1,6 +1,12 @@
 import type { SchemaIR } from "../../types.js";
 import type { CodeGenContext } from "../context.js";
-import { EMAIL_REGEX_SOURCE, emit, escapeString, UUID_REGEX_SOURCE } from "../context.js";
+import {
+  checkPriority,
+  EMAIL_REGEX_SOURCE,
+  emit,
+  escapeString,
+  UUID_REGEX_SOURCE,
+} from "../context.js";
 
 export function generateStringValidation(
   ir: SchemaIR & { type: "string" },
@@ -20,7 +26,7 @@ export function generateStringValidation(
 
   if (ir.checks.length > 0) {
     code += `else{`;
-    for (const check of ir.checks) {
+    for (const check of [...ir.checks].sort(checkPriority)) {
       switch (check.kind) {
         case "min_length":
           code += emit`

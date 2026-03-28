@@ -1,7 +1,9 @@
 import type { SchemaIR } from "../types.js";
 import type { CodeGenContext, CodeGenResult } from "./context.js";
+import { generateFastCheck } from "./fast-check.js";
 
 export type { CodeGenResult } from "./context.js";
+export { generateFastCheck } from "./fast-check.js";
 
 import {
   generateAnyValidation,
@@ -166,11 +168,33 @@ export function generateValidator(
 ): CodeGenResult {
   const fnName = `safeParse_${name}`;
   const ctx: CodeGenContext = { preamble: [], counter: 0, fnName };
+
+  // Fast Path: generate a boolean expression for eligible schemas
+  const fastExpr = generateFastCheck(ir, "input", ctx);
+
   const bodyCode = generateValidation(ir, "input", "[]", "__issues", ctx);
 
+  const auxiliaryFunctions: string[] = [];
   const code = ["/* zod-aot */", ...ctx.preamble].join("\n");
-  const functionDef = [
-    `function ${fnName}(input){`,
+
+  const functionDefParts = [`function ${fnName}(input){`];
+
+  // Prepend fast path guard if eligible
+  if (fastExpr !== null && fastExpr !== "true") {
+    functionDefParts.push(`if(${fastExpr}){return{success:true,data:input};}`);
+  } else if (fastExpr === "true") {
+    // Schema always succeeds (any/unknown) — skip slow path entirely
+    functionDefParts.push(`return{success:true,data:input};`);
+    functionDefParts.push(`}`);
+    return {
+      code,
+      functionDef: functionDefParts.join("\n"),
+      fallbackCount: options?.fallbackCount ?? 0,
+      auxiliaryFunctions,
+    };
+  }
+
+  functionDefParts.push(
     `var __issues=[];`,
     bodyCode,
     `if(__issues.length>0){`,
@@ -182,7 +206,9 @@ export function generateValidator(
     `}`,
     `return{success:true,data:input};`,
     `}`,
-  ].join("\n");
+  );
 
-  return { code, functionDef, fallbackCount: options?.fallbackCount ?? 0 };
+  const functionDef = functionDefParts.join("\n");
+
+  return { code, functionDef, fallbackCount: options?.fallbackCount ?? 0, auxiliaryFunctions };
 }

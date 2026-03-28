@@ -1,6 +1,6 @@
 import type { SchemaIR } from "../../types.js";
 import type { CodeGenContext } from "../context.js";
-import { emit } from "../context.js";
+import { checkPriority, emit } from "../context.js";
 
 export function generateNumberValidation(
   ir: SchemaIR & { type: "number" },
@@ -24,7 +24,7 @@ export function generateNumberValidation(
 
   if (ir.checks.length > 0) {
     code += `else{`;
-    for (const check of ir.checks) {
+    for (const check of [...ir.checks].sort(checkPriority)) {
       switch (check.kind) {
         case "greater_than":
           if (check.inclusive) {
