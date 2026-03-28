@@ -1,4 +1,5 @@
 export { extractBigint } from "./bigint.js";
+export { extractCatch } from "./catch.js";
 export { extractDate } from "./date.js";
 export { extractDefault } from "./default.js";
 export { extractLazy } from "./lazy.js";
@@ -6,4 +7,5 @@ export { extractNumber } from "./number.js";
 export { extractPipe } from "./pipe.js";
 export { extractSet } from "./set.js";
 export { extractString } from "./string.js";
+export { extractTemplateLiteral } from "./template-literal.js";
 export { extractUnion } from "./union.js";

@@ -9,7 +9,11 @@ export function generateBigIntValidation(
   issuesVar: string,
   _ctx: CodeGenContext,
 ): string {
-  let code = emit`
+  let code = "";
+  if (ir.coerce) {
+    code += emit`try{${inputExpr}=BigInt(${inputExpr});}catch(_){}`;
+  }
+  code += emit`
     if(typeof ${inputExpr}!=="bigint"){
       ${issuesVar}.push({code:"invalid_type",expected:"bigint",input:${inputExpr},path:${pathExpr}});
     }`;

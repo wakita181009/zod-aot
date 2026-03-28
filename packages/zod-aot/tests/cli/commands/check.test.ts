@@ -115,7 +115,7 @@ describe("runCheck", () => {
 
     try {
       await runCheck({ inputs: [path.join(fixturesDir, "simple-schema.ts")] });
-      expect(mockLogger.success).toHaveBeenCalledWith(expect.stringContaining("compilable"));
+      expect(mockLogger.success).toHaveBeenCalledWith(expect.stringContaining("compiled"));
     } finally {
       logSpy.mockRestore();
     }
@@ -142,7 +142,7 @@ describe("runCheck", () => {
       await expect(
         runCheck({ inputs: [path.join(fixturesDir, "with-fallback.ts")] }),
       ).rejects.toThrow("process.exit");
-      expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining("partial"));
+      expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining("compiled"));
       expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining("fallback"));
     } finally {
       mockExit.mockRestore();

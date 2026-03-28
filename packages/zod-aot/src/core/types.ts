@@ -138,25 +138,30 @@ export type SetCheckIR = CheckMinSize | CheckMaxSize;
 export interface StringIR {
   type: "string";
   checks: CheckIR[];
+  coerce?: boolean;
 }
 
 export interface NumberIR {
   type: "number";
   checks: CheckIR[];
+  coerce?: boolean;
 }
 
 export interface BooleanIR {
   type: "boolean";
+  coerce?: boolean;
 }
 
 export interface BigIntIR {
   type: "bigint";
   checks: BigIntCheckIR[];
+  coerce?: boolean;
 }
 
 export interface DateIR {
   type: "date";
   checks: DateCheckIR[];
+  coerce?: boolean;
 }
 
 export interface SymbolIR {
@@ -296,6 +301,17 @@ export interface FallbackIR {
   fallbackIndex?: number;
 }
 
+export interface TemplateLiteralIR {
+  type: "templateLiteral";
+  pattern: string;
+}
+
+export interface CatchIR {
+  type: "catch";
+  inner: SchemaIR;
+  defaultValue: unknown;
+}
+
 export interface RecursiveRefIR {
   type: "recursiveRef";
 }
@@ -337,6 +353,8 @@ export type SchemaIR =
   | DefaultIR
   | PipeIR
   // Special
+  | TemplateLiteralIR
+  | CatchIR
   | FallbackIR
   | RecursiveRefIR;
 

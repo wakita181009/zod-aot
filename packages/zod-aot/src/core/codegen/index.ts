@@ -8,6 +8,7 @@ import {
   generateArrayValidation,
   generateBigIntValidation,
   generateBooleanValidation,
+  generateCatchValidation,
   generateDateValidation,
   generateDefaultValidation,
   generateDiscriminatedUnionValidation,
@@ -30,6 +31,7 @@ import {
   generateSetValidation,
   generateStringValidation,
   generateSymbolValidation,
+  generateTemplateLiteralValidation,
   generateTupleValidation,
   generateUndefinedValidation,
   generateUnionValidation,
@@ -50,7 +52,7 @@ function generateValidation(
     case "number":
       return generateNumberValidation(ir, inputExpr, pathExpr, issuesVar, ctx);
     case "boolean":
-      return generateBooleanValidation(inputExpr, pathExpr, issuesVar);
+      return generateBooleanValidation(ir, inputExpr, pathExpr, issuesVar);
     case "null":
       return generateNullValidation(inputExpr, pathExpr, issuesVar);
     case "undefined":
@@ -142,6 +144,10 @@ function generateValidation(
       return generateNanValidation(inputExpr, pathExpr, issuesVar);
     case "never":
       return generateNeverValidation(inputExpr, pathExpr, issuesVar);
+    case "templateLiteral":
+      return generateTemplateLiteralValidation(ir, inputExpr, pathExpr, issuesVar, ctx);
+    case "catch":
+      return generateCatchValidation(ir, inputExpr, pathExpr, issuesVar, ctx, generateValidation);
   }
 }
 

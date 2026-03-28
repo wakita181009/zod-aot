@@ -30,5 +30,5 @@ export function extractDate(def: ZodDef): SchemaIR {
       }
     }
   }
-  return { type: "date", checks: dateChecks };
+  return { type: "date", checks: dateChecks, ...(def.coerce ? { coerce: true } : {}) };
 }

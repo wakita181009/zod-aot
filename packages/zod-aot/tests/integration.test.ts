@@ -1439,3 +1439,146 @@ describe("integration — partial fallback (mixed compilable + non-compilable)",
     }
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Coerce Types
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("integration — coerce schemas match Zod", () => {
+  it("z.coerce.string()", () => {
+    const schema = z.coerce.string();
+    for (const input of [42, true, null, undefined, "hello", 0, "", 3.14]) {
+      assertSameResult(schema, input, "coerceString");
+    }
+  });
+
+  it("z.coerce.number()", () => {
+    const schema = z.coerce.number();
+    for (const input of ["42", "3.14", "0", "", "abc", true, false, null, undefined, 42]) {
+      assertSameResult(schema, input, "coerceNumber");
+    }
+  });
+
+  it("z.coerce.number() with checks", () => {
+    const schema = z.coerce.number().int().positive();
+    for (const input of ["42", "3.14", "-1", "0", "abc", 42]) {
+      assertSameResult(schema, input, "coerceNumberChecks");
+    }
+  });
+
+  it("z.coerce.boolean()", () => {
+    const schema = z.coerce.boolean();
+    for (const input of [1, 0, "true", "", null, undefined, true, false, "hello"]) {
+      assertSameResult(schema, input, "coerceBoolean");
+    }
+  });
+
+  it("z.coerce.bigint()", () => {
+    const schema = z.coerce.bigint();
+    for (const input of ["42", 42, "0", 0, true, false]) {
+      assertSameResult(schema, input, "coerceBigint");
+    }
+  });
+
+  it("z.coerce.bigint() with invalid input", () => {
+    const schema = z.coerce.bigint();
+    for (const input of ["abc", 3.14, null, undefined, ""]) {
+      assertSameResult(schema, input, "coerceBigintInvalid");
+    }
+  });
+
+  it("z.coerce.date()", () => {
+    const schema = z.coerce.date();
+    for (const input of ["2024-01-01", 0, 1704067200000, "invalid", null, undefined]) {
+      assertSameResult(schema, input, "coerceDate");
+    }
+  });
+
+  it("coerce in nested object", () => {
+    const schema = z.object({
+      name: z.coerce.string(),
+      age: z.coerce.number(),
+    });
+    for (const input of [
+      { name: 42, age: "25" },
+      { name: "Alice", age: 30 },
+      { name: null, age: "abc" },
+    ]) {
+      assertSameResult(schema, input, "coerceNested");
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TemplateLiteral Type
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("integration — templateLiteral schema matches Zod", () => {
+  it("simple template literal", () => {
+    const schema = z.templateLiteral([z.literal("user-"), z.number().int()]);
+    for (const input of ["user-42", "user-0", "user-abc", "admin-42", "", 42, null]) {
+      assertSameResult(schema, input, "templateLiteral");
+    }
+  });
+
+  it("template literal with string and number", () => {
+    const schema = z.templateLiteral([z.string(), z.literal("-v"), z.number().int()]);
+    for (const input of ["hello-v1", "test-v42", "x-v0", "-v1", "hello-v", 42]) {
+      assertSameResult(schema, input, "templateLiteralComplex");
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Catch Type
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("integration — catch schema matches Zod", () => {
+  it("z.string().catch('default')", () => {
+    const schema = z.string().catch("default");
+    for (const input of ["hello", 42, null, undefined, true, {}, []]) {
+      assertSameResult(schema, input, "catchString");
+    }
+  });
+
+  it("z.number().catch(0)", () => {
+    const schema = z.number().catch(0);
+    for (const input of [42, "abc", null, undefined, true]) {
+      assertSameResult(schema, input, "catchNumber");
+    }
+  });
+
+  it("catch in nested object", () => {
+    const schema = z.object({
+      name: z.string().catch("anonymous"),
+      age: z.number().catch(0),
+    });
+    for (const input of [
+      { name: "Alice", age: 30 },
+      { name: 42, age: "abc" },
+      { name: null, age: null },
+    ]) {
+      assertSameResult(schema, input, "catchNested");
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Branded Type (passthrough verification)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("integration — branded schema matches Zod", () => {
+  it("z.string().brand<'Email'>()", () => {
+    const schema = z.string().brand<"Email">();
+    for (const input of ["hello@example.com", "", 42, null, undefined]) {
+      assertSameResult(schema, input, "branded");
+    }
+  });
+
+  it("branded with checks", () => {
+    const schema = z.string().min(3).brand<"Username">();
+    for (const input of ["Alice", "Al", "", 42, null]) {
+      assertSameResult(schema, input, "brandedChecks");
+    }
+  });
+});

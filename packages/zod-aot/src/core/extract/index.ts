@@ -2,6 +2,7 @@ import type { SchemaIR } from "../types.js";
 import { extractChecks } from "./checks.js";
 import {
   extractBigint,
+  extractCatch,
   extractDate,
   extractDefault,
   extractLazy,
@@ -9,6 +10,7 @@ import {
   extractPipe,
   extractSet,
   extractString,
+  extractTemplateLiteral,
   extractUnion,
 } from "./extractors/index.js";
 import { makeFallback } from "./fallback.js";
@@ -53,7 +55,7 @@ function extractSchemaInner(
   switch (def.type) {
     // ── Simple cases (inline) ──────────────────────────────────────────────
     case "boolean":
-      return { type: "boolean" };
+      return { type: "boolean", ...(def.coerce ? { coerce: true } : {}) };
 
     case "null":
       return { type: "null" };
@@ -175,6 +177,12 @@ function extractSchemaInner(
 
     case "pipe":
       return extractPipe(def, zodSchema, p, fallbacks, extractSchema, v);
+
+    case "template_literal":
+      return extractTemplateLiteral(schema, zodSchema, p, fallbacks);
+
+    case "catch":
+      return extractCatch(def, zodSchema, p, fallbacks, extractSchema, v);
 
     default:
       return makeFallback("unsupported", zodSchema, fallbacks, p);

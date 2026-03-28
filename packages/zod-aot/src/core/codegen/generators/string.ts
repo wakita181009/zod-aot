@@ -9,7 +9,11 @@ export function generateStringValidation(
   issuesVar: string,
   ctx: CodeGenContext,
 ): string {
-  let code = emit`
+  let code = "";
+  if (ir.coerce) {
+    code += emit`${inputExpr}=String(${inputExpr});`;
+  }
+  code += emit`
     if(typeof ${inputExpr}!=="string"){
       ${issuesVar}.push({code:"invalid_type",expected:"string",input:${inputExpr},path:${pathExpr}});
     }`;
