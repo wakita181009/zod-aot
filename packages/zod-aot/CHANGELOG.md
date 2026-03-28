@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.2](https://github.com/wakita181009/zod-aot/compare/v0.9.1...v0.9.2) (2026-03-28)
+
+
+### Bug Fixes
+
+* replace tsx with jiti for reliable TypeScript loading on Node 24 ([#72](https://github.com/wakita181009/zod-aot/issues/72)) ([191f782](https://github.com/wakita181009/zod-aot/commit/191f78287e8a5cea31b6cfde7951b15baaa98533))
+
 ## [0.9.1](https://github.com/wakita181009/zod-aot/compare/v0.9.0...v0.9.1) (2026-03-27)
 
 
