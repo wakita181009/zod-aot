@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
+import { extractBigint } from "#src/core/extract/extractors/bigint.js";
 import { extractSchema } from "#src/core/extract/index.js";
 import type { BigIntIR } from "#src/core/types.js";
 
@@ -113,5 +114,19 @@ describe("extractSchema — bigint checks", () => {
       kind: "bigint_greater_than",
       value: "9007199254740993",
     });
+  });
+
+  it("skips checks without _zod.def", () => {
+    const ir = extractBigint({
+      type: "bigint",
+      checks: [{ _zod: undefined }],
+    } as never) as BigIntIR;
+    expect(ir).toEqual({ type: "bigint", checks: [] });
+  });
+
+  it("extracts coerce flag", () => {
+    const ir = extractSchema(z.coerce.bigint()) as BigIntIR;
+    expect(ir.type).toBe("bigint");
+    expect(ir.coerce).toBe(true);
   });
 });

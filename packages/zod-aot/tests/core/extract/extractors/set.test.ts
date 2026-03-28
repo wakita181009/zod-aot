@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
+import { extractSet } from "#src/core/extract/extractors/set.js";
 import { extractSchema } from "#src/core/extract/index.js";
 import type { SetIR } from "#src/core/types.js";
 
@@ -48,5 +49,20 @@ describe("extractSchema — set", () => {
     const ir = extractSchema(z.set(z.object({ name: z.string() }))) as SetIR;
     expect(ir.type).toBe("set");
     expect(ir.valueType.type).toBe("object");
+  });
+
+  it("skips checks without _zod.def", () => {
+    const ir = extractSet(
+      {
+        type: "set",
+        checks: [{ _zod: undefined }],
+        valueType: {},
+      } as never,
+      "test",
+      undefined,
+      () => ({ type: "string", checks: [] }),
+    ) as SetIR;
+    expect(ir.type).toBe("set");
+    expect(ir.checks).toBeUndefined();
   });
 });

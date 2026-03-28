@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
+import { extractDate } from "#src/core/extract/extractors/date.js";
 import { extractSchema } from "#src/core/extract/index.js";
 import type { DateIR } from "#src/core/types.js";
 
@@ -42,5 +43,45 @@ describe("extractSchema — date", () => {
     for (const check of ir.checks) {
       expect(Number.isNaN(check.timestamp)).toBe(false);
     }
+  });
+
+  it("skips checks without _zod.def", () => {
+    const ir = extractDate({
+      type: "date",
+      checks: [{ _zod: undefined }],
+    } as never) as DateIR;
+    expect(ir).toEqual({ type: "date", checks: [] });
+  });
+
+  it("skips greater_than check with NaN timestamp", () => {
+    const ir = extractDate({
+      type: "date",
+      checks: [
+        { _zod: { def: { check: "greater_than", value: "invalid-date", inclusive: true } } },
+      ],
+    } as never) as DateIR;
+    expect(ir).toEqual({ type: "date", checks: [] });
+  });
+
+  it("skips less_than check with NaN timestamp", () => {
+    const ir = extractDate({
+      type: "date",
+      checks: [{ _zod: { def: { check: "less_than", value: "invalid-date", inclusive: true } } }],
+    } as never) as DateIR;
+    expect(ir).toEqual({ type: "date", checks: [] });
+  });
+
+  it("extracts coerce flag", () => {
+    const ir = extractSchema(z.coerce.date()) as DateIR;
+    expect(ir.type).toBe("date");
+    expect(ir.coerce).toBe(true);
+  });
+
+  it("skips unrecognized check types", () => {
+    const ir = extractDate({
+      type: "date",
+      checks: [{ _zod: { def: { check: "unknown_check" } } }],
+    } as never) as DateIR;
+    expect(ir).toEqual({ type: "date", checks: [] });
   });
 });

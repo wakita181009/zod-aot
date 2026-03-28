@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { extractSchema } from "#src/core/extract/index.js";
-import type { TemplateLiteralIR } from "#src/core/types.js";
+import type { FallbackIR, TemplateLiteralIR } from "#src/core/types.js";
 
 describe("extractSchema — templateLiteral", () => {
   it("extracts simple template literal pattern", () => {
@@ -38,5 +38,14 @@ describe("extractSchema — templateLiteral", () => {
     const regex = new RegExp(ir.pattern);
     expect(regex.test("hello world")).toBe(true);
     expect(regex.test("hello  world")).toBe(false);
+  });
+
+  it("falls back when pattern is falsy", () => {
+    const schema = z.templateLiteral([z.literal("hello")]);
+    // Simulate missing pattern
+    (schema._zod as unknown as Record<string, unknown>).pattern = undefined;
+    const ir = extractSchema(schema);
+    expect(ir.type).toBe("fallback");
+    expect((ir as FallbackIR).reason).toBe("unsupported");
   });
 });

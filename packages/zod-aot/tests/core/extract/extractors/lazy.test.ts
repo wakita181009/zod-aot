@@ -4,6 +4,7 @@ import type { FallbackEntry } from "#src/core/extract/index.js";
 import { extractSchema } from "#src/core/extract/index.js";
 import type {
   ArrayIR,
+  FallbackIR,
   NullableIR,
   ObjectIR,
   OptionalIR,
@@ -219,5 +220,14 @@ describe("extractSchema — lazy (recursive / cycle detection)", () => {
     const rightIR = ir.properties["right"] as NullableIR;
     expect(leftIR.inner.type).toBe("recursiveRef");
     expect(rightIR.inner.type).toBe("recursiveRef");
+  });
+
+  it("falls back when innerType is falsy", () => {
+    const schema = z.lazy(() => z.string());
+    // Simulate missing innerType
+    (schema._zod as unknown as Record<string, unknown>).innerType = undefined;
+    const ir = extractSchema(schema);
+    expect(ir.type).toBe("fallback");
+    expect((ir as FallbackIR).reason).toBe("lazy");
   });
 });
