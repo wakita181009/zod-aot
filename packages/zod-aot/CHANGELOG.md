@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/wakita181009/zod-aot/compare/v0.11.0...v0.12.0) (2026-03-28)
+
+
+### Features
+
+* add two-phase validation with Fast Path boolean expression chain ([#79](https://github.com/wakita181009/zod-aot/issues/79)) ([f20c1dc](https://github.com/wakita181009/zod-aot/commit/f20c1dcc880b1e76092d03a22e3950c1f3a2b722))
+
 ## [0.11.0](https://github.com/wakita181009/zod-aot/compare/v0.10.0...v0.11.0) (2026-03-28)
 
 
