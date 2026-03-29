@@ -1,11 +1,7 @@
 import { isCompiledSchema } from "#src/core/compile.js";
+import type { DiscoveredSchema } from "#src/core/types.js";
 import type { LoadOptions } from "./loader.js";
 import { loadSourceFile } from "./loader.js";
-
-export interface DiscoveredSchema {
-  exportName: string;
-  schema: unknown;
-}
 
 /**
  * Discover all compile() calls in a source file by importing it and

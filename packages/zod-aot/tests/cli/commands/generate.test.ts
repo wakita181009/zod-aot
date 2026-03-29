@@ -239,6 +239,72 @@ describe("runGenerate", () => {
   });
 });
 
+describe("runGenerate — edge cases", () => {
+  it("warns when no source files found (empty directory)", async () => {
+    const logSpy = vi.spyOn(await import("#src/cli/logger.js"), "logger", "get");
+    const mockLogger = {
+      info: vi.fn(),
+      success: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      dim: vi.fn(),
+    };
+    logSpy.mockReturnValue(mockLogger);
+
+    const emptyDir = path.join(fixturesDir, "__empty_test_dir__");
+    await fs.promises.mkdir(emptyDir, { recursive: true });
+
+    try {
+      await runGenerate({ inputs: [emptyDir], output: undefined });
+      expect(mockLogger.warn).toHaveBeenCalledWith("No source files found.");
+    } finally {
+      await fs.promises.rmdir(emptyDir).catch(() => undefined);
+      logSpy.mockRestore();
+    }
+  });
+
+  it("exits with error when generateFile throws", async () => {
+    const logSpy = vi.spyOn(await import("#src/cli/logger.js"), "logger", "get");
+    const mockLogger = {
+      info: vi.fn(),
+      success: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      dim: vi.fn(),
+    };
+    logSpy.mockReturnValue(mockLogger);
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
+      throw new Error("process.exit");
+    });
+
+    // Create a temp file that will cause discoverSchemas to fail
+    const badFile = path.join(fixturesDir, "__bad_syntax_test__.ts");
+    await fs.promises.writeFile(badFile, "export const x = {{{INVALID SYNTAX");
+
+    try {
+      await expect(runGenerate({ inputs: [badFile], output: undefined })).rejects.toThrow(
+        "process.exit",
+      );
+      expect(mockLogger.error).toHaveBeenCalled();
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    } finally {
+      await fs.promises.unlink(badFile).catch(() => undefined);
+      logSpy.mockRestore();
+      exitSpy.mockRestore();
+    }
+  });
+});
+
+describe("resolveInputFiles — mixed inputs", () => {
+  it("resolves a mix of files and directories", async () => {
+    const filePath = path.join(fixturesDir, "simple-schema.ts");
+    const result = await resolveInputFiles([filePath, fixturesDir]);
+    // Should include the explicitly listed file plus files from directory scan
+    expect(result).toContain(filePath);
+    expect(result.length).toBeGreaterThan(1);
+  });
+});
+
 describe("generate E2E", () => {
   it("generates a compiled file from simple schema and validates correctly", async () => {
     const filePath = path.join(fixturesDir, "simple-schema.ts");

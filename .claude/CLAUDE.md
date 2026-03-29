@@ -48,14 +48,16 @@ Output          emitter.ts                  rewriteSource()          IIFE inline
 
 Key files:
 - `core/compile.ts`: `compile()` is NOT the optimizer — it's a Zod fallback + `COMPILED_MARKER` symbol for discovery
-- `core/pipeline.ts`: `compileSchemas()` — shared extract → generate pipeline, `CompiledSchemaInfo` type
+- `core/pipeline.ts`: `compileSchemas()` — shared extract → generate pipeline, `CompiledSchemaInfo` type, `CompileSchemasOptions` with `onError` callback for graceful failure handling
+- `core/diagnostic.ts`: `diagnoseSchema()` — single-pass SchemaIR walker producing `DiagnosticResult` (tree, coverage, Fast Path eligibility, hints)
 - `core/codegen/fast-check/index.ts`: `generateFastCheck()` — Fast Path dispatcher + trivial inline cases
 - `core/codegen/generators/index.ts`: `generateValidation()` — Slow Path dispatcher
 - `core/codegen/emit.ts`: `emit()` — tagged template for Slow Path code generation
 - `core/iife.ts`: `generateIIFE()` — shared IIFE generation for CLI emitter and unplugin transform (owns `extractFunctionName()`)
 - `discovery.ts`: `discoverSchemas()` loads file → scans exports with `isCompiledSchema()`
 - `cli/commands/generate.ts`: discovery → `compileSchemas()` → `emitter.ts` writes `.compiled.ts`
-- `unplugin/transform.ts`: discovery → `compileSchemas()` → `rewriteSource()` replaces `compile()` with IIFE
+- `cli/commands/check.ts`: discovery → `extractSchema()` → `diagnoseSchema()` → tree view / JSON output
+- `unplugin/transform.ts`: discovery → `compileSchemas()` → `rewriteSource()` replaces `compile()` with IIFE, verbose logging + `BuildStats` tracking
 - `benchmarks/vitest.config.ts`: uses `zodAot()` vite plugin + `@typia/unplugin` for build-time compilation
 
 The generated `safeParse_*` function is identical across all paths. Benchmark results accurately reflect CLI/unplugin output performance.
@@ -97,7 +99,8 @@ Exports: `compile`, `isCompiledSchema`, types (`CompiledSchema`, `SafeParseResul
 npx zod-aot generate src/schemas.ts -o src/schemas.compiled.ts
 npx zod-aot generate src/ -o src/compiled/
 npx zod-aot generate src/ --watch   # watch for changes and regenerate
-npx zod-aot check src/schemas.ts    # check if compilable
+npx zod-aot check src/schemas.ts    # diagnose with tree view, coverage, hints
+npx zod-aot check src/schemas.ts --json --fail-under 80  # JSON output + CI gate
 ```
 
 ### unplugin (Vite / webpack / esbuild / Rollup / Rolldown / rspack)
@@ -126,7 +129,10 @@ Plugin entries: `zod-aot/vite`, `zod-aot/webpack`, `zod-aot/esbuild`, `zod-aot/r
 - IIFE wraps preamble (regex/Set) + safeParse function + CompiledSchema object
 - `loadSourceFile()` uses `jiti` on Node.js, native import on Bun/Deno
 - `cacheBust: true` (`?t=${Date.now()}`) for HMR support
-- Options: `include?: string[]`, `exclude?: string[]` (path substring matching)
+- Options: `include?: string[]`, `exclude?: string[]` (path substring matching), `zodCompat?: boolean`, `verbose?: boolean`
+- `verbose: true` logs per-schema compilation status and build summary (`buildEnd`), resets stats each watch cycle
+- `BuildStats` tracked in `transform.ts`: `{ files, schemas, optimized, failed }`
+- `compileSchemas()` uses `onError` callback so a single schema failure doesn't abort the entire file
 
 ## Schema Coverage
 
@@ -151,9 +157,10 @@ zod-aot/
 │       │   ├── discovery.ts      # discoverSchemas() — shared by cli & unplugin
 │       │   ├── loader.ts         # loadSourceFile() — runtime-aware file loader
 │       │   ├── core/             # Pure logic (no cli/unplugin/discovery/loader deps)
-│       │   │   ├── types.ts      # SchemaIR, CompiledSchema, CheckIR
+│       │   │   ├── types.ts      # SchemaIR, CompiledSchema, DiscoveredSchema
 │       │   │   ├── compile.ts    # compile() marker + isCompiledSchema() + createFallback()
-│       │   │   ├── pipeline.ts   # compileSchemas() — shared extract→generate pipeline
+│       │   │   ├── diagnostic.ts # diagnoseSchema() → DiagnosticResult (tree, coverage, Fast Path, hints)
+│       │   │   ├── pipeline.ts   # compileSchemas() — shared extract→generate pipeline, onError callback
 │       │   │   ├── extract/      # extractSchema() — _zod.def → SchemaIR
 │       │   │   │   ├── index.ts  # extractSchema() main entry
 │       │   │   │   ├── checks.ts # Check extraction (string/number/bigint/date)
@@ -171,15 +178,14 @@ zod-aot/
 │       │   │           ├── index.ts # generateValidation() dispatcher
 │       │   │           └── string.ts, number.ts, ... # 33 per-type generators
 │       │   ├── cli/              # CLI-specific (no unplugin deps)
-│       │   │   ├── index.ts      # CLI entry point (command parser)
-│       │   │   ├── logger.ts     # Logging utility
+│       │   │   ├── index.ts      # CLI entry point (command parser, usage text)
+│       │   │   ├── logger.ts     # Colored logging (info/success/warn/error/dim), TTY-aware
 │       │   │   ├── emitter.ts    # .compiled.ts file generation
 │       │   │   ├── errors.ts     # Error message utility
-│       │   │   ├── fallback.ts   # hasFallback() — recursive fallback detection
 │       │   │   └── commands/
 │       │   │       ├── generate.ts
 │       │   │       ├── watch.ts
-│       │   │       └── check.ts
+│       │   │       └── check.ts   # diagnose schemas: tree view, coverage %, Fast Path, hints, --json, --fail-under
 │       │   └── unplugin/         # Build plugin (no cli deps)
 │       │       ├── index.ts      # createUnplugin() factory
 │       │       ├── transform.ts  # shouldTransform, transformCode, rewriteSource
@@ -192,6 +198,8 @@ zod-aot/
 │       │   ├── fixtures/         # Shared test fixtures (simple-schema, multi-schema, etc.)
 │       │   ├── core/
 │       │   │   ├── types.test.ts, compile.test.ts
+│       │   │   ├── diagnostic.test.ts  # diagnoseSchema() coverage, Fast Path, hints
+│       │   │   ├── pipeline.test.ts    # compileSchemas() + onError
 │       │   │   ├── extract/
 │       │   │   │   ├── index.test.ts
 │       │   │   │   └── extractors/*.test.ts
@@ -199,11 +207,11 @@ zod-aot/
 │       │   │       ├── index.test.ts, helpers.ts
 │       │   │       └── generators/*.test.ts
 │       │   ├── cli/
-│       │   │   ├── emitter.test.ts, fallback.test.ts, logger.test.ts
+│       │   │   ├── emitter.test.ts, logger.test.ts
 │       │   │   └── commands/
 │       │   │       └── check.test.ts, generate.test.ts, watch.test.ts
 │       │   └── unplugin/
-│       │       ├── transform.test.ts
+│       │       ├── transform.test.ts   # includes verbose/BuildStats tests
 │       │       └── index.test.ts
 │       ├── package.json
 │       └── tsconfig.json

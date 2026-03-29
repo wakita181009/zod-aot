@@ -1,9 +1,10 @@
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { generateValidator } from "#src/core/codegen/index.js";
 import { extractSchema } from "#src/core/extract/index.js";
 import {
+  type BuildStats,
   removeCompileImport,
   rewriteSource,
   shouldTransform,
@@ -48,6 +49,22 @@ describe("shouldTransform()", () => {
   it("excludes non-script files", () => {
     expect(shouldTransform("/src/styles.css")).toBe(false);
     expect(shouldTransform("/src/data.json")).toBe(false);
+  });
+
+  it("includes .cjs and .cts files", () => {
+    expect(shouldTransform("/src/schemas.cjs")).toBe(true);
+    expect(shouldTransform("/src/schemas.cts")).toBe(true);
+  });
+
+  it("includes .jsx files", () => {
+    expect(shouldTransform("/src/component.jsx")).toBe(true);
+  });
+
+  it("handles include and exclude together", () => {
+    const options = { include: ["src/"], exclude: ["src/generated"] };
+    expect(shouldTransform("/src/schemas.ts", options)).toBe(true);
+    expect(shouldTransform("/src/generated/schemas.ts", options)).toBe(false);
+    expect(shouldTransform("/lib/schemas.ts", options)).toBe(false);
   });
 
   it("respects exclude option", () => {
@@ -329,5 +346,83 @@ describe("transformCode() E2E", () => {
     const result = await transformCode(code, "/fake/path.ts");
 
     expect(result).toBeNull();
+  });
+
+  it("returns null when code contains compile but not zod-aot", async () => {
+    const code = `import { compile } from "other-lib";\nexport const x = compile(foo);`;
+    const result = await transformCode(code, "/fake/path.ts");
+
+    expect(result).toBeNull();
+  });
+
+  it("calls onBuildStats callback when schemas are compiled", async () => {
+    const fixturePath = path.join(fixturesDir, "simple-schema.ts");
+    const code = readFixtureAsUserCode(fixturePath);
+    const stats: BuildStats[] = [];
+
+    await transformCode(code, fixturePath, {
+      onBuildStats: (s) => stats.push(s),
+    });
+
+    expect(stats).toHaveLength(1);
+    expect(stats[0]?.files).toBe(1);
+    expect(stats[0]?.schemas).toBeGreaterThanOrEqual(1);
+    expect(stats[0]?.optimized).toBeGreaterThanOrEqual(1);
+    expect(stats[0]?.failed).toBe(0);
+  });
+
+  it("verbose mode logs per-schema compilation status", async () => {
+    const fixturePath = path.join(fixturesDir, "simple-schema.ts");
+    const code = readFixtureAsUserCode(fixturePath);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(vi.fn());
+
+    try {
+      await transformCode(code, fixturePath, { verbose: true });
+      const output = logSpy.mock.calls.map((c) => c[0]).join("\n");
+      expect(output).toContain("[zod-aot]");
+      expect(output).toContain("✓");
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it("throws when discoverSchemas fails", async () => {
+    const code = `import { compile } from "zod-aot";\nexport const v = compile(S);`;
+    await expect(transformCode(code, "/nonexistent/bad-file.ts")).rejects.toThrow("[zod-aot]");
+  });
+});
+
+describe("rewriteSource() — zodCompat option", () => {
+  const simpleSchema = z.object({ name: z.string() });
+
+  function makeCompiledInfo(exportName: string, schema: z.ZodType) {
+    const ir = extractSchema(schema);
+    const codegenResult = generateValidator(ir, exportName);
+    return { exportName, codegenResult, fallbackEntries: [] };
+  }
+
+  it("uses plain object when zodCompat is false", () => {
+    const code = [
+      `import { compile } from "zod-aot";`,
+      `export const validateUser = compile(UserSchema);`,
+    ].join("\n");
+
+    const schemas = [makeCompiledInfo("validateUser", simpleSchema)];
+    const result = rewriteSource(code, schemas, { zodCompat: false });
+
+    expect(result).toContain("var __w={}");
+    expect(result).not.toContain("Object.create");
+  });
+
+  it("uses Object.create when zodCompat is true (default)", () => {
+    const code = [
+      `import { compile } from "zod-aot";`,
+      `export const validateUser = compile(UserSchema);`,
+    ].join("\n");
+
+    const schemas = [makeCompiledInfo("validateUser", simpleSchema)];
+    const result = rewriteSource(code, schemas, { zodCompat: true });
+
+    expect(result).toContain("Object.create(UserSchema)");
   });
 });

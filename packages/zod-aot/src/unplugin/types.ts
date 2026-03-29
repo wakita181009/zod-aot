@@ -11,4 +11,10 @@ export interface ZodAotPluginOptions {
    * @default true
    */
   zodCompat?: boolean | undefined;
+  /**
+   * Enable verbose logging during build.
+   * Logs per-schema compilation status and a build summary.
+   * @default false
+   */
+  verbose?: boolean | undefined;
 }

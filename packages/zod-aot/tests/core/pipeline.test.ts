@@ -52,6 +52,30 @@ describe("compileSchemas", () => {
     expect(results[0]?.fallbackEntries.length).toBe(2);
   });
 
+  it("continues on error when onError is provided", () => {
+    const schemas = [
+      { exportName: "badOne", schema: null },
+      { exportName: "goodOne", schema: z.object({ name: z.string() }) },
+    ];
+    const errors: { name: string; error: Error }[] = [];
+    const results = compileSchemas(schemas, {
+      onError(name: string, error: Error) {
+        errors.push({ name, error });
+      },
+    });
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0]?.name).toBe("badOne");
+    expect(results).toHaveLength(1);
+    expect(results[0]?.exportName).toBe("goodOne");
+  });
+
+  it("throws on error when onError is not provided", () => {
+    const schemas = [{ exportName: "badOne", schema: null }];
+
+    expect(() => compileSchemas(schemas)).toThrow();
+  });
+
   it("generates valid code for each schema", () => {
     const schemas = [
       {
