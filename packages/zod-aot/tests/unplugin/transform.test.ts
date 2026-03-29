@@ -435,7 +435,9 @@ describe("transformCode() E2E", () => {
 
     expect(result).not.toBeNull();
     // Should NOT add a second config import line
-    const importLines = result!.split("\n").filter((l) => l.includes('import { config as __zodAotConfig }'));
+    const importLines = result!
+      .split("\n")
+      .filter((l) => l.includes("import { config as __zodAotConfig }"));
     expect(importLines).toHaveLength(1);
   });
 

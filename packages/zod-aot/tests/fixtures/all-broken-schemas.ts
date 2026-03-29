@@ -1,4 +1,6 @@
+// biome-ignore lint/correctness/noUnusedImports: needed in source text for readFixtureAsUserCode bail-out
 import { z } from "zod";
+// biome-ignore lint/correctness/noUnusedImports: needed in source text for readFixtureAsUserCode bail-out
 import { compile } from "#src/core/compile.js";
 
 // Manually create broken compiled schemas that pass isCompiledSchema
