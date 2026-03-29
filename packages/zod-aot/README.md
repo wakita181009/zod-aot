@@ -135,8 +135,14 @@ npx zod-aot generate src/ -o src/compiled/
 # Watch mode — regenerate on file changes
 npx zod-aot generate src/ --watch
 
-# Check if schemas are compilable (without generating)
+# Diagnose schemas — tree view, coverage, Fast Path, hints
 npx zod-aot check src/schemas.ts
+
+# JSON output for CI integration
+npx zod-aot check src/schemas.ts --json
+
+# Fail CI if coverage < 80%
+npx zod-aot check src/schemas.ts --json --fail-under 80
 ```
 
 ## Build Plugin (unplugin)
@@ -159,6 +165,7 @@ module.exports = { plugins: [zodAot()] };
 zodAot({
   include: ["src/schemas"],   // only process files matching these substrings
   exclude: ["test", "mock"],  // skip files matching these substrings
+  verbose: true,              // log per-schema compilation status and build summary
 })
 ```
 
@@ -198,6 +205,59 @@ app.post("/users", zValidator("json", validateUser), (c) => {
 ```
 
 `@hono/zod-validator` internally calls `schema.safeParse()` — with zod-aot, this call is replaced by the generated optimized validator at build time, giving you faster request validation with zero code changes.
+
+## Schema Diagnostics (`check`)
+
+The `check` command analyzes schemas for compilation coverage, Fast Path eligibility, and actionable hints — without generating code.
+
+```bash
+npx zod-aot check src/schemas.ts
+```
+
+**Output includes:**
+
+- **Tree view** — hierarchical visualization of schema structure with compile/fallback status per node
+- **Coverage** — percentage of schema nodes that are compiled (e.g. `85% compiled (17/20 nodes)`)
+- **Fast Path eligibility** — whether the schema qualifies for two-phase validation, with the specific blocker if ineligible
+- **Hints** — actionable suggestions (e.g. "Replace `.refine()` with built-in checks")
+
+### Options
+
+| Flag | Description |
+|---|---|
+| `--json` | Output structured JSON (for CI/CD integration) |
+| `--fail-under <pct>` | Exit with code 1 if any schema's coverage is below the threshold |
+| `--no-color` | Disable colored output |
+
+### JSON output
+
+```bash
+npx zod-aot check src/schemas.ts --json
+```
+
+```json
+[
+  {
+    "file": "src/schemas.ts",
+    "schemas": [
+      {
+        "exportName": "validateUser",
+        "coverage": { "total": 5, "compilable": 5, "percent": 100 },
+        "fastPath": { "eligible": true },
+        "fallbacks": []
+      }
+    ]
+  }
+]
+```
+
+### CI gate
+
+```bash
+npx zod-aot check src/schemas.ts --json --fail-under 80
+```
+
+Exits with code 1 if any schema's compilation coverage drops below 80%.
 
 ## How It Works
 

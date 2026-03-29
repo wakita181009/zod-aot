@@ -141,6 +141,15 @@ describe("debounce", () => {
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
+  it("passes arguments through to the original function", () => {
+    const fn = vi.fn<(a: string, b: number) => void>();
+    const debounced = debounce(fn, 100);
+
+    debounced("hello", 42);
+    vi.advanceTimersByTime(100);
+    expect(fn).toHaveBeenCalledWith("hello", 42);
+  });
+
   it("resets timer on each call", () => {
     const fn = vi.fn();
     const debounced = debounce(fn, 100);
@@ -252,6 +261,89 @@ describe("runWatch", () => {
       process.emit("SIGINT", "SIGINT");
       await watchPromise;
     }
+  });
+
+  it("handles SIGTERM for graceful shutdown", async () => {
+    const { deps } = createMockDeps();
+    const filePath = path.join(fixturesDir, "simple-schema.ts");
+    outputFiles.push(resolveOutputPath(filePath, undefined));
+
+    const watchPromise = runWatch({ inputs: [filePath], output: undefined }, deps);
+
+    try {
+      await vi.waitFor(() => {
+        expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining("Watching"));
+      });
+    } finally {
+      process.emit("SIGTERM", "SIGTERM");
+      await watchPromise;
+    }
+
+    expect(mockLogger.dim).toHaveBeenCalledWith(expect.stringContaining("Stopping"));
+  });
+
+  it("ignores watcher callback with null filename", async () => {
+    const { deps, callbacks } = createMockDeps();
+    const filePath = path.join(fixturesDir, "simple-schema.ts");
+    outputFiles.push(resolveOutputPath(filePath, undefined));
+
+    const watchPromise = runWatch({ inputs: [filePath], output: undefined }, deps);
+
+    try {
+      await vi.waitFor(() => {
+        expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining("Watching"));
+      });
+      mockLogger.success.mockClear();
+
+      // Trigger with null filename — should be silently ignored
+      callbacks[0]?.("change", null);
+
+      // Give it a moment, then verify no regeneration occurred
+      await new Promise((r) => setTimeout(r, 300));
+      expect(mockLogger.success).not.toHaveBeenCalled();
+    } finally {
+      process.emit("SIGINT", "SIGINT");
+      await watchPromise;
+    }
+  });
+
+  it("ignores watcher callback for non-target files", async () => {
+    const { deps, callbacks } = createMockDeps();
+    const filePath = path.join(fixturesDir, "simple-schema.ts");
+    outputFiles.push(resolveOutputPath(filePath, undefined));
+
+    const watchPromise = runWatch({ inputs: [filePath], output: undefined }, deps);
+
+    try {
+      await vi.waitFor(() => {
+        expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining("Watching"));
+      });
+      mockLogger.success.mockClear();
+
+      // Trigger with non-schema file — should be ignored
+      callbacks[0]?.("change", "styles.css");
+
+      await new Promise((r) => setTimeout(r, 300));
+      expect(mockLogger.success).not.toHaveBeenCalled();
+    } finally {
+      process.emit("SIGINT", "SIGINT");
+      await watchPromise;
+    }
+  });
+
+  it("logs error when all watchers fail to start", async () => {
+    const deps: WatchDeps = {
+      createWatcher: () => {
+        throw new Error("permission denied");
+      },
+    };
+    const filePath = path.join(fixturesDir, "simple-schema.ts");
+    outputFiles.push(resolveOutputPath(filePath, undefined));
+
+    await runWatch({ inputs: [filePath], output: undefined }, deps);
+
+    expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining("Failed to watch"));
+    expect(mockLogger.error).toHaveBeenCalledWith("No directories could be watched.");
   });
 
   it("regenerates on watcher callback", async () => {

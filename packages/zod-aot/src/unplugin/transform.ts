@@ -1,6 +1,6 @@
 import { generateIIFE, ZOD_CONFIG_IMPORT, ZOD_MSG_DECLARATION } from "#src/core/iife.js";
-import type { CompiledSchemaInfo } from "#src/core/pipeline.js";
-import { compileSchemas } from "#src/core/pipeline.js";
+import { type CompiledSchemaInfo, compileSchemas } from "#src/core/pipeline.js";
+import type { DiscoveredSchema } from "#src/core/types.js";
 import { discoverSchemas } from "#src/discovery.js";
 import type { ZodAotPluginOptions } from "./types.js";
 
@@ -19,6 +19,29 @@ export function shouldTransform(id: string, options?: ZodAotPluginOptions): bool
   return true;
 }
 
+export interface BuildStats {
+  files: number;
+  schemas: number;
+  optimized: number;
+  failed: number;
+}
+
+interface TransformOptions {
+  zodCompat?: boolean | undefined;
+  verbose?: boolean | undefined;
+  onBuildStats?: (stats: BuildStats) => void;
+}
+
+export function log(msg: string): void {
+  // biome-ignore lint/suspicious/noConsole: build output
+  console.log(`[zod-aot] ${msg}`);
+}
+
+function warn(msg: string): void {
+  // biome-ignore lint/suspicious/noConsole: build output
+  console.warn(`[zod-aot] ${msg}`);
+}
+
 /**
  * Transform source code by replacing compile() calls with optimized validators.
  * Returns the transformed code or null if no transformation was needed.
@@ -26,13 +49,15 @@ export function shouldTransform(id: string, options?: ZodAotPluginOptions): bool
 export async function transformCode(
   code: string,
   id: string,
-  options?: { zodCompat?: boolean | undefined },
+  options?: TransformOptions,
 ): Promise<string | null> {
+  const verbose = options?.verbose === true;
+
   // Quick check: source must reference both "zod-aot" and "compile"
   if (!code.includes("zod-aot") || !code.includes("compile")) return null;
 
   // Discover compiled schemas by executing the file (with cache busting for HMR)
-  let schemas: { exportName: string; schema: unknown }[];
+  let schemas: DiscoveredSchema[];
   try {
     schemas = await discoverSchemas(id, { cacheBust: true });
   } catch (e) {
@@ -42,7 +67,36 @@ export async function transformCode(
   if (schemas.length === 0) return null;
 
   // For each schema, run the compilation pipeline
-  const compiled = compileSchemas(schemas);
+  let failedCount = 0;
+  const compiled = compileSchemas(schemas, {
+    onError(exportName, error) {
+      failedCount++;
+      warn(
+        `Failed to compile "${exportName}" in ${id}: ${error.message}. Keeping original compile() call.`,
+      );
+    },
+  });
+
+  if (verbose) {
+    for (const s of compiled) {
+      const fbCount = s.fallbackEntries.length;
+      const fbSuffix = fbCount > 0 ? ` (${fbCount} fallback${fbCount > 1 ? "s" : ""})` : "";
+      log(`  ✓ ${s.exportName}${fbSuffix}`);
+    }
+    if (failedCount > 0) {
+      log(`  ✗ ${failedCount} schema(s) failed — kept original compile() calls`);
+    }
+  }
+
+  if (compiled.length === 0) return null;
+
+  // Report build stats only when at least one schema was compiled
+  options?.onBuildStats?.({
+    files: 1,
+    schemas: schemas.length,
+    optimized: compiled.length,
+    failed: failedCount,
+  });
 
   return rewriteSource(code, compiled, { zodCompat: options?.zodCompat });
 }

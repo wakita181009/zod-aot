@@ -1,16 +1,39 @@
 import process from "node:process";
 
-const isTTY = process.stdout.isTTY === true;
+export interface Colors {
+  reset: string;
+  red: string;
+  green: string;
+  yellow: string;
+  cyan: string;
+  dim: string;
+  bold: string;
+}
 
-const colors = {
-  reset: isTTY ? "\x1b[0m" : "",
-  red: isTTY ? "\x1b[31m" : "",
-  green: isTTY ? "\x1b[32m" : "",
-  yellow: isTTY ? "\x1b[33m" : "",
-  cyan: isTTY ? "\x1b[36m" : "",
-  dim: isTTY ? "\x1b[2m" : "",
-  bold: isTTY ? "\x1b[1m" : "",
+const NO_COLORS: Colors = {
+  reset: "",
+  red: "",
+  green: "",
+  yellow: "",
+  cyan: "",
+  dim: "",
+  bold: "",
 };
+
+export function createColors(enabled: boolean): Colors {
+  if (!enabled) return NO_COLORS;
+  return {
+    reset: "\x1b[0m",
+    red: "\x1b[31m",
+    green: "\x1b[32m",
+    yellow: "\x1b[33m",
+    cyan: "\x1b[36m",
+    dim: "\x1b[2m",
+    bold: "\x1b[1m",
+  };
+}
+
+const colors = createColors(process.stdout.isTTY === true);
 
 // biome-ignore lint/suspicious/noConsole: CLI output
 const log = console.log;

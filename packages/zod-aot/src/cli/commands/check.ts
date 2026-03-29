@@ -1,139 +1,98 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import type { DiagnosticNode, DiagnosticResult } from "#src/core/diagnostic.js";
+import { diagnoseSchema } from "#src/core/diagnostic.js";
 import { extractSchema } from "#src/core/extract/index.js";
-import type { SchemaIR } from "#src/core/types.js";
-import type { DiscoveredSchema } from "#src/discovery.js";
+import type { DiscoveredSchema, SchemaIR } from "#src/core/types.js";
 import { discoverSchemas } from "#src/discovery.js";
 import { getErrorMessage } from "../errors.js";
-import { logger } from "../logger.js";
+import type { Colors } from "../logger.js";
+import { createColors, logger } from "../logger.js";
 
-interface CoverageResult {
-  total: number;
-  compilable: number;
-  fallbacks: { reason: string; path: string }[];
+// ─── Tree Rendering ─────────────────────────────────────────────────────────
+
+function renderTree(node: DiagnosticNode, c: Colors, prefix = "", isLast = true): string[] {
+  const lines: string[] = [];
+  const connector = prefix === "" ? "" : isLast ? "└─ " : "├─ ";
+  const childPrefix = prefix === "" ? "" : prefix + (isLast ? "   " : "│  ");
+
+  const statusIcon = node.status === "compiled" ? `${c.green}✓${c.reset}` : `${c.red}✗${c.reset}`;
+  const typeLabel = `${c.bold}${node.type}${c.reset}`;
+  const pathLabel = node.path && node.path !== "(root)" ? ` ${c.dim}${node.path}${c.reset}` : "";
+  const reasonLabel =
+    node.status === "fallback" && node.reason ? ` ${c.yellow}(${node.reason})${c.reset}` : "";
+
+  lines.push(`${prefix}${connector}${statusIcon} ${typeLabel}${pathLabel}${reasonLabel}`);
+
+  if (node.status === "fallback" && node.hint) {
+    const hintPrefix = `${childPrefix}   `;
+    lines.push(`${hintPrefix}${c.dim}hint: ${node.hint}${c.reset}`);
+  }
+
+  for (const [i, child] of node.children.entries()) {
+    const last = i === node.children.length - 1;
+    lines.push(...renderTree(child, c, childPrefix, last));
+  }
+
+  return lines;
 }
 
-function countNodes(ir: SchemaIR, currentPath = ""): CoverageResult {
-  if (ir.type === "fallback") {
-    return {
-      total: 1,
-      compilable: 0,
-      fallbacks: [{ reason: ir.reason, path: currentPath || "." }],
-    };
-  }
+// ─── JSON Output ────────────────────────────────────────────────────────────
 
-  if (ir.type === "object") {
-    let total = 0;
-    let compilable = 0;
-    const fallbacks: CoverageResult["fallbacks"] = [];
-    for (const [key, prop] of Object.entries(ir.properties)) {
-      const r = countNodes(prop, `${currentPath}.${key}`);
-      total += r.total;
-      compilable += r.compilable;
-      fallbacks.push(...r.fallbacks);
-    }
-    return { total, compilable, fallbacks };
-  }
-
-  if (ir.type === "array") {
-    return countNodes(ir.element, `${currentPath}[]`);
-  }
-
-  if (ir.type === "optional" || ir.type === "nullable" || ir.type === "readonly") {
-    return countNodes(ir.inner, currentPath);
-  }
-
-  if (ir.type === "default" || ir.type === "catch") {
-    return countNodes(ir.inner, currentPath);
-  }
-
-  if (ir.type === "union" || ir.type === "discriminatedUnion") {
-    let total = 0;
-    let compilable = 0;
-    const fallbacks: CoverageResult["fallbacks"] = [];
-    for (const [i, opt] of ir.options.entries()) {
-      const r = countNodes(opt, `${currentPath}[${i}]`);
-      total += r.total;
-      compilable += r.compilable;
-      fallbacks.push(...r.fallbacks);
-    }
-    return { total, compilable, fallbacks };
-  }
-
-  if (ir.type === "tuple") {
-    let total = 0;
-    let compilable = 0;
-    const fallbacks: CoverageResult["fallbacks"] = [];
-    for (const [i, item] of ir.items.entries()) {
-      const r = countNodes(item, `${currentPath}[${i}]`);
-      total += r.total;
-      compilable += r.compilable;
-      fallbacks.push(...r.fallbacks);
-    }
-    if (ir.rest) {
-      const r = countNodes(ir.rest, `${currentPath}[...rest]`);
-      total += r.total;
-      compilable += r.compilable;
-      fallbacks.push(...r.fallbacks);
-    }
-    return { total, compilable, fallbacks };
-  }
-
-  if (ir.type === "record") {
-    const kr = countNodes(ir.keyType, `${currentPath}[key]`);
-    const vr = countNodes(ir.valueType, `${currentPath}[value]`);
-    return {
-      total: kr.total + vr.total,
-      compilable: kr.compilable + vr.compilable,
-      fallbacks: [...kr.fallbacks, ...vr.fallbacks],
-    };
-  }
-
-  if (ir.type === "intersection") {
-    const lr = countNodes(ir.left, `${currentPath}[left]`);
-    const rr = countNodes(ir.right, `${currentPath}[right]`);
-    return {
-      total: lr.total + rr.total,
-      compilable: lr.compilable + rr.compilable,
-      fallbacks: [...lr.fallbacks, ...rr.fallbacks],
-    };
-  }
-
-  if (ir.type === "set") {
-    return countNodes(ir.valueType, `${currentPath}[element]`);
-  }
-
-  if (ir.type === "map") {
-    const kr = countNodes(ir.keyType, `${currentPath}[key]`);
-    const vr = countNodes(ir.valueType, `${currentPath}[value]`);
-    return {
-      total: kr.total + vr.total,
-      compilable: kr.compilable + vr.compilable,
-      fallbacks: [...kr.fallbacks, ...vr.fallbacks],
-    };
-  }
-
-  if (ir.type === "pipe") {
-    const ir2 = countNodes(ir.in, `${currentPath}[in]`);
-    const or2 = countNodes(ir.out, `${currentPath}[out]`);
-    return {
-      total: ir2.total + or2.total,
-      compilable: ir2.compilable + or2.compilable,
-      fallbacks: [...ir2.fallbacks, ...or2.fallbacks],
-    };
-  }
-
-  // Leaf node (string, number, boolean, bigint, date, literal, enum,
-  // symbol, null, undefined, void, nan, never, any, unknown, recursiveRef, templateLiteral)
-  return { total: 1, compilable: 1, fallbacks: [] };
+interface JsonSchemaReport {
+  exportName: string;
+  coverage: { total: number; compilable: number; percent: number };
+  fastPath: { eligible: boolean; blocker?: string };
+  fallbacks: { reason: string; path: string; hint: string }[];
 }
 
-interface CheckOptions {
+interface JsonReport {
+  file: string;
+  schemas: JsonSchemaReport[];
+}
+
+function buildJsonReport(
+  filePath: string,
+  results: { exportName: string; diagnostic: DiagnosticResult }[],
+): JsonReport {
+  return {
+    file: filePath,
+    schemas: results.map(({ exportName, diagnostic }) => {
+      const report: JsonSchemaReport = {
+        exportName,
+        coverage: {
+          total: diagnostic.total,
+          compilable: diagnostic.compilable,
+          percent: diagnostic.coveragePct,
+        },
+        fastPath: { eligible: diagnostic.fastPathEligible },
+        fallbacks: diagnostic.fallbacks,
+      };
+      if (diagnostic.fastPathBlocker) {
+        report.fastPath.blocker = diagnostic.fastPathBlocker;
+      }
+      return report;
+    }),
+  };
+}
+
+// ─── Command ────────────────────────────────────────────────────────────────
+
+export interface CheckOptions {
   inputs: string[];
+  json: boolean;
+  failUnder: number | undefined;
+  noColor: boolean;
 }
 
 export async function runCheck(options: CheckOptions): Promise<void> {
+  // biome-ignore lint/suspicious/noConsole: CLI output
+  const out = console.log;
+  // biome-ignore lint/suspicious/noConsole: CLI output
+  const err = console.error;
+  const colorEnabled = !options.noColor && process.stdout.isTTY === true;
+  const c = createColors(colorEnabled);
   const files: string[] = [];
 
   for (const input of options.inputs) {
@@ -153,7 +112,9 @@ export async function runCheck(options: CheckOptions): Promise<void> {
     files.push(absPath);
   }
 
-  let hasCompilable = false;
+  const allJsonReports: JsonReport[] = [];
+  let minCoverage = 100;
+  let schemasProcessed = 0;
 
   for (const filePath of files) {
     const relPath = path.relative(process.cwd(), filePath);
@@ -161,8 +122,8 @@ export async function runCheck(options: CheckOptions): Promise<void> {
     let schemas: DiscoveredSchema[];
     try {
       schemas = await discoverSchemas(filePath);
-    } catch (err) {
-      logger.error(`Failed to load ${relPath}: ${getErrorMessage(err)}`);
+    } catch (e) {
+      logger.error(`Failed to load ${relPath}: ${getErrorMessage(e)}`);
       process.exit(1);
     }
 
@@ -171,23 +132,72 @@ export async function runCheck(options: CheckOptions): Promise<void> {
       continue;
     }
 
-    for (const s of schemas) {
-      const ir = extractSchema(s.schema);
-      const coverage = countNodes(ir);
-      const pct =
-        coverage.total > 0 ? Math.round((coverage.compilable / coverage.total) * 100) : 100;
+    const results: { exportName: string; diagnostic: DiagnosticResult }[] = [];
 
-      if (coverage.fallbacks.length > 0) {
-        const reasons = coverage.fallbacks.map((f) => `${f.reason} at ${f.path}`).join(", ");
-        logger.warn(`${s.exportName} — ${pct}% compiled (fallback: ${reasons})`);
-      } else {
-        logger.success(`${s.exportName} — ${pct}% compiled`);
-        hasCompilable = true;
+    for (const s of schemas) {
+      let ir: SchemaIR;
+      try {
+        ir = extractSchema(s.schema);
+      } catch (e) {
+        err(
+          `${c.red}error${c.reset} Failed to extract "${s.exportName}" in ${relPath}: ${getErrorMessage(e)}`,
+        );
+        continue;
+      }
+      const diagnostic = diagnoseSchema(ir);
+      results.push({ exportName: s.exportName, diagnostic });
+      schemasProcessed++;
+
+      if (diagnostic.coveragePct < minCoverage) {
+        minCoverage = diagnostic.coveragePct;
+      }
+    }
+
+    if (options.json) {
+      allJsonReports.push(buildJsonReport(relPath, results));
+    } else {
+      out(`\n${c.bold}${relPath}${c.reset}`);
+
+      for (const { exportName, diagnostic } of results) {
+        const pctColor = diagnostic.coveragePct === 100 ? c.green : c.yellow;
+        const fpLabel = diagnostic.fastPathEligible
+          ? `${c.green}Fast Path: eligible${c.reset}`
+          : `${c.yellow}Fast Path: ineligible${c.reset}${c.dim} (${diagnostic.fastPathBlocker})${c.reset}`;
+
+        out(
+          `\n  ${c.cyan}${exportName}${c.reset} — ${pctColor}${diagnostic.coveragePct}%${c.reset} compiled (${diagnostic.compilable}/${diagnostic.total} nodes) | ${fpLabel}`,
+        );
+
+        const treeLines = renderTree(diagnostic.root, c, "    ");
+        for (const line of treeLines) {
+          out(line);
+        }
+
+        if (diagnostic.fallbacks.length > 0) {
+          out(`\n    ${c.yellow}Fallbacks:${c.reset}`);
+          for (const fb of diagnostic.fallbacks) {
+            out(`      ${c.red}✗${c.reset} ${fb.path} — ${fb.reason}`);
+            out(`        ${c.dim}${fb.hint}${c.reset}`);
+          }
+        }
       }
     }
   }
 
-  if (!hasCompilable) {
+  if (options.json) {
+    out(JSON.stringify(allJsonReports, null, 2));
+  }
+
+  if (options.failUnder !== undefined) {
+    if (schemasProcessed === 0) {
+      logger.error("No schemas were analyzed — cannot satisfy --fail-under");
+      process.exit(1);
+    }
+    if (minCoverage < options.failUnder) {
+      logger.error(`Coverage ${minCoverage}% is below threshold ${options.failUnder}%`);
+      process.exit(1);
+    }
+  } else if (schemasProcessed === 0) {
     process.exit(1);
   }
 }

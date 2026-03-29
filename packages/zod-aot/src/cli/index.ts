@@ -2,6 +2,7 @@
 
 import { createRequire } from "node:module";
 import process from "node:process";
+import type { CheckOptions } from "./commands/check.js";
 import type { GenerateOptions as BaseGenerateOptions } from "./commands/generate.js";
 import { getErrorMessage } from "./errors.js";
 import { logger } from "./logger.js";
@@ -10,10 +11,6 @@ const require = createRequire(import.meta.url);
 const VERSION: string = (require("../../package.json") as { version: string }).version;
 
 type GenerateOptions = BaseGenerateOptions & { watch: boolean };
-
-interface CheckOptions {
-  inputs: string[];
-}
 
 type Command =
   | { kind: "generate"; options: GenerateOptions }
@@ -29,24 +26,28 @@ zod-aot v${VERSION} — Compile Zod schemas into zero-overhead validation functi
 
 Usage:
   zod-aot generate <files...> [-o <output>] [-w]
-  zod-aot check <files...>
+  zod-aot check <files...> [--json] [--fail-under <pct>] [--no-color]
 
 Commands:
   generate    Generate optimized validation code from compile() calls
-  check       Check if schemas are compilable (dry-run)
+  check       Check schemas with tree view, coverage, Fast Path status, and hints
 
 Options:
-  -o, --output <path>   Output file or directory
-  -w, --watch           Watch for changes and regenerate
-  --no-zod-compat       Minimal output without Zod compatibility (smaller bundle)
-  -h, --help            Show this help message
-  -v, --version         Show version number
+  -o, --output <path>        Output file or directory
+  -w, --watch                Watch for changes and regenerate
+  --no-zod-compat            Minimal output without Zod compatibility (smaller bundle)
+  --json                     Output diagnosis as JSON (check only)
+  --fail-under <pct>         Exit with code 1 if any schema's coverage < pct (check only)
+  --no-color                 Disable colored output (check only)
+  -h, --help                 Show this help message
+  -v, --version              Show version number
 
 Examples:
   zod-aot generate src/schemas.ts
   zod-aot generate src/schemas.ts -o src/schemas.compiled.ts
   zod-aot generate src/ --watch
   zod-aot check src/schemas.ts
+  zod-aot check src/schemas.ts --json --fail-under 80
 `.trim(),
   );
 }
@@ -110,20 +111,44 @@ function parseArgs(argv: string[]): Command {
   }
 
   if (command === "check") {
-    const inputs = rest.filter((arg) => {
-      if (arg.startsWith("-")) {
+    const inputs: string[] = [];
+    let json = false;
+    let failUnder: number | undefined;
+    let noColor = false;
+
+    for (let i = 0; i < rest.length; i++) {
+      const arg = rest[i] as string;
+      if (arg === "--json") {
+        json = true;
+      } else if (arg === "--fail-under") {
+        i++;
+        const val = rest[i];
+        if (!val) {
+          logger.error("Missing value for --fail-under");
+          process.exit(1);
+        }
+        const num = Number(val);
+        if (Number.isNaN(num) || num < 0 || num > 100) {
+          logger.error("--fail-under must be a number between 0 and 100");
+          process.exit(1);
+        }
+        failUnder = num;
+      } else if (arg === "--no-color") {
+        noColor = true;
+      } else if (arg.startsWith("-")) {
         logger.error(`Unknown option: ${arg}`);
         process.exit(1);
+      } else {
+        inputs.push(arg);
       }
-      return true;
-    });
+    }
 
     if (inputs.length === 0) {
       logger.error("No input files specified. Run 'zod-aot --help' for usage.");
       process.exit(1);
     }
 
-    return { kind: "check", options: { inputs } };
+    return { kind: "check", options: { inputs, json, failUnder, noColor } };
   }
 
   logger.error(`Unknown command: ${command}. Run 'zod-aot --help' for usage.`);

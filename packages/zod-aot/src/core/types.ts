@@ -383,6 +383,11 @@ export interface ZodErrorLike {
   issues: ZodIssueLike[];
 }
 
+export interface DiscoveredSchema {
+  exportName: string;
+  schema: unknown;
+}
+
 export interface CompiledSchema<T> {
   parse(input: unknown): T;
   parseAsync(input: unknown): Promise<T>;

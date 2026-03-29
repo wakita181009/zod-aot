@@ -65,6 +65,16 @@ Available plugins:
 | rspack | `import zodAot from "zod-aot/rspack"` |
 | Bun | `import zodAot from "zod-aot/bun"` |
 
+Plugin options:
+
+```typescript
+zodAot({
+  include: ["src/schemas"],   // only process files matching these substrings
+  exclude: ["test", "mock"],  // skip files matching these substrings
+  verbose: true,              // log per-schema compilation status and build summary
+})
+```
+
 ### Zod Ecosystem Compatibility
 
 `compile()` returns a full Zod schema with AOT-optimized validation methods. It works seamlessly with any library that accepts Zod schemas, such as [`@hono/zod-validator`](https://github.com/honojs/middleware/tree/main/packages/zod-validator):
@@ -101,6 +111,27 @@ npx zod-aot generate src/schemas.ts -o src/schemas.compiled.ts
 npx zod-aot generate src/ -o src/compiled/
 npx zod-aot generate src/ --watch
 ```
+
+### Schema Diagnostics (`check`)
+
+Analyze schemas for compilation coverage, Fast Path eligibility, and actionable hints — without generating code:
+
+```bash
+# Tree view with coverage percentage and hints
+npx zod-aot check src/schemas.ts
+
+# JSON output for CI integration
+npx zod-aot check src/schemas.ts --json
+
+# Fail CI if any schema's coverage drops below 80%
+npx zod-aot check src/schemas.ts --json --fail-under 80
+```
+
+The `check` command shows:
+- **Tree view** — hierarchical visualization of schema structure with compile/fallback status per node
+- **Coverage** — percentage of schema nodes that are compiled vs. falling back to Zod
+- **Fast Path eligibility** — whether the schema qualifies for two-phase validation, with the specific blocker if ineligible
+- **Hints** — actionable suggestions for fixing fallbacks (e.g., "Replace `.refine()` with built-in checks")
 
 See the [full documentation](./packages/zod-aot/README.md) for API reference, benchmarks, and usage details.
 

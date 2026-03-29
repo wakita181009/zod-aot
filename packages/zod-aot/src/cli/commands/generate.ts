@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { compileSchemas } from "#src/core/pipeline.js";
-import type { DiscoveredSchema } from "#src/discovery.js";
+import type { DiscoveredSchema } from "#src/core/types.js";
 import { discoverSchemas } from "#src/discovery.js";
 import { generateCompiledFileContent, resolveOutputPath, writeCompiledFile } from "../emitter.js";
 import { getErrorMessage } from "../errors.js";
