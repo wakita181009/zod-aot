@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.1](https://github.com/wakita181009/zod-aot/compare/v0.14.0...v0.14.1) (2026-03-29)
+
+
+### Bug Fixes
+
+* resolve biome lint errors in test fixtures and formatting ([db5679b](https://github.com/wakita181009/zod-aot/commit/db5679bb60d040c3e48c5932fb6241c90f6aa61e))
+
 ## [0.14.0](https://github.com/wakita181009/zod-aot/compare/v0.13.0...v0.14.0) (2026-03-29)
 
 
