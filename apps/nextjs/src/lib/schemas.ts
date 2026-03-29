@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { compile } from "zod-aot";
 
 // --- User ---
 
@@ -10,8 +9,6 @@ export const CreateUserSchema = z.object({
   role: z.enum(["admin", "editor", "viewer"]),
 });
 
-export const validateUser = compile(CreateUserSchema);
-
 // --- Product ---
 
 export const ProductSchema = z.object({
@@ -21,5 +18,3 @@ export const ProductSchema = z.object({
   tags: z.array(z.string()),
   inStock: z.boolean(),
 });
-
-export const validateProduct = compile(ProductSchema);

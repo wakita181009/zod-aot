@@ -1,21 +1,21 @@
-import { validateProduct, validateUser } from "@/lib/schemas";
+import { CreateUserSchema, ProductSchema } from "@/lib/schemas";
 
 export default function Home() {
-  const userResult = validateUser.safeParse({
+  const userResult = CreateUserSchema.safeParse({
     name: "Alice",
     email: "alice@example.com",
     age: 30,
     role: "admin",
   });
 
-  const invalidUserResult = validateUser.safeParse({
+  const invalidUserResult = CreateUserSchema.safeParse({
     name: "",
     email: "not-an-email",
     age: -1,
     role: "unknown",
   });
 
-  const productResult = validateProduct.safeParse({
+  const productResult = ProductSchema.safeParse({
     id: "550e8400-e29b-41d4-a716-446655440000",
     name: "Widget",
     price: 9.99,
