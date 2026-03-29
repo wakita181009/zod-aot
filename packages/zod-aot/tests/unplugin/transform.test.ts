@@ -5,8 +5,10 @@ import { generateValidator } from "#src/core/codegen/index.js";
 import { extractSchema } from "#src/core/extract/index.js";
 import {
   type BuildStats,
+  findExpressionEnd,
   removeCompileImport,
   rewriteSource,
+  rewriteSourceAutoDiscover,
   shouldTransform,
   transformCode,
 } from "#src/unplugin/transform.js";
@@ -202,7 +204,7 @@ describe("rewriteSource()", () => {
     expect(result).not.toContain("compile<z.infer");
   });
 
-  it("IIFE includes __msg from zod config import", () => {
+  it("IIFE references __msg (injection handled by transformCode)", () => {
     const code = [
       `import { z } from "zod";`,
       `import { compile } from "zod-aot";`,
@@ -212,10 +214,10 @@ describe("rewriteSource()", () => {
     const schemas = [makeCompiledInfo("validateUser", simpleSchema)];
     const result = rewriteSource(code, schemas);
 
-    // Should add zod config import
-    expect(result).toContain('import { config as __zodAotConfig } from "zod"');
-    // IIFE should declare __msg
-    expect(result).toContain("var __msg=__zodAotConfig().localeError;");
+    // rewriteSource itself no longer injects the config import
+    // (that's done by injectZodConfigImport in transformCode).
+    // But the IIFE still uses __msg.
+    expect(result).toContain("__msg");
   });
 
   it("preserves schema variable reference in generated code", () => {
@@ -296,19 +298,19 @@ describe("rewriteSource()", () => {
   });
 });
 
-describe("transformCode() E2E", () => {
-  /**
-   * Fixture files use relative imports (../../../src/index.js) for discoverSchemas to work,
-   * but transformCode checks for "zod-aot" in the source. We pass the code with "zod-aot"
-   * import so the quick check passes, while discoverSchemas loads the actual fixture file.
-   */
-  function readFixtureAsUserCode(fixturePath: string): string {
-    const fs = require("node:fs") as typeof import("node:fs");
-    return fs
-      .readFileSync(fixturePath, "utf-8")
-      .replace(/from\s*["'](?:\.\.\/.*?|#src\/.*?)["']/g, 'from "zod-aot"');
-  }
+/**
+ * Fixture files use relative imports (../../../src/index.js) for discoverSchemas to work,
+ * but transformCode checks for "zod-aot" in the source. We pass the code with "zod-aot"
+ * import so the quick check passes, while discoverSchemas loads the actual fixture file.
+ */
+function readFixtureAsUserCode(fixturePath: string): string {
+  const fs = require("node:fs") as typeof import("node:fs");
+  return fs
+    .readFileSync(fixturePath, "utf-8")
+    .replace(/from\s*["'](?:\.\.\/.*?|#src\/.*?)["']/g, 'from "zod-aot"');
+}
 
+describe("transformCode() E2E", () => {
   it("transforms a simple compile() file and produces working validation", async () => {
     const fixturePath = path.join(fixturesDir, "simple-schema.ts");
     const code = readFixtureAsUserCode(fixturePath);
@@ -389,6 +391,187 @@ describe("transformCode() E2E", () => {
   it("throws when discoverSchemas fails", async () => {
     const code = `import { compile } from "zod-aot";\nexport const v = compile(S);`;
     await expect(transformCode(code, "/nonexistent/bad-file.ts")).rejects.toThrow("[zod-aot]");
+  });
+});
+
+describe("findExpressionEnd()", () => {
+  it("finds end of simple expression", () => {
+    const code = "const x = z.string();";
+    const end = findExpressionEnd(code, 10); // starts at z.string()
+    expect(code.slice(10, end)).toBe("z.string()");
+  });
+
+  it("finds end of nested object expression", () => {
+    const code = "const x = z.object({ a: z.string() });";
+    const end = findExpressionEnd(code, 10);
+    expect(code.slice(10, end)).toBe("z.object({ a: z.string() })");
+  });
+
+  it("finds end of multi-line expression", () => {
+    const code = "const x = z.object({\n  a: z.string(),\n  b: z.number(),\n});";
+    const end = findExpressionEnd(code, 10);
+    expect(code.slice(10, end)).toContain("z.object(");
+    expect(code.slice(10, end)).toContain("b: z.number()");
+  });
+
+  it("finds end of expression with regex literal", () => {
+    const code = "const x = z.string().regex(/[a-z]+/);";
+    const end = findExpressionEnd(code, 10);
+    expect(code.slice(10, end)).toBe("z.string().regex(/[a-z]+/)");
+  });
+
+  it("returns -1 for unparseable expression", () => {
+    const code = "const x = @@@invalid;";
+    const end = findExpressionEnd(code, 10);
+    expect(end).toBe(-1);
+  });
+});
+
+describe("rewriteSourceAutoDiscover()", () => {
+  const simpleSchema = z.object({ name: z.string() });
+
+  function makeCompiledInfo(exportName: string, schema: z.ZodType) {
+    const ir = extractSchema(schema);
+    const codegenResult = generateValidator(ir, exportName);
+    return { exportName, codegenResult, fallbackEntries: [] };
+  }
+
+  it("replaces a single schema export with IIFE", () => {
+    const code = `import { z } from "zod";\nexport const UserSchema = z.object({ name: z.string() });`;
+    const schemas = [makeCompiledInfo("UserSchema", simpleSchema)];
+    const result = rewriteSourceAutoDiscover(code, schemas);
+
+    expect(result).toContain("/* @__PURE__ */");
+    expect(result).toContain("safeParse_UserSchema");
+    expect(result).toContain("Object.create(z.object({ name: z.string() })");
+  });
+
+  it("replaces multiple schema exports", () => {
+    const code = [
+      `import { z } from "zod";`,
+      `export const A = z.object({ x: z.string() });`,
+      `export const B = z.object({ y: z.number() });`,
+    ].join("\n");
+    const schemas = [
+      makeCompiledInfo("A", z.object({ x: z.string() })),
+      makeCompiledInfo("B", z.object({ y: z.number() })),
+    ];
+    const result = rewriteSourceAutoDiscover(code, schemas);
+
+    expect(result).toContain("safeParse_A");
+    expect(result).toContain("safeParse_B");
+  });
+
+  it("handles schema with type annotation", () => {
+    const code = `import { z } from "zod";\nexport const UserSchema: z.ZodObject<{ name: z.ZodString }> = z.object({ name: z.string() });`;
+    const schemas = [makeCompiledInfo("UserSchema", simpleSchema)];
+    const result = rewriteSourceAutoDiscover(code, schemas);
+
+    expect(result).toContain("safeParse_UserSchema");
+    expect(result).toContain("/* @__PURE__ */");
+  });
+
+  it("uses plain object when zodCompat is false", () => {
+    const code = `import { z } from "zod";\nexport const UserSchema = z.object({ name: z.string() });`;
+    const schemas = [makeCompiledInfo("UserSchema", simpleSchema)];
+    const result = rewriteSourceAutoDiscover(code, schemas, { zodCompat: false });
+
+    expect(result).toContain("var __w={}");
+    expect(result).not.toContain("Object.create");
+  });
+
+  it("IIFE references __msg (injection handled by transformCode)", () => {
+    const code = `import { z } from "zod";\nexport const UserSchema = z.object({ name: z.string() });`;
+    const schemas = [makeCompiledInfo("UserSchema", simpleSchema)];
+    const result = rewriteSourceAutoDiscover(code, schemas);
+
+    // rewriteSourceAutoDiscover itself no longer injects the config import
+    // (that's done by injectZodConfigImport in transformCode).
+    // But the IIFE still uses __msg.
+    expect(result).toContain("__msg");
+  });
+});
+
+describe("transformCode() — autoDiscover", () => {
+  it("transforms a simple Zod file with autoDiscover", async () => {
+    const fixturePath = path.join(fixturesDir, "auto-discover-simple.ts");
+    const code = readFixtureAsUserCode(fixturePath);
+
+    const result = await transformCode(code, fixturePath, { autoDiscover: true });
+
+    expect(result).not.toBeNull();
+    expect(result).toContain("safeParse_UserSchema");
+    expect(result).toContain("/* @__PURE__ */");
+  });
+
+  it("transforms multiple Zod exports with autoDiscover", async () => {
+    const fixturePath = path.join(fixturesDir, "auto-discover-multi.ts");
+    const code = readFixtureAsUserCode(fixturePath);
+
+    const result = await transformCode(code, fixturePath, { autoDiscover: true });
+
+    expect(result).not.toBeNull();
+    expect(result).toContain("safeParse_UserSchema");
+    expect(result).toContain("safeParse_ProductSchema");
+  });
+
+  it("handles mixed compile() + autoDiscover with two-pass rewrite", async () => {
+    const fixturePath = path.join(fixturesDir, "auto-discover-mixed.ts");
+    const code = readFixtureAsUserCode(fixturePath);
+
+    const result = await transformCode(code, fixturePath, { autoDiscover: true });
+
+    expect(result).not.toBeNull();
+    // compile() schema should be rewritten
+    expect(result).toContain("safeParse_validateUser");
+    // autoDiscover schema should also be rewritten
+    expect(result).toContain("safeParse_ProductSchema");
+    // compile import should be removed by rewriteSource pass
+    expect(result).not.toContain('from "zod-aot"');
+  });
+
+  it("returns null when no runtime Zod import in autoDiscover mode", async () => {
+    const code = `export const x = 1;`;
+    const result = await transformCode(code, "/fake/path.ts", { autoDiscover: true });
+
+    expect(result).toBeNull();
+  });
+
+  it("returns null for type-only Zod import in autoDiscover mode", async () => {
+    const code = `import type { z } from "zod";\nexport const x = 1;`;
+    const result = await transformCode(code, "/fake/path.ts", { autoDiscover: true });
+
+    expect(result).toBeNull();
+  });
+
+  it("calls onBuildStats in autoDiscover mode", async () => {
+    const fixturePath = path.join(fixturesDir, "auto-discover-simple.ts");
+    const code = readFixtureAsUserCode(fixturePath);
+    const stats: BuildStats[] = [];
+
+    await transformCode(code, fixturePath, {
+      autoDiscover: true,
+      onBuildStats: (s) => stats.push(s),
+    });
+
+    expect(stats).toHaveLength(1);
+    expect(stats[0]?.optimized).toBeGreaterThanOrEqual(1);
+  });
+
+  it("verbose mode logs auto-discovering status", async () => {
+    const fixturePath = path.join(fixturesDir, "auto-discover-simple.ts");
+    const code = readFixtureAsUserCode(fixturePath);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(vi.fn());
+
+    try {
+      await transformCode(code, fixturePath, { autoDiscover: true, verbose: true });
+      const output = logSpy.mock.calls.map((c) => c[0]).join("\n");
+      expect(output).toContain("[zod-aot]");
+      expect(output).toContain("Auto-discovering");
+      expect(output).toContain("✓");
+    } finally {
+      logSpy.mockRestore();
+    }
   });
 });
 

@@ -17,4 +17,14 @@ export interface ZodAotPluginOptions {
    * @default false
    */
   verbose?: boolean | undefined;
+  /**
+   * Auto-detect all exported Zod schemas without requiring compile() wrappers.
+   * When enabled, the plugin scans exports for Zod schemas (via `_zod.def` detection)
+   * and compiles them at build time. No `import { compile } from "zod-aot"` needed.
+   *
+   * **Note:** Files with runtime Zod imports are executed at build time via `loadSourceFile()`.
+   * Use `include` to limit scope if your project has schema files with side effects.
+   * @default false
+   */
+  autoDiscover?: boolean | undefined;
 }
