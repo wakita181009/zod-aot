@@ -7,30 +7,323 @@
 [![npm](https://img.shields.io/npm/v/zod-aot)](https://www.npmjs.com/package/zod-aot)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-No code changes required — keep your existing Zod schemas and get **2-64x faster** validation.
+Keep your existing Zod schemas. Get **2-64x faster** validation. No code changes required.
 
-## Why
+```typescript
+// vite.config.ts — add one line
+import zodAot from "zod-aot/vite";
+export default defineConfig({
+  plugins: [zodAot({ autoDiscover: true })],
+});
+```
 
-Zod v4 is already fast, but runtime schema traversal still costs ~10x compared to ahead-of-time (AOT) compiled approaches. Existing AOT solutions like [Typia](https://typia.io/) require rewriting your schemas as TypeScript types. **zod-aot** bridges this gap — it takes your existing Zod schemas and generates optimized, plain JavaScript validation functions at build time.
+```typescript
+// src/schemas.ts — write plain Zod, nothing else
+import { z } from "zod";
 
-| | Zod AOT             | Typia | AJV standalone | Zod v3 | Zod v4 |
-|---|---------------------|---|---|---|---|
-| **Input** | Zod schemas         | TS types | JSON Schema | Zod schemas | Zod schemas |
-| **Existing code changes** | None                | Full rewrite | Full rewrite | N/A | N/A |
-| **Type inference** | Inherited from Zod  | Native | External | Native | Native |
-| **Runtime dependency** | None (generated code) | Typia runtime | AJV runtime | Zod | Zod |
+export const UserSchema = z.object({
+  name: z.string().min(3),
+  email: z.email(),
+  age: z.number().int().positive(),
+});
+
+// Use it anywhere — tRPC, Hono, React Hook Form, etc.
+// At build time, zod-aot compiles it to a 3-64x faster validator.
+```
+
+## Install
+
+```bash
+npm install zod-aot zod@^4
+```
+
+| Runtime | Version |
+|---------|---------|
+| Node.js | 20+     |
+| Bun     | 1.3+    |
+| Deno    | 2.0+    |
+
+## Usage
+
+There are three ways to use zod-aot. Choose the one that fits your project.
+
+### 1. autoDiscover (Recommended)
+
+The plugin automatically detects and compiles all exported Zod schemas at build time. No wrappers, no imports from `zod-aot` in your source code.
+
+**vite.config.ts:**
+
+```typescript
+import zodAot from "zod-aot/vite";
+
+export default defineConfig({
+  plugins: [zodAot({ autoDiscover: true })],
+});
+```
+
+**Your schema file stays pure Zod:**
+
+```typescript
+// src/schemas.ts
+import { z } from "zod";
+
+export const CreateUserSchema = z.object({
+  name: z.string().min(1).max(100),
+  email: z.email(),
+  age: z.number().int().min(0).max(150),
+  role: z.enum(["admin", "editor", "viewer"]),
+});
+
+export const UpdateUserSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  email: z.email().optional(),
+});
+
+export const ListUsersSchema = z.object({
+  page: z.number().int().min(1).optional().default(1),
+  limit: z.number().int().min(1).max(100).optional().default(20),
+});
+```
+
+**Use them as usual:**
+
+```typescript
+const user = CreateUserSchema.parse(data);          // throws on failure
+const result = CreateUserSchema.safeParse(data);    // { success, data/error }
+```
+
+At build time, the plugin:
+1. Finds every file with `import ... from "zod"` (skips type-only imports)
+2. Executes the file and detects exported Zod schemas
+3. Compiles each schema into an optimized validator
+4. Replaces the export with a tree-shakeable IIFE that preserves the full Zod API
+
+**What "preserves the full Zod API" means:** The compiled schema inherits from the original Zod schema via `Object.create()`. So `._zod`, `.shape`, Standard Schema (`~standard`), `instanceof` checks — all still work. Libraries that accept Zod schemas (tRPC, Hono, React Hook Form) work without changes.
+
+### 2. compile() (Explicit)
+
+If you prefer explicit opt-in, wrap specific schemas with `compile()`:
+
+```typescript
+import { z } from "zod";
+import { compile } from "zod-aot";
+
+const UserSchema = z.object({
+  name: z.string().min(3),
+  email: z.email(),
+});
+
+export const validateUser = compile(UserSchema);
+
+// In dev: falls back to Zod's runtime validation
+// After build: uses AOT-compiled optimized code
+validateUser.parse(data);
+validateUser.safeParse(data);
+```
+
+`compile()` and `autoDiscover` coexist — `compile()` schemas are detected first, then `autoDiscover` picks up remaining plain Zod exports.
+
+### 3. CLI (No Bundler)
+
+Generate optimized validation files from the command line:
+
+```bash
+# Single file
+npx zod-aot generate src/schemas.ts -o src/schemas.compiled.ts
+
+# Directory
+npx zod-aot generate src/ -o src/compiled/
+
+# Watch mode
+npx zod-aot generate src/ --watch
+```
+
+## Build Plugin
+
+### Supported Build Tools
+
+| Build Tool | Import |
+|---|---|
+| Vite | `import zodAot from "zod-aot/vite"` |
+| webpack | `import zodAot from "zod-aot/webpack"` |
+| esbuild | `import zodAot from "zod-aot/esbuild"` |
+| Rollup | `import zodAot from "zod-aot/rollup"` |
+| Rolldown | `import zodAot from "zod-aot/rolldown"` |
+| rspack | `import zodAot from "zod-aot/rspack"` |
+| Bun | `import zodAot from "zod-aot/bun"` |
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `autoDiscover` | `boolean` | `false` | Auto-detect all exported Zod schemas without `compile()` |
+| `include` | `string[]` | — | Only process files matching these substrings |
+| `exclude` | `string[]` | — | Skip files matching these substrings |
+| `zodCompat` | `boolean` | `true` | Preserve Zod API via `Object.create()`. Set `false` for smaller output |
+| `verbose` | `boolean` | `false` | Log per-schema compilation status during build |
+
+```typescript
+zodAot({
+  autoDiscover: true,
+  include: ["src/schemas"],
+  verbose: true,
+})
+```
+
+### autoDiscover: Side Effects Warning
+
+With `autoDiscover`, the plugin executes files to inspect their exports. If a file imports Zod AND has side effects (starts a server, connects to a database), those side effects run at build time.
+
+**Fix:** Use `include` to limit which files are scanned:
+
+```typescript
+zodAot({
+  autoDiscover: true,
+  include: ["src/schemas", "src/validators"],
+})
+```
+
+### autoDiscover vs compile()
+
+| | autoDiscover | compile() |
+|---|---|---|
+| Source code changes | None | Wrap each schema |
+| `zod-aot` import needed | No | Yes |
+| What gets compiled | All exported Zod schemas | Only wrapped schemas |
+| Build-time file execution | Files with `import ... from "zod"` | Files with `import ... from "zod-aot"` |
+| Best for | New projects, framework integration | Gradual adoption, selective optimization |
+
+## Framework Examples
+
+### tRPC
+
+```typescript
+// src/schemas.ts
+import { z } from "zod";
+
+export const CreateUserSchema = z.object({
+  name: z.string().min(1).max(100),
+  email: z.email(),
+  age: z.number().int().min(0).max(150),
+});
+
+// src/router.ts
+import { CreateUserSchema } from "./schemas";
+
+export const appRouter = t.router({
+  createUser: t.procedure
+    .input(CreateUserSchema)
+    .mutation(({ input }) => createUser(input)),
+});
+```
+
+With `autoDiscover: true`, `CreateUserSchema` is compiled at build time. The tRPC router uses the optimized version automatically. No `.input(compile(CreateUserSchema))` needed.
+
+### Hono
+
+```typescript
+import { Hono } from "hono";
+import { zValidator } from "@hono/zod-validator";
+import { UserSchema } from "./schemas";
+
+const app = new Hono();
+
+app.post("/users", zValidator("json", UserSchema), (c) => {
+  const user = c.req.valid("json");
+  return c.json(user);
+});
+```
+
+### React Hook Form
+
+```typescript
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { UserSchema } from "./schemas";
+
+function UserForm() {
+  const form = useForm({
+    resolver: zodResolver(UserSchema),
+  });
+  // ...
+}
+```
+
+### Any Standard Schema Consumer
+
+zod-aot compiled schemas implement [Standard Schema](https://standardschema.dev) via prototype chain. Any library that accepts Standard Schema validators works automatically.
+
+## Schema Diagnostics
+
+Analyze your schemas before compiling — check coverage, Fast Path eligibility, and get actionable hints:
+
+```bash
+npx zod-aot check src/schemas.ts
+```
+
+Output:
+
+```
+src/schemas.ts
+
+  CreateUserSchema  [Fast Path]  100% compiled  (5 checks)
+  ├─ name: string (min_length, max_length)
+  ├─ email: string (string_format[email])
+  ├─ age: number (number_format[safeint], greater_than)
+  └─ role: enum
+
+  OrderSchema  [Slow Path]  85% compiled  (3 checks)
+  ├─ id: string (string_format[uuid])
+  └─ metadata: object
+      └─ audit: fallback(transform)
+         Hint: Consider z.pipe() to keep inner schema compilable
+
+  Summary: 2 schemas | 1 Fast Path, 1 Slow Path | 8/9 nodes (88.9%)
+```
+
+### CI Integration
+
+```bash
+# JSON output
+npx zod-aot check src/schemas.ts --json
+
+# Fail if any schema below 80% coverage
+npx zod-aot check src/schemas.ts --json --fail-under 80
+```
+
+| Flag | Description |
+|---|---|
+| `--json` | Structured JSON output |
+| `--fail-under <pct>` | Exit code 1 if coverage below threshold |
+| `--no-color` | Disable colored output |
+
+## What Gets Compiled
+
+### Fully Compiled (3-64x faster)
+
+`string`, `number`, `bigint`, `boolean`, `null`, `undefined`, `any`, `unknown`, `literal`, `enum`, `date`, `object`, `array`, `tuple`, `record`, `set`, `map`, `union`, `discriminatedUnion`, `intersection`, `pipe` (non-transform), `optional`, `nullable`, `readonly`, `default`, `catch`, `coerce`, `templateLiteral`, `symbol`, `void`, `nan`, `never`, `lazy` (self-recursive)
+
+All standard Zod checks are supported: `min`, `max`, `length`, `email`, `url`, `uuid`, `regex`, `int`, `positive`, `negative`, `multipleOf`, `int32`, `uint32`, `float32`, `float64`, `includes`, `startsWith`, `endsWith`, and more.
+
+### Falls Back to Zod (Still Works, Not Faster)
+
+These types contain JavaScript closures that cannot be compiled to static code:
+
+| Type | Why | Alternative |
+|---|---|---|
+| `transform` | Runtime data transformation function | Use `z.pipe()` when possible |
+| `refine` / `superRefine` | Custom validation closures | Use built-in checks when possible |
+| `custom` | Arbitrary validation logic | — |
+| `preprocess` | Input preprocessing function | Use `z.coerce` when possible |
+| `lazy` (non-recursive) | Cannot resolve inner type | Use self-referencing lazy for recursion |
+
+**Partial fallback:** If an object has 10 properties and 1 uses `transform`, the other 9 are still compiled. Only the `transform` property falls back to Zod.
+
+**Tip:** Run `npx zod-aot check` to see exactly which parts of your schemas are compiled and which fall back.
 
 ## Benchmarks
 
-Measured with `vitest bench` on Node.js (Apple M-series). The benchmark suite compares **Zod v3**, **Zod v4**, **zod-aot**, **[ajv](https://ajv.js.org/)**, and **[typia](https://typia.io/)** across primitives, objects, collections, unions, recursive schemas, and real-world scenarios.
-
-Run benchmarks locally:
-
-```bash
-pnpm bench
-```
-
-### safeParse
+5-way comparison: **Zod v3** vs **Zod v4** vs **Zod AOT** vs **[Typia](https://typia.io/)** vs **[AJV](https://ajv.js.org/)**
 
 | Scenario | Zod v3 | Zod v4 | **Zod AOT** | Typia | AJV | vs Zod v4 |
 |---|---|---|---|---|---|---|
@@ -60,414 +353,22 @@ pnpm bench
 
 *ops/s, higher is better. "—" = not supported by the library. Measured with `vitest bench` on Apple M-series.*
 
-Performance gains scale with schema complexity. The `discriminatedUnion` optimization uses an O(1) `switch` dispatch instead of Zod's sequential trial approach. Partial fallback schemas (containing `transform`/`refine`) still show 2-6x speedups by compiling the optimizable portions. Set/Map/BigInt are only benchmarked among Zod variants as AJV and Typia lack native support for these types.
-
-## Runtime Support
-
-| Runtime | Version | Status |
-|---------|---------|--------|
-| Node.js | 20+     | Fully supported |
-| Bun     | 1.3+    | Fully supported |
-| Deno    | 2.0+    | Fully supported |
-
-## Install
+Performance scales with schema complexity. Nested objects and arrays see the biggest gains because zod-aot eliminates per-node traversal overhead. `discriminatedUnion` uses O(1) `switch` dispatch instead of Zod's sequential trial. Partial fallback schemas (containing `transform`/`refine`) still show 2-6x speedups.
 
 ```bash
-npm install zod-aot
-# zod v4 is a peer dependency
-npm install zod@^4
+pnpm bench   # run locally
 ```
 
-## Quick Start
+### Performance Architecture
 
-### 1. Define schemas with `compile()`
+For eligible schemas, zod-aot generates a **two-phase validator**:
 
-```typescript
-// src/schemas.ts
-import { z } from "zod";
-import { compile } from "zod-aot";
+1. **Fast Path** — A single `&&` expression chain that validates the entire input with zero allocations. Valid input returns immediately.
+2. **Slow Path** — Error-collecting validation that only runs when the Fast Path fails.
 
-const UserSchema = z.object({
-  name: z.string().min(3),
-  age: z.number().int().positive(),
-  email: z.email(),
-  role: z.enum(["admin", "user"]),
-});
+Additional optimizations: check ordering (cheap checks first), pre-compiled regex, Set-based enum lookups, small enum inlining (`===` for 1-3 values).
 
-// compile() falls back to Zod in dev, uses generated functions after build
-export const validateUser = compile(UserSchema);
-```
-
-### 2. Use the compiled validator
-
-```typescript
-// Same interface as Zod — works in both dev and production
-const user = validateUser.parse(data);          // throws on failure
-const result = validateUser.safeParse(data);    // { success, data/error }
-```
-
-### 3. Generate optimized code
-
-Choose one of these approaches:
-
-**Option A: Build plugin (Vite / webpack / esbuild / Rollup / Rolldown / rspack)**
-
-```typescript
-// vite.config.ts
-import zodAot from "zod-aot/vite";
-
-export default defineConfig({
-  plugins: [zodAot()],
-});
-```
-
-Also available: `zod-aot/webpack`, `zod-aot/esbuild`, `zod-aot/rollup`, `zod-aot/rolldown`, `zod-aot/rspack`, `zod-aot/bun`
-
-**Option B: CLI**
-
-```bash
-# Generate optimized validators
-npx zod-aot generate src/schemas.ts -o src/schemas.compiled.ts
-
-# Generate from a directory
-npx zod-aot generate src/ -o src/compiled/
-
-# Watch mode — regenerate on file changes
-npx zod-aot generate src/ --watch
-
-# Diagnose schemas — tree view, coverage, Fast Path, hints
-npx zod-aot check src/schemas.ts
-
-# JSON output for CI integration
-npx zod-aot check src/schemas.ts --json
-
-# Fail CI if coverage < 80%
-npx zod-aot check src/schemas.ts --json --fail-under 80
-```
-
-## Build Plugin (unplugin)
-
-The build plugin automatically replaces `compile()` calls with optimized inline validators during the build step. No code changes needed — your source files stay the same.
-
-```typescript
-// vite.config.ts
-import zodAot from "zod-aot/vite";
-export default defineConfig({ plugins: [zodAot()] });
-
-// webpack.config.js
-const zodAot = require("zod-aot/webpack");
-module.exports = { plugins: [zodAot()] };
-```
-
-### Options
-
-```typescript
-zodAot({
-  include: ["src/schemas"],   // only process files matching these substrings
-  exclude: ["test", "mock"],  // skip files matching these substrings
-  verbose: true,              // log per-schema compilation status and build summary
-})
-```
-
-The plugin:
-- Runs at build time (`enforce: "pre"`)
-- Replaces `compile(Schema)` with optimized IIFE inline validators
-- Adds `/* @__PURE__ */` annotations for tree-shaking
-- Supports HMR in development
-
-## Zod Ecosystem Compatibility
-
-`compile()` returns a full Zod schema (`T & CompiledSchema<T>`) — it preserves all original Zod methods and only replaces validation methods (`safeParse`, `parse`, etc.) with AOT-optimized versions. This means compiled schemas work with any library that accepts Zod schemas.
-
-### Hono
-
-```typescript
-import { Hono } from "hono";
-import { zValidator } from "@hono/zod-validator";
-import { z } from "zod";
-import { compile } from "zod-aot";
-
-const UserSchema = z.object({
-  name: z.string().min(3),
-  age: z.number().int().positive(),
-  email: z.email(),
-});
-
-// Still a Zod schema — but safeParse is AOT-optimized
-const validateUser = compile(UserSchema);
-
-const app = new Hono();
-
-app.post("/users", zValidator("json", validateUser), (c) => {
-  const user = c.req.valid("json");
-  return c.json(user);
-});
-```
-
-`@hono/zod-validator` internally calls `schema.safeParse()` — with zod-aot, this call is replaced by the generated optimized validator at build time, giving you faster request validation with zero code changes.
-
-## Schema Diagnostics (`check`)
-
-The `check` command analyzes schemas for compilation coverage, Fast Path eligibility, and actionable hints — without generating code.
-
-```bash
-npx zod-aot check src/schemas.ts
-```
-
-**Output includes:**
-
-- **Tree view** — hierarchical visualization of schema structure with compile/fallback status per node
-- **Coverage** — percentage of schema nodes that are compiled (e.g. `85% compiled (17/20 nodes)`)
-- **Fast Path eligibility** — whether the schema qualifies for two-phase validation, with the specific blocker if ineligible
-- **Hints** — actionable suggestions (e.g. "Replace `.refine()` with built-in checks")
-
-### Options
-
-| Flag | Description |
-|---|---|
-| `--json` | Output structured JSON (for CI/CD integration) |
-| `--fail-under <pct>` | Exit with code 1 if any schema's coverage is below the threshold |
-| `--no-color` | Disable colored output |
-
-### JSON output
-
-```bash
-npx zod-aot check src/schemas.ts --json
-```
-
-```json
-[
-  {
-    "file": "src/schemas.ts",
-    "schemas": [
-      {
-        "exportName": "validateUser",
-        "coverage": { "total": 5, "compilable": 5, "percent": 100 },
-        "fastPath": { "eligible": true },
-        "fallbacks": []
-      }
-    ]
-  }
-]
-```
-
-### CI gate
-
-```bash
-npx zod-aot check src/schemas.ts --json --fail-under 80
-```
-
-Exits with code 1 if any schema's compilation coverage drops below 80%.
-
-## How It Works
-
-```
-Zod Schema
-    │
-    ▼
-┌─────────────────────┐
-│  Extractor          │  Traverse _zod.def recursively
-│  extractSchema()    │  → produce JSON-serializable IR
-└─────────┬───────────┘
-          │ SchemaIR
-          ▼
-┌─────────────────────┐
-│  CodeGen            │  IR → optimized JS with:
-│  generateValidator()│  • inline type checks
-└─────────┬───────────┘  • pre-compiled RegExps
-          │              • Set-based enum lookups
-          ▼              • early returns
-   Optimized JS function
-   (no runtime dependencies)
-```
-
-### Why Runtime Extraction (not static analysis)
-
-- Zod v4's `_zod.def` is JSON-serializable — perfect for IR extraction
-- Static AST analysis cannot handle dynamic schemas (variable references, function calls, spread operators)
-- `_zod.bag` contains aggregated metadata from checks (minimum, maximum, regex patterns, etc.)
-- Reliable detection of `transform`/`refine` for automatic fallback
-
-### Generated Code Example
-
-**Input:**
-
-```typescript
-z.object({
-  name: z.string().min(3).max(50),
-  role: z.enum(["admin", "user"]),
-})
-```
-
-**Output:**
-
-```javascript
-/* zod-aot */
-var __set_0 = new Set(["admin", "user"]);
-
-function safeParse_validate(input) {
-  var __issues = [];
-  if (typeof input !== "object" || input === null || Array.isArray(input)) {
-    __issues.push({ code: "invalid_type", expected: "object", path: [] });
-  } else {
-    // name: string().min(3).max(50)
-    if (typeof input["name"] !== "string") {
-      __issues.push({ code: "invalid_type", expected: "string", path: ["name"] });
-    } else {
-      if (input["name"].length < 3)
-        __issues.push({ code: "too_small", minimum: 3, path: ["name"] });
-      if (input["name"].length > 50)
-        __issues.push({ code: "too_big", maximum: 50, path: ["name"] });
-    }
-
-    // role: enum(["admin", "user"])
-    if (!__set_0.has(input["role"])) {
-      __issues.push({ code: "invalid_enum_value", path: ["role"] });
-    }
-  }
-  if (__issues.length > 0) return { success: false, error: { issues: __issues } };
-  return { success: true, data: input };
-}
-```
-
-Key optimizations in the generated code:
-
-- **No schema traversal** — all validation logic is inlined
-- **Pre-compiled RegExps** — regex patterns are compiled once, reused across calls
-- **Set-based enum lookups** — O(1) membership tests instead of array iteration
-- **Early type checks** — nested checks only run if the type is correct
-- **Minimal allocations** — issues array is only created once per call
-
-## API Reference
-
-### `compile<T>(zodSchema): CompiledSchema<T>`
-
-Wraps a Zod schema for AOT compilation. In development, it falls back to Zod's built-in validation. After build (via CLI or unplugin), it uses the generated optimized validator.
-
-```typescript
-import { z } from "zod";
-import { compile } from "zod-aot";
-
-const validateUser = compile(z.object({
-  name: z.string().min(3),
-  age: z.number().int().positive(),
-}));
-```
-
-### `CompiledSchema<T>`
-
-The interface returned by `compile()`:
-
-```typescript
-interface CompiledSchema<T> {
-  parse(input: unknown): T;           // throws on failure
-  safeParse(input: unknown): SafeParseResult<T>;  // { success, data/error }
-  schema: unknown;                    // reference to original Zod schema
-}
-```
-
-## Supported Types
-
-| Type | Supported Checks |
-|---|---|
-| `string` | `min`, `max`, `length`, `email`, `url`, `uuid`, `regex`, `includes`, `startsWith`, `endsWith` |
-| `number` | `int`, `positive`, `negative`, `nonnegative`, `nonpositive`, `min`, `max`, `multipleOf`, `int32`, `uint32`, `float32`, `float64` |
-| `bigint` | `min`, `max`, `positive`, `negative`, `nonnegative`, `nonpositive`, `multipleOf` |
-| `boolean` | — |
-| `null` | — |
-| `undefined` | — |
-| `any` | — (always passes) |
-| `unknown` | — (always passes) |
-| `literal` | single value, multi-value |
-| `enum` | string enum values |
-| `date` | `min`, `max` (timestamp comparison) |
-| `object` | nested objects, mixed property types |
-| `array` | `min`, `max`, `length`, element validation |
-| `tuple` | per-element types, optional rest element |
-| `record` | key and value type validation |
-| `set` | `min`, `max` (size), element validation |
-| `map` | key and value type validation |
-| `union` | sequential trial of all options |
-| `discriminatedUnion` | O(1) `switch` dispatch on discriminator field |
-| `intersection` | validates both left and right schemas |
-| `pipe` (non-transform) | sequential in→out validation |
-| `optional` | wraps any supported type |
-| `nullable` | wraps any supported type |
-| `readonly` | validates inner type (TS-only concept) |
-| `default` | replaces `undefined` with default value, then validates inner |
-| `symbol` | — (typeof check) |
-| `void` | — (accepts `undefined`) |
-| `nan` | — (Number.isNaN check) |
-| `never` | — (always fails) |
-| `lazy` (self-recursive) | cycle detection → self-recursive codegen |
-
-### Automatic Fallback to Zod
-
-These schema types contain JavaScript closures or runtime-dependent logic that cannot be compiled to static code. They are detected during extraction and produce a `FallbackIR`:
-
-- `transform` — runtime data transformation
-- `refine` / `superRefine` — custom validation with closures
-- `custom` — arbitrary validation logic
-- `preprocess` — input preprocessing
-- `lazy` (non-recursive) — deferred schema resolution where inner type cannot be resolved
-
-#### Partial Fallback
-
-When a schema contains a mix of compilable and non-compilable parts (e.g., an object where some properties use `transform`/`refine`), zod-aot compiles the optimizable parts and delegates only the non-compilable properties to Zod at runtime.
-
-> **Note:** If a schema heavily relies on `transform`, `refine`, or other non-compilable features, the performance benefit from partial fallback will be minimal — most of the validation work is still delegated to Zod. Partial fallback is most effective when only a small portion of the schema uses these features.
-
-## Development
-
-```bash
-# Install dependencies
-pnpm install
-
-# Run tests
-pnpm test
-
-# Run benchmarks (zod v3 vs zod v4 vs zod-aot vs ajv vs typia)
-pnpm bench
-
-# Lint (Biome)
-pnpm lint
-
-# Type check
-pnpm -r typecheck
-
-# Build
-pnpm -r build
-```
-
-### Project Structure
-
-```
-zod-aot/
-├── packages/zod-aot/        # Main npm package
-│   ├── src/
-│   │   ├── index.ts          # Public API exports (zod-aot)
-│   │   ├── discovery.ts      # Schema discovery (shared by CLI & unplugin)
-│   │   ├── loader.ts         # Runtime-aware file loader
-│   │   ├── core/             # Pure logic (no CLI/unplugin deps)
-│   │   │   ├── types.ts      # SchemaIR, CompiledSchema, CheckIR
-│   │   │   ├── compile.ts    # compile() marker + isCompiledSchema()
-│   │   │   ├── runtime.ts    # createFallback (dev-time)
-│   │   │   ├── extract/      # _zod.def → SchemaIR (extractors per type)
-│   │   │   └── codegen/      # SchemaIR → optimized JS
-│   │   ├── cli/              # CLI commands (generate, check, watch)
-│   │   └── unplugin/         # Build plugin (Vite/webpack/esbuild/Rollup/Rolldown/rspack/Bun)
-│   └── tests/
-├── benchmarks/               # vitest bench (zod v3 vs v4 vs zod-aot vs ajv vs typia)
-└── .github/workflows/        # CI + release automation
-```
-
-## Contributing
-
-Contributions are welcome! Please ensure your changes pass all checks before submitting a PR:
-
-```bash
-pnpm lint && pnpm -r typecheck && pnpm test
-```
+Run `npx zod-aot check --json` to see which schemas qualify for Fast Path.
 
 ## License
 

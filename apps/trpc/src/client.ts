@@ -9,62 +9,45 @@ async function main() {
   // biome-ignore lint/suspicious/noConsole: demo output
   const log = console.log;
 
-  log("=== tRPC + zod-aot demo ===\n");
+  log("=== tRPC + zod-aot autoDiscover demo ===\n");
 
-  // Create users via both routers
-  const zodUser = await trpc.zod.create.mutate({
+  // Create user
+  const user = await trpc.create.mutate({
     name: "Alice",
     email: "alice@example.com",
     age: 30,
     role: "admin",
   });
-  log("[zod]  Created:", zodUser);
-
-  const aotUser = await trpc.aot.create.mutate({
-    name: "Bob",
-    email: "bob@example.com",
-    age: 25,
-    role: "editor",
-  });
-  log("[aot]  Created:", aotUser);
+  log("Created:", user);
 
   // List users
-  const zodList = await trpc.zod.list.query({});
-  log("\n[zod]  List:", zodList);
-
-  const aotList = await trpc.aot.list.query({});
-  log("[aot]  List:", aotList);
+  const list = await trpc.list.query({});
+  log("List:", list);
 
   // Get by ID
-  const zodGet = await trpc.zod.getById.query({ id: zodUser.id });
-  log("\n[zod]  Get #1:", zodGet);
-
-  const aotGet = await trpc.aot.getById.query({ id: aotUser.id });
-  log("[aot]  Get #2:", aotGet);
+  const found = await trpc.getById.query({ id: user.id });
+  log("Get:", found);
 
   // Update
-  const updated = await trpc.aot.update.mutate({
-    id: aotUser.id,
-    name: "Bob Updated",
-  });
-  log("\n[aot]  Updated:", updated);
+  const updated = await trpc.update.mutate({ id: user.id, name: "Alice Updated" });
+  log("Updated:", updated);
 
   // Validation error
   log("\n--- Validation error demo ---");
   try {
-    await trpc.aot.create.mutate({
+    await trpc.create.mutate({
       name: "",
       email: "invalid",
       age: -1,
       role: "superadmin" as "admin",
     });
   } catch (e) {
-    log("[aot]  Expected error:", (e as Error).message);
+    log("Expected error:", (e as Error).message);
   }
 
   // Delete
-  const deleted = await trpc.zod.delete.mutate({ id: zodUser.id });
-  log("\n[zod]  Deleted #1:", deleted);
+  const deleted = await trpc.delete.mutate({ id: user.id });
+  log("Deleted:", deleted);
 }
 
 main().catch((e) => {

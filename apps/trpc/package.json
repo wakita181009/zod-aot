@@ -7,20 +7,20 @@
     "start": "tsx src/server.ts",
     "client": "tsx src/client.ts",
     "build": "vite build",
-    "check": "zod-aot check src/schemas.ts",
+    "check": "zod-aot check src/schemas.ts --json",
     "test": "vitest run"
   },
   "dependencies": {
     "@trpc/client": "^11.0.0",
     "@trpc/server": "^11.0.0",
-    "zod": "catalog:",
-    "zod-aot": "workspace:*"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "zod-aot": "workspace:*"
   }
 }

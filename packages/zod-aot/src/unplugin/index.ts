@@ -19,6 +19,7 @@ export const unplugin = createUnplugin((options?: ZodAotPluginOptions) => {
       const result = await transformCode(code, id, {
         zodCompat: options?.zodCompat,
         verbose,
+        autoDiscover: options?.autoDiscover,
         onBuildStats(s) {
           stats.files += s.files;
           stats.schemas += s.schemas;

@@ -22,7 +22,7 @@ Zod compatibility: v4.0.0, v4.1.0, v4.2.0, v4.3.0, latest
 [Zod Schema (TS)] → Extract (_zod.def) → SchemaIR → CodeGen → [Optimized JS/TS functions]
 ```
 
-1. **Discovery**: AST detection of `compile()` calls in source files
+1. **Discovery**: Detection of `compile()` calls or plain Zod schema exports (`autoDiscover` mode) in source files
 2. **Extraction**: Execute schema file in Node.js → recursively traverse `_zod.def` → produce SchemaIR
 3. **CodeGen**: SchemaIR → JS/TS code with Fast Path (boolean expression chain) + Slow Path (error collecting), inline type checks, early returns, pre-compiled regexes
 4. **Emit**: Write generated code to files
@@ -54,10 +54,10 @@ Key files:
 - `core/codegen/generators/index.ts`: `generateValidation()` — Slow Path dispatcher
 - `core/codegen/emit.ts`: `emit()` — tagged template for Slow Path code generation
 - `core/iife.ts`: `generateIIFE()` — shared IIFE generation for CLI emitter and unplugin transform (owns `extractFunctionName()`)
-- `discovery.ts`: `discoverSchemas()` loads file → scans exports with `isCompiledSchema()`
+- `discovery.ts`: `discoverSchemas()` loads file → scans exports with `isCompiledSchema()` or `isZodSchema()` (autoDiscover mode via `DiscoverOptions`)
 - `cli/commands/generate.ts`: discovery → `compileSchemas()` → `emitter.ts` writes `.compiled.ts`
 - `cli/commands/check.ts`: discovery → `extractSchema()` → `diagnoseSchema()` → tree view / JSON output
-- `unplugin/transform.ts`: discovery → `compileSchemas()` → `rewriteSource()` replaces `compile()` with IIFE, verbose logging + `BuildStats` tracking
+- `unplugin/transform.ts`: discovery → `compileSchemas()` → `rewriteSource()` (compile mode) or `rewriteSourceAutoDiscover()` (autoDiscover mode) replaces schemas with IIFE, verbose logging + `BuildStats` tracking. Uses `acorn.parseExpressionAt()` for expression boundary detection in autoDiscover mode. Two-pass rewrite for mixed files (compile() + autoDiscover).
 - `benchmarks/vitest.config.ts`: uses `zodAot()` vite plugin + `@typia/unplugin` for build-time compilation
 
 The generated `safeParse_*` function is identical across all paths. Benchmark results accurately reflect CLI/unplugin output performance.
@@ -115,7 +115,7 @@ export default { plugins: [zodAot()] };
 
 Plugin entries: `zod-aot/vite`, `zod-aot/webpack`, `zod-aot/esbuild`, `zod-aot/rollup`, `zod-aot/rolldown`, `zod-aot/rspack`, `zod-aot/bun`
 
-**Transform flow:**
+**Transform flow (compile mode):**
 1. `shouldTransform(id)` — file extension check, skip `node_modules`/`.d.ts`/`.compiled.ts`
 2. Quick bail-out: source must contain both `"zod-aot"` and `"compile"`
 3. `discoverSchemas(id)` — execute file via `loadSourceFile()`, scan exports with `isCompiledSchema()`
@@ -123,13 +123,21 @@ Plugin entries: `zod-aot/vite`, `zod-aot/webpack`, `zod-aot/esbuild`, `zod-aot/r
 5. `rewriteSource()` — replace `compile(Schema)` with `/* @__PURE__ */ (() => { ... })()` IIFE
 6. `removeCompileImport()` — remove `compile` from import statement
 
+**Transform flow (autoDiscover mode):**
+1. `shouldTransform(id)` — same file extension check
+2. Quick bail-out: source must contain a runtime (non-type-only) `import` from `"zod"`
+3. `discoverSchemas(id, { autoDiscover: true })` — execute file, scan exports with `isCompiledSchema()` (priority) then `isZodSchema()` (detects `_zod.def`)
+4. `compileSchemas()` — same shared pipeline
+5. Two-pass rewrite for mixed files: `rewriteSource()` for compile() schemas, `rewriteSourceAutoDiscover()` for plain Zod schemas
+6. `rewriteSourceAutoDiscover()` — match `export const X = <expr>` (with type annotation support), use `acorn.parseExpressionAt()` for expression boundary, replace with IIFE
+
 **Key implementation details:**
 - `enforce: "pre"` — runs before other plugins
 - `/* @__PURE__ */` annotation enables tree-shaking
 - IIFE wraps preamble (regex/Set) + safeParse function + CompiledSchema object
 - `loadSourceFile()` uses `jiti` on Node.js, native import on Bun/Deno
 - `cacheBust: true` (`?t=${Date.now()}`) for HMR support
-- Options: `include?: string[]`, `exclude?: string[]` (path substring matching), `zodCompat?: boolean`, `verbose?: boolean`
+- Options: `include?: string[]`, `exclude?: string[]` (path substring matching), `zodCompat?: boolean`, `verbose?: boolean`, `autoDiscover?: boolean`
 - `verbose: true` logs per-schema compilation status and build summary (`buildEnd`), resets stats each watch cycle
 - `BuildStats` tracked in `transform.ts`: `{ files, schemas, optimized, failed }`
 - `compileSchemas()` uses `onError` callback so a single schema failure doesn't abort the entire file
@@ -188,8 +196,8 @@ zod-aot/
 │       │   │       └── check.ts   # diagnose schemas: tree view, coverage %, Fast Path, hints, --json, --fail-under
 │       │   └── unplugin/         # Build plugin (no cli deps)
 │       │       ├── index.ts      # createUnplugin() factory
-│       │       ├── transform.ts  # shouldTransform, transformCode, rewriteSource
-│       │       ├── types.ts      # ZodAotPluginOptions
+│       │       ├── transform.ts  # shouldTransform, transformCode, rewriteSource, rewriteSourceAutoDiscover, findExpressionEnd
+│       │       ├── types.ts      # ZodAotPluginOptions (includes autoDiscover)
 │       │       └── vite.ts, webpack.ts, esbuild.ts, rollup.ts, rolldown.ts, rspack.ts, bun.ts
 │       ├── tests/                # Mirrors src/ structure
 │       │   ├── integration.test.ts

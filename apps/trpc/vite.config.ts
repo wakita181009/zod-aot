@@ -2,7 +2,7 @@ import { defineConfig } from "vite";
 import zodAot from "zod-aot/vite";
 
 export default defineConfig({
-  plugins: [zodAot()],
+  plugins: [zodAot({ autoDiscover: true, verbose: true })],
   build: {
     lib: {
       entry: "src/server.ts",

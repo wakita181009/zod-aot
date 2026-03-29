@@ -87,6 +87,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "acorn": "^8.16.0",
     "jiti": "^2.6.1",
     "unplugin": "^3.0.0"
   },

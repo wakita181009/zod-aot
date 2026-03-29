@@ -23,7 +23,19 @@ npm install zod-aot zod@^4
 
 ### Build Plugin (Recommended)
 
-zod-aot provides build plugins for Vite, webpack, esbuild, Rollup, Rolldown, and rspack via [unplugin](https://github.com/unjs/unplugin). The plugin automatically detects `compile()` calls and replaces them with optimized inline validators at build time.
+zod-aot provides build plugins for Vite, webpack, esbuild, Rollup, Rolldown, and rspack via [unplugin](https://github.com/unjs/unplugin). Two modes: **autoDiscover** (zero-config) and **compile()** (explicit opt-in).
+
+#### autoDiscover (Zero-Config)
+
+Add one line to your build config. Every exported Zod schema in your project is automatically compiled at build time. No wrappers, no imports from `zod-aot` in your source code.
+
+**Step 1 — Install:**
+
+```bash
+npm install -D zod-aot
+```
+
+**Step 2 — Add the plugin to your build config:**
 
 ```typescript
 // vite.config.ts
@@ -31,9 +43,74 @@ import { defineConfig } from "vite";
 import zodAot from "zod-aot/vite";
 
 export default defineConfig({
-  plugins: [zodAot()],
+  plugins: [zodAot({ autoDiscover: true })],
 });
 ```
+
+**Step 3 — There is no step 3.** Write your Zod schemas as usual:
+
+```typescript
+// src/schemas.ts — plain Zod, no zod-aot import
+import { z } from "zod";
+
+export const UserSchema = z.object({
+  name: z.string().min(3),
+  age: z.number().int().positive(),
+  email: z.email(),
+});
+```
+
+At build time, zod-aot detects the exported `UserSchema`, compiles it into an optimized validator (3-64x faster), and replaces the export with a `/* @__PURE__ */` IIFE that preserves the full Zod prototype chain.
+
+**How it works:**
+
+1. The plugin scans each file for runtime `import ... from "zod"` statements
+2. It executes the file and checks each export for `_zod.def` (a Zod schema marker)
+3. Discovered schemas go through the same extract → codegen pipeline as `compile()` mode
+4. The export assignment (`export const X = z.object(...)`) is replaced with an optimized IIFE
+5. The IIFE uses `Object.create(originalSchema)` to preserve the full Zod API via prototype chain
+
+**Works with any framework that consumes Zod schemas:**
+
+```typescript
+// tRPC — no changes to your router code
+import { UserSchema } from "./schemas";
+
+export const appRouter = t.router({
+  createUser: t.procedure
+    .input(UserSchema)  // automatically 3-64x faster at build time
+    .mutation(({ input }) => createUser(input)),
+});
+```
+
+```typescript
+// Hono
+import { zValidator } from "@hono/zod-validator";
+import { UserSchema } from "./schemas";
+
+app.post("/users", zValidator("json", UserSchema), (c) => {
+  const user = c.req.valid("json");
+  return c.json(user);
+});
+```
+
+```typescript
+// React Hook Form
+import { zodResolver } from "@hookform/resolvers/zod";
+import { UserSchema } from "./schemas";
+
+const form = useForm({ resolver: zodResolver(UserSchema) });
+```
+
+> **Note:** With `autoDiscover`, files containing runtime Zod imports are executed at build time. Use `include` to limit scope if your project has files with side effects that also import Zod.
+>
+> ```typescript
+> zodAot({ autoDiscover: true, include: ["src/schemas"] })
+> ```
+
+#### compile() (Explicit Opt-In)
+
+For fine-grained control, wrap specific schemas with `compile()`:
 
 ```typescript
 // src/schemas.ts
@@ -53,7 +130,9 @@ validateUser.parse(data);       // throws ZodError on failure
 validateUser.safeParse(data);   // { success, data/error }
 ```
 
-Available plugins:
+Both modes can coexist in the same project — `compile()` schemas are detected first (priority), then `autoDiscover` picks up remaining plain Zod exports.
+
+#### Available Plugins
 
 | Build Tool | Import |
 |---|---|
@@ -65,41 +144,16 @@ Available plugins:
 | rspack | `import zodAot from "zod-aot/rspack"` |
 | Bun | `import zodAot from "zod-aot/bun"` |
 
-Plugin options:
+#### Plugin Options
 
 ```typescript
 zodAot({
+  autoDiscover: true,         // auto-detect all exported Zod schemas (no compile() needed)
   include: ["src/schemas"],   // only process files matching these substrings
   exclude: ["test", "mock"],  // skip files matching these substrings
+  zodCompat: true,            // use Object.create for Zod API compat (default: true)
   verbose: true,              // log per-schema compilation status and build summary
 })
-```
-
-### Zod Ecosystem Compatibility
-
-`compile()` returns a full Zod schema with AOT-optimized validation methods. It works seamlessly with any library that accepts Zod schemas, such as [`@hono/zod-validator`](https://github.com/honojs/middleware/tree/main/packages/zod-validator):
-
-```typescript
-import { Hono } from "hono";
-import { zValidator } from "@hono/zod-validator";
-import { z } from "zod";
-import { compile } from "zod-aot";
-
-const UserSchema = z.object({
-  name: z.string().min(3),
-  age: z.number().int().positive(),
-  email: z.email(),
-});
-
-// Still a Zod schema — but safeParse is AOT-optimized
-const validateUser = compile(UserSchema);
-
-const app = new Hono();
-
-app.post("/users", zValidator("json", validateUser), (c) => {
-  const user = c.req.valid("json");
-  return c.json(user);
-});
 ```
 
 ### CLI (Alternative)

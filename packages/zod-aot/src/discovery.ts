@@ -3,13 +3,31 @@ import type { DiscoveredSchema } from "#src/core/types.js";
 import type { LoadOptions } from "./loader.js";
 import { loadSourceFile } from "./loader.js";
 
+export interface DiscoverOptions extends LoadOptions {
+  /** Auto-detect all exported Zod schemas without requiring compile() wrappers. */
+  autoDiscover?: boolean;
+}
+
 /**
- * Discover all compile() calls in a source file by importing it and
- * scanning exports for CompiledSchema objects.
+ * Check if a value is a Zod schema by detecting the _zod.def structure.
+ * Used by autoDiscover to find plain Zod exports.
+ */
+function isZodSchema(value: unknown): boolean {
+  if (typeof value !== "object" || value === null || !("_zod" in value)) return false;
+  const zod = (value as Record<string, unknown>)["_zod"];
+  return typeof zod === "object" && zod !== null && "def" in zod;
+}
+
+/**
+ * Discover schemas in a source file by importing it and scanning exports.
+ *
+ * - Default mode: finds compile() calls via CompiledSchema marker.
+ * - autoDiscover mode: also finds plain Zod schema exports via _zod.def detection.
+ *   compile() schemas take priority (isCompiledSchema checked first).
  */
 export async function discoverSchemas(
   filePath: string,
-  options?: LoadOptions,
+  options?: DiscoverOptions,
 ): Promise<DiscoveredSchema[]> {
   const mod = await loadSourceFile(filePath, options);
   const schemas: DiscoveredSchema[] = [];
@@ -26,6 +44,8 @@ export async function discoverSchemas(
   for (const [exportName, value] of Object.entries(targets)) {
     if (isCompiledSchema(value)) {
       schemas.push({ exportName, schema: value.schema });
+    } else if (options?.autoDiscover && isZodSchema(value)) {
+      schemas.push({ exportName, schema: value });
     }
   }
 
