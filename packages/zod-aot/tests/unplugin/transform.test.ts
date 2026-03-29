@@ -280,6 +280,35 @@ describe("rewriteSource()", () => {
     expect(result).not.toContain("compile(z.object");
   });
 
+  it("skips replacement when closing paren is not found (unmatched parens)", () => {
+    const code = [
+      `import { compile } from "zod-aot";`,
+      `export const validateUser = compile(UserSchema;`,
+    ].join("\n");
+
+    const schemas = [makeCompiledInfo("validateUser", simpleSchema)];
+    const result = rewriteSource(code, schemas);
+
+    // Code should be unchanged except compile import removal
+    expect(result).not.toContain("safeParse_validateUser");
+    expect(result).toContain("compile(UserSchema;");
+  });
+
+  it("skips schema when export name does not match code (no regex match)", () => {
+    const code = [
+      `import { compile } from "zod-aot";`,
+      `export const validateProduct = compile(ProductSchema);`,
+    ].join("\n");
+
+    // Schema name "validateUser" does not exist in the code
+    const schemas = [makeCompiledInfo("validateUser", simpleSchema)];
+    const result = rewriteSource(code, schemas);
+
+    // Code should be unchanged (except compile import removal)
+    expect(result).not.toContain("safeParse_validateUser");
+    expect(result).toContain("validateProduct = compile(ProductSchema)");
+  });
+
   it("does not match export name as substring (word boundary)", () => {
     const code = [
       `import { compile } from "zod-aot";`,
@@ -350,6 +379,14 @@ describe("transformCode() E2E", () => {
     expect(result).toBeNull();
   });
 
+  it("returns null when code has compile import but no exported compiled schemas", async () => {
+    const fixturePath = path.join(fixturesDir, "no-compile.ts");
+    // Inject "zod-aot" and "compile" strings to pass bail-out, but the file has no compile() calls
+    const code = `import { compile } from "zod-aot";\nimport { z } from "zod";\nconst Schema = z.object({ name: z.string() });\n`;
+    const result = await transformCode(code, fixturePath);
+    expect(result).toBeNull();
+  });
+
   it("returns null when code contains compile but not zod-aot", async () => {
     const code = `import { compile } from "other-lib";\nexport const x = compile(foo);`;
     const result = await transformCode(code, "/fake/path.ts");
@@ -383,6 +420,50 @@ describe("transformCode() E2E", () => {
       const output = logSpy.mock.calls.map((c) => c[0]).join("\n");
       expect(output).toContain("[zod-aot]");
       expect(output).toContain("✓");
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it("does not inject duplicate __zodAotConfig import", async () => {
+    const fixturePath = path.join(fixturesDir, "simple-schema.ts");
+    const baseCode = readFixtureAsUserCode(fixturePath);
+    // Pre-inject the __zodAotConfig import to simulate already present
+    const code = `import { config as __zodAotConfig } from "zod";\n${baseCode}`;
+
+    const result = await transformCode(code, fixturePath);
+
+    expect(result).not.toBeNull();
+    // Should NOT add a second config import line
+    const importLines = result!
+      .split("\n")
+      .filter((l) => l.includes("import { config as __zodAotConfig }"));
+    expect(importLines).toHaveLength(1);
+  });
+
+  it("verbose mode logs fallback count (singular)", async () => {
+    const fixturePath = path.join(fixturesDir, "with-fallback.ts");
+    const code = readFixtureAsUserCode(fixturePath);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(vi.fn());
+
+    try {
+      await transformCode(code, fixturePath, { verbose: true });
+      const output = logSpy.mock.calls.map((c) => c[0]).join("\n");
+      expect(output).toContain("1 fallback)");
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it("verbose mode logs fallback count (plural)", async () => {
+    const fixturePath = path.join(fixturesDir, "with-multi-fallback.ts");
+    const code = readFixtureAsUserCode(fixturePath);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(vi.fn());
+
+    try {
+      await transformCode(code, fixturePath, { verbose: true });
+      const output = logSpy.mock.calls.map((c) => c[0]).join("\n");
+      expect(output).toContain("fallbacks)");
     } finally {
       logSpy.mockRestore();
     }
@@ -435,6 +516,24 @@ describe("rewriteSourceAutoDiscover()", () => {
     const codegenResult = generateValidator(ir, exportName);
     return { exportName, codegenResult, fallbackEntries: [] };
   }
+
+  it("skips schema when export pattern does not match code", () => {
+    const code = `import { z } from "zod";\nexport const OtherSchema = z.string();`;
+    const schemas = [makeCompiledInfo("UserSchema", simpleSchema)];
+    const result = rewriteSourceAutoDiscover(code, schemas);
+
+    // Code should be unchanged
+    expect(result).toBe(code);
+  });
+
+  it("skips schema when expression is unparseable", () => {
+    const code = `import { z } from "zod";\nexport const UserSchema = @@@invalid;`;
+    const schemas = [makeCompiledInfo("UserSchema", simpleSchema)];
+    const result = rewriteSourceAutoDiscover(code, schemas);
+
+    // Code should be unchanged
+    expect(result).toBe(code);
+  });
 
   it("replaces a single schema export with IIFE", () => {
     const code = `import { z } from "zod";\nexport const UserSchema = z.object({ name: z.string() });`;
@@ -530,6 +629,18 @@ describe("transformCode() — autoDiscover", () => {
     expect(result).not.toContain('from "zod-aot"');
   });
 
+  it("autoDiscover with only compile() schemas (no plain Zod exports)", async () => {
+    const fixturePath = path.join(fixturesDir, "simple-schema.ts");
+    const code = readFixtureAsUserCode(fixturePath);
+
+    const result = await transformCode(code, fixturePath, { autoDiscover: true });
+
+    expect(result).not.toBeNull();
+    expect(result).toContain("safeParse_validateUser");
+    // compile import should be removed
+    expect(result).not.toContain('from "zod-aot"');
+  });
+
   it("returns null when no runtime Zod import in autoDiscover mode", async () => {
     const code = `export const x = 1;`;
     const result = await transformCode(code, "/fake/path.ts", { autoDiscover: true });
@@ -558,7 +669,7 @@ describe("transformCode() — autoDiscover", () => {
     expect(stats[0]?.optimized).toBeGreaterThanOrEqual(1);
   });
 
-  it("verbose mode logs auto-discovering status", async () => {
+  it("verbose mode logs auto-discovering status (single export)", async () => {
     const fixturePath = path.join(fixturesDir, "auto-discover-simple.ts");
     const code = readFixtureAsUserCode(fixturePath);
     const logSpy = vi.spyOn(console, "log").mockImplementation(vi.fn());
@@ -566,11 +677,97 @@ describe("transformCode() — autoDiscover", () => {
     try {
       await transformCode(code, fixturePath, { autoDiscover: true, verbose: true });
       const output = logSpy.mock.calls.map((c) => c[0]).join("\n");
-      expect(output).toContain("[zod-aot]");
       expect(output).toContain("Auto-discovering");
+      expect(output).toContain("1 Zod export found");
       expect(output).toContain("✓");
     } finally {
       logSpy.mockRestore();
+    }
+  });
+
+  it("verbose mode logs auto-discovering status (multiple exports)", async () => {
+    const fixturePath = path.join(fixturesDir, "auto-discover-multi.ts");
+    const code = readFixtureAsUserCode(fixturePath);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(vi.fn());
+
+    try {
+      await transformCode(code, fixturePath, { autoDiscover: true, verbose: true });
+      const output = logSpy.mock.calls.map((c) => c[0]).join("\n");
+      expect(output).toContain("Auto-discovering");
+      expect(output).toContain("exports found");
+      expect(output).toContain("✓");
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+});
+
+describe("transformCode() — compilation failure paths", () => {
+  it("warns and continues when a schema fails to compile", async () => {
+    const fixturePath = path.join(fixturesDir, "with-broken-schema.ts");
+    const code = readFixtureAsUserCode(fixturePath);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(vi.fn());
+
+    try {
+      const result = await transformCode(code, fixturePath);
+      // goodValidator should be compiled, brokenValidator should fail
+      expect(result).not.toBeNull();
+      expect(result).toContain("safeParse_goodValidator");
+      // warn() should have been called for brokenValidator
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to compile "brokenValidator"'),
+      );
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("compile()"));
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it("warns without 'compile()' mention in autoDiscover mode", async () => {
+    const fixturePath = path.join(fixturesDir, "with-broken-schema.ts");
+    const code = readFixtureAsUserCode(fixturePath);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(vi.fn());
+
+    try {
+      await transformCode(code, fixturePath, { autoDiscover: true });
+      const warnMsg = warnSpy.mock.calls.find(
+        (c) => typeof c[0] === "string" && c[0].includes("brokenValidator"),
+      )?.[0] as string;
+      expect(warnMsg).toContain("Keeping original");
+      expect(warnMsg).not.toContain("compile()");
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it("verbose mode logs failed schema count", async () => {
+    const fixturePath = path.join(fixturesDir, "with-broken-schema.ts");
+    const code = readFixtureAsUserCode(fixturePath);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(vi.fn());
+    const logSpy = vi.spyOn(console, "log").mockImplementation(vi.fn());
+
+    try {
+      await transformCode(code, fixturePath, { verbose: true });
+      const output = logSpy.mock.calls.map((c) => c[0]).join("\n");
+      expect(output).toContain("1 schema(s) failed");
+    } finally {
+      warnSpy.mockRestore();
+      logSpy.mockRestore();
+    }
+  });
+
+  it("returns null when all schemas fail to compile", async () => {
+    const fixturePath = path.join(fixturesDir, "all-broken-schemas.ts");
+    const code = readFixtureAsUserCode(fixturePath);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(vi.fn());
+
+    try {
+      const result = await transformCode(code, fixturePath);
+      expect(result).toBeNull();
+      // Both schemas should have triggered warnings
+      expect(warnSpy).toHaveBeenCalledTimes(2);
+    } finally {
+      warnSpy.mockRestore();
     }
   });
 });

@@ -100,4 +100,19 @@ describe("generateFastCheck dispatcher", () => {
   it("recursiveRef → null", () => {
     expect(compileFastCheck({ type: "recursiveRef" })).toBeNull();
   });
+
+  it("templateLiteral → regex check", () => {
+    const fn = compileFastCheck({ type: "templateLiteral", pattern: "^hello-\\d+$" });
+    expect(fn?.("hello-123")).toBe(true);
+    expect(fn?.("goodbye-123")).toBe(false);
+    expect(fn?.(42)).toBe(false);
+  });
+
+  it("string with coerce → null", () => {
+    expect(compileFastCheck({ type: "string", checks: [], coerce: true })).toBeNull();
+  });
+
+  it("bigint with coerce → null", () => {
+    expect(compileFastCheck({ type: "bigint", checks: [], coerce: true })).toBeNull();
+  });
 });

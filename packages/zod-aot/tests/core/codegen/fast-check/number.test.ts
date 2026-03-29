@@ -105,6 +105,24 @@ describe("fastCheckNumber", () => {
     expect(fn?.(10)).toBe(false);
   });
 
+  it("string-only checks on number schema are skipped", () => {
+    const fn = compileFastCheck({
+      type: "number",
+      checks: [
+        { kind: "min_length", minimum: 1 },
+        { kind: "max_length", maximum: 10 },
+        { kind: "length_equals", length: 5 },
+        { kind: "string_format", format: "email" },
+        { kind: "includes", includes: "foo" },
+        { kind: "starts_with", prefix: "bar" },
+        { kind: "ends_with", suffix: "baz" },
+      ],
+    });
+    // All string-only checks are skipped, only typeof/isNaN/isFinite remain
+    expect(fn?.(42)).toBe(true);
+    expect(fn?.("42")).toBe(false);
+  });
+
   it("multiple_of: accepts 6 for 3, rejects 7", () => {
     const fn = compileFastCheck({
       type: "number",

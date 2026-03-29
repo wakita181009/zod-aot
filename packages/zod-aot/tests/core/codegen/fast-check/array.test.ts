@@ -41,6 +41,17 @@ describe("fastCheckArray", () => {
     expect(fn?.([1, "a", null])).toBe(true);
   });
 
+  it("length_equals check", () => {
+    const fn = compileFastCheck({
+      type: "array",
+      element: { type: "any" },
+      checks: [{ kind: "length_equals", length: 3 }],
+    });
+    expect(fn?.([1, 2, 3])).toBe(true);
+    expect(fn?.([1, 2])).toBe(false);
+    expect(fn?.([1, 2, 3, 4])).toBe(false);
+  });
+
   it("ineligible element → returns null", () => {
     expect(
       compileFastCheck({

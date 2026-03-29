@@ -12,6 +12,26 @@ describe("fastCheckPipe", () => {
     expect(fn?.(42)).toBe(false);
   });
 
+  it("pipe(any, string): in is 'true', returns out only", () => {
+    const fn = compileFastCheck({
+      type: "pipe",
+      in: { type: "any" },
+      out: { type: "string", checks: [] },
+    });
+    expect(fn?.("hello")).toBe(true);
+    expect(fn?.(42)).toBe(false);
+  });
+
+  it("pipe(string, any): out is 'true', returns in only", () => {
+    const fn = compileFastCheck({
+      type: "pipe",
+      in: { type: "string", checks: [] },
+      out: { type: "any" },
+    });
+    expect(fn?.("hello")).toBe(true);
+    expect(fn?.(42)).toBe(false);
+  });
+
   it("pipe with ineligible in → returns null", () => {
     expect(
       compileFastCheck({

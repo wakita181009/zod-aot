@@ -102,6 +102,30 @@ describe("fastCheckString", () => {
     expect(fn?.("abc")).toBe(false);
   });
 
+  it("string_format uuid with custom pattern", () => {
+    const fn = compileFastCheck({
+      type: "string",
+      checks: [
+        {
+          kind: "string_format",
+          format: "uuid",
+          pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        },
+      ],
+    });
+    expect(fn?.("550e8400-e29b-41d4-a716-446655440000")).toBe(true);
+    expect(fn?.("not-a-uuid")).toBe(false);
+  });
+
+  it("non-regex format with pattern: uses pattern as regex", () => {
+    const fn = compileFastCheck({
+      type: "string",
+      checks: [{ kind: "string_format", format: "ipv4", pattern: "^\\d+\\.\\d+\\.\\d+\\.\\d+$" }],
+    });
+    expect(fn?.("192.168.1.1")).toBe(true);
+    expect(fn?.("not-an-ip")).toBe(false);
+  });
+
   it("unknown format without pattern: returns null", () => {
     expect(
       compileFastCheck({
