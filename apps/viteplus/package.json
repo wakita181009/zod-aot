@@ -1,18 +1,18 @@
 {
-  "name": "@zod-aot/hono-api",
+  "name": "@zod-aot/viteplus",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/app.ts",
-    "start": "tsx src/app.ts",
     "generate": "zod-aot generate src/schemas.ts -o src/schemas.compiled.ts",
     "check": "zod-aot check src/schemas.ts",
-    "test": "vitest run"
+    "start": "tsx src/main.ts",
+    "dev": "vp dev",
+    "build": "vp build",
+    "start:built": "node dist/main.mjs",
+    "test": "vp test run",
+    "lint": "vp check"
   },
   "dependencies": {
-    "@hono/node-server": "^1.19.11",
-    "@hono/zod-validator": "^0.7.6",
-    "hono": "^4.12.9",
     "zod": "catalog:",
     "zod-aot": "workspace:*"
   },
@@ -20,7 +20,6 @@
     "@types/node": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",
-    "vite": "catalog:",
-    "vitest": "catalog:"
+    "vite-plus": "^0.1.14"
   }
 }

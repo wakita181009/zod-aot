@@ -8,6 +8,6 @@ catalog:
   "@vitest/coverage-v8": ^4.1.1
   tsx: ^4.21.0
   typescript: ^6.0.2
-  vite: ^8.0.2
+  vite: ^8.0.3
   vitest: ^4.1.1
   zod: ^4.0.0

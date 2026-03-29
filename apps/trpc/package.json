@@ -1,0 +1,26 @@
+{
+  "name": "@zod-aot/trpc",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "client": "tsx src/client.ts",
+    "build": "vite build",
+    "check": "zod-aot check src/schemas.ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@trpc/client": "^11.0.0",
+    "@trpc/server": "^11.0.0",
+    "zod": "catalog:",
+    "zod-aot": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  }
+}

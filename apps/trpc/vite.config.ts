@@ -5,12 +5,12 @@ export default defineConfig({
   plugins: [zodAot()],
   build: {
     lib: {
-      entry: "src/main.ts",
+      entry: "src/server.ts",
       formats: ["es"],
-      fileName: "main",
+      fileName: "index",
     },
-    rollupOptions: {
-      external: ["zod"],
+    rolldownOptions: {
+      external: ["zod", "@trpc/server", "@trpc/server/adapters/standalone"],
     },
     outDir: "dist",
   },

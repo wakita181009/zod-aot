@@ -67,8 +67,8 @@ test("User: is() type guard", () => {
     tags: ["writer"],
     bio: null,
   };
-  log(`  is valid: ${validateUser.is(data)}`);
-  log(`  is invalid: ${validateUser.is({ name: 123 })}`);
+  log(`  is valid: ${validateUser.safeParse(data).success}`);
+  log(`  is invalid: ${validateUser.safeParse({ name: 123 }).success}`);
 });
 
 // --- Address (regex) ---

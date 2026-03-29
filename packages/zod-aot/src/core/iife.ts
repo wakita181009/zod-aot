@@ -5,6 +5,12 @@
 
 import type { CompiledSchemaInfo } from "./pipeline.js";
 
+/** Import statement required by generateIIFE output (references __zodAotConfig). */
+export const ZOD_CONFIG_IMPORT = 'import { config as __zodAotConfig } from "zod";';
+
+/** File-level __msg declaration (must appear once after ZOD_CONFIG_IMPORT). */
+export const ZOD_MSG_DECLARATION = "var __msg=__zodAotConfig().localeError;";
+
 function extractFunctionName(functionDef: string): string {
   const match = /^function\s+(\w+)\s*\(/.exec(functionDef);
   if (!match?.[1]) {
@@ -12,12 +18,6 @@ function extractFunctionName(functionDef: string): string {
   }
   return match[1];
 }
-
-/** Import statement required by generateIIFE output (references __zodAotConfig). */
-export const ZOD_CONFIG_IMPORT = 'import { config as __zodAotConfig } from "zod";';
-
-/** File-level __msg declaration (must appear once after ZOD_CONFIG_IMPORT). */
-export const ZOD_MSG_DECLARATION = "var __msg=__zodAotConfig().localeError;";
 
 /**
  * Generate a `/* @__PURE__ * /` IIFE wrapping a compiled validator.
