@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.1](https://github.com/wakita181009/zod-aot/compare/v0.14.0...v0.14.1) (2026-03-29)
+
+
+### Bug Fixes
+
+* gracefully skip unloadable files in autoDiscover mode ([ac3861f](https://github.com/wakita181009/zod-aot/commit/ac3861fb38665b3b9d878a5821ef706426a67ade))
+
 ## [0.14.0](https://github.com/wakita181009/zod-aot/compare/v0.13.0...v0.14.0) (2026-03-29)
 
 
