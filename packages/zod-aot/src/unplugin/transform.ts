@@ -75,6 +75,14 @@ export async function transformCode(
     schemas = await discoverSchemas(id, { cacheBust: true, autoDiscover });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
+    // In autoDiscover mode, files that can't be loaded (JSX components,
+    // unresolved path aliases, etc.) are expected — warn and skip.
+    if (autoDiscover) {
+      if (verbose) {
+        warn(`Skipping ${id}: ${msg}`);
+      }
+      return null;
+    }
     throw new Error(`[zod-aot] Failed to load schemas from ${id}: ${msg}`);
   }
   if (schemas.length === 0) return null;

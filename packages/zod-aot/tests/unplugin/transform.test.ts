@@ -435,8 +435,8 @@ describe("transformCode() E2E", () => {
 
     expect(result).not.toBeNull();
     // Should NOT add a second config import line
-    const importLines = result!
-      .split("\n")
+    const importLines = result
+      ?.split("\n")
       .filter((l) => l.includes("import { config as __zodAotConfig }"));
     expect(importLines).toHaveLength(1);
   });
@@ -653,6 +653,32 @@ describe("transformCode() — autoDiscover", () => {
     const result = await transformCode(code, "/fake/path.ts", { autoDiscover: true });
 
     expect(result).toBeNull();
+  });
+
+  it("returns null (does not throw) when file loading fails in autoDiscover mode", async () => {
+    const code = `import { z } from "zod";\nexport const v = z.string();`;
+    const result = await transformCode(code, "/nonexistent/bad-file.ts", { autoDiscover: true });
+
+    expect(result).toBeNull();
+  });
+
+  it("logs warning when file loading fails in autoDiscover verbose mode", async () => {
+    const code = `import { z } from "zod";\nexport const v = z.string();`;
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(vi.fn());
+
+    try {
+      const result = await transformCode(code, "/nonexistent/bad-file.ts", {
+        autoDiscover: true,
+        verbose: true,
+      });
+
+      expect(result).toBeNull();
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Skipping /nonexistent/bad-file.ts"),
+      );
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 
   it("calls onBuildStats in autoDiscover mode", async () => {
