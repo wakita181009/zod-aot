@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.0](https://github.com/wakita181009/zod-aot/compare/v0.13.0...v0.14.0) (2026-03-29)
+
+
+### Features
+
+* add autoDiscover mode for zero-config Zod schema optimization ([#85](https://github.com/wakita181009/zod-aot/issues/85)) ([feab439](https://github.com/wakita181009/zod-aot/commit/feab439da6e7c517521a93764d92d5833edc2348))
+
 ## [0.13.0](https://github.com/wakita181009/zod-aot/compare/v0.12.0...v0.13.0) (2026-03-29)
 
 
