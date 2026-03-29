@@ -30,6 +30,26 @@ describe("fastCheckRecord", () => {
     expect(fn?.("string")).toBe(false);
   });
 
+  it("Record<any, any>: both key and value are 'true', skips .every()", () => {
+    const fn = compileFastCheck({
+      type: "record",
+      keyType: { type: "any" },
+      valueType: { type: "any" },
+    });
+    expect(fn?.({ a: 1, b: "x" })).toBe(true);
+    expect(fn?.(null)).toBe(false);
+  });
+
+  it("Record<any, number>: only value check in .every()", () => {
+    const fn = compileFastCheck({
+      type: "record",
+      keyType: { type: "any" },
+      valueType: { type: "number", checks: [] },
+    });
+    expect(fn?.({ a: 1, b: 2 })).toBe(true);
+    expect(fn?.({ a: "x" })).toBe(false);
+  });
+
   it("ineligible key → returns null", () => {
     expect(
       compileFastCheck({
