@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0](https://github.com/wakita181009/zod-aot/compare/v0.12.0...v0.13.0) (2026-03-29)
+
+
+### Features
+
+* **check:** diagnostic tree view with coverage gates and JSON output ([#82](https://github.com/wakita181009/zod-aot/issues/82)) ([2acad95](https://github.com/wakita181009/zod-aot/commit/2acad9547d6aa67d5401aeb4a71da809e2909ee7))
+
 ## [0.12.0](https://github.com/wakita181009/zod-aot/compare/v0.11.0...v0.12.0) (2026-03-28)
 
 
