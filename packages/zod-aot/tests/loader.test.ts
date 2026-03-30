@@ -53,4 +53,22 @@ describe("loadSourceFile", () => {
     const mod = await loadSourceFile(path.join(fixturesDir, "with-enum.ts"));
     expect(mod).toHaveProperty("validateItem");
   });
+
+  it("resolves tsconfig path aliases", async () => {
+    const mod = await loadSourceFile(path.join(fixturesDir, "path-alias", "schema.ts"));
+    expect(mod).toHaveProperty("UserSchema");
+  });
+
+  it("resolves path aliases with cacheBust", async () => {
+    const mod = await loadSourceFile(path.join(fixturesDir, "path-alias", "schema.ts"), {
+      cacheBust: true,
+    });
+    expect(mod).toHaveProperty("UserSchema");
+  });
+
+  it("loads TSX files with JSX syntax", async () => {
+    const mod = await loadSourceFile(path.join(fixturesDir, "with-jsx", "schema.tsx"));
+    expect(mod).toHaveProperty("LoginSchema");
+    expect(mod).toHaveProperty("LoginForm");
+  });
 });
