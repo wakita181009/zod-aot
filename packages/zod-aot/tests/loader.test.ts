@@ -3,6 +3,8 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { loadSourceFile } from "#src/loader.js";
 
+const isNode = !("Bun" in globalThis) && !("Deno" in globalThis);
+
 const fixturesDir = path.resolve(import.meta.dirname, "fixtures");
 
 describe("loadSourceFile", () => {
@@ -54,19 +56,19 @@ describe("loadSourceFile", () => {
     expect(mod).toHaveProperty("validateItem");
   });
 
-  it("resolves tsconfig path aliases", async () => {
+  it.skipIf(!isNode)("resolves tsconfig path aliases", async () => {
     const mod = await loadSourceFile(path.join(fixturesDir, "path-alias", "schema.ts"));
     expect(mod).toHaveProperty("UserSchema");
   });
 
-  it("resolves path aliases with cacheBust", async () => {
+  it.skipIf(!isNode)("resolves path aliases with cacheBust", async () => {
     const mod = await loadSourceFile(path.join(fixturesDir, "path-alias", "schema.ts"), {
       cacheBust: true,
     });
     expect(mod).toHaveProperty("UserSchema");
   });
 
-  it("loads TSX files with JSX syntax", async () => {
+  it.skipIf(!isNode)("loads TSX files with JSX syntax", async () => {
     const mod = await loadSourceFile(path.join(fixturesDir, "with-jsx", "schema.tsx"));
     expect(mod).toHaveProperty("LoginSchema");
     expect(mod).toHaveProperty("LoginForm");
