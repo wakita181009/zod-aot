@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.0](https://github.com/wakita181009/zod-aot/compare/v0.14.1...v0.15.0) (2026-03-30)
+
+
+### Features
+
+* support tsconfig path aliases and JSX in loader ([#91](https://github.com/wakita181009/zod-aot/issues/91)) ([3ecbc77](https://github.com/wakita181009/zod-aot/commit/3ecbc778e475c19b36b739db494e83c9ea65c0aa))
+
 ## [0.14.1](https://github.com/wakita181009/zod-aot/compare/v0.14.0...v0.14.1) (2026-03-29)
 
 
