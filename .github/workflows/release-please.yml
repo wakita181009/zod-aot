@@ -42,9 +42,9 @@ jobs:
       - name: Lint & Format
         run: pnpm check
       - name: Typecheck
-        run: pnpm -r typecheck
+        run: pnpm --filter zod-aot typecheck
       - name: Build
-        run: pnpm -r build
+        run: pnpm --filter zod-aot build
       - name: Test
         run: pnpm test
       - name: Publish to npm

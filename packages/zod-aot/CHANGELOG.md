@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.1](https://github.com/wakita181009/zod-aot/compare/v0.15.0...v0.15.1) (2026-04-01)
+
+
+### Bug Fixes
+
+* prevent input mutation in generated validators with coerce/default/catch ([2f0dd30](https://github.com/wakita181009/zod-aot/commit/2f0dd30ce00fe0d65606a71101028df250154414))
+
 ## [0.15.0](https://github.com/wakita181009/zod-aot/compare/v0.14.1...v0.15.0) (2026-03-30)
 
 
