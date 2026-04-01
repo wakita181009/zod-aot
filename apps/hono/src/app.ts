@@ -1,4 +1,3 @@
-import { serve } from "@hono/node-server";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import {
@@ -58,13 +57,4 @@ app.get("/aot/protected", zValidator("header", ApiHeaderSchema), (c) => {
   return c.json({ validator: "zod-aot", ok: true });
 });
 
-// ============================================================
-// Server
-// ============================================================
-
-if (!process.env["VITEST"]) {
-  const port = 3000;
-  // biome-ignore lint/suspicious/noConsole: app startup log
-  console.log(`Server running on http://localhost:${port}`);
-  serve({ fetch: app.fetch, port });
-}
+export default app;

@@ -138,6 +138,12 @@
       }
     },
     {
+      "includes": ["apps/hono/**"],
+      "javascript": {
+        "globals": ["Bun"]
+      }
+    },
+    {
       "includes": ["packages/*/src/unplugin/**"],
       "linter": {
         "rules": {

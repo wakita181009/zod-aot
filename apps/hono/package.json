@@ -3,24 +3,22 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/app.ts",
-    "start": "tsx src/app.ts",
+    "dev": "bun --watch src/server.ts",
+    "start": "bun src/server.ts",
+    "build": "bun run build.ts",
     "generate": "zod-aot generate src/schemas.ts -o src/schemas.compiled.ts",
     "check": "zod-aot check src/schemas.ts",
     "test": "vitest run"
   },
   "dependencies": {
-    "@hono/node-server": "^1.19.12",
     "@hono/zod-validator": "^0.7.6",
     "hono": "^4.12.9",
     "zod": "catalog:",
     "zod-aot": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "catalog:",
-    "tsx": "catalog:",
+    "@types/bun": "^1.2.0",
     "typescript": "catalog:",
-    "vite": "catalog:",
     "vitest": "catalog:"
   }
 }

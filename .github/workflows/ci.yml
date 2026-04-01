@@ -31,7 +31,7 @@ jobs:
         run: pnpm -r typecheck
 
       - name: Build
-        run: pnpm -r build
+        run: pnpm -r --filter '!@zod-aot/hono' --filter '!zod-aot-monorepo' build
 
       - name: Test
         run: pnpm test:coverage
@@ -85,7 +85,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: pnpm -r build
+        run: pnpm -r --filter '!@zod-aot/hono' --filter '!zod-aot-monorepo' build
 
       - name: Test (Deno)
         run: deno run -A packages/zod-aot/tests/compat.mjs
@@ -108,7 +108,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: pnpm -r build
+        run: pnpm -r --filter '!@zod-aot/hono' --filter '!zod-aot-monorepo' build
 
       - name: Override Zod to ${{ matrix.zod-version }}
         run: pnpm --filter zod-aot exec pnpm add -D zod@${{ matrix.zod-version }} --no-lockfile

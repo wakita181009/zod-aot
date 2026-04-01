@@ -6,7 +6,7 @@
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts",
     "client": "tsx src/client.ts",
-    "build": "vite build",
+    "build": "tsdown",
     "check": "zod-aot check src/schemas.ts --json",
     "test": "vitest run"
   },
@@ -17,6 +17,7 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "tsdown": "^0.14.0",
     "tsx": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
