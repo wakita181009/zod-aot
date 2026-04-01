@@ -5,6 +5,7 @@ import { emit } from "../emit.js";
 export function generateSetValidation(
   ir: SchemaIR & { type: "set" },
   inputExpr: string,
+  _outputExpr: string,
   pathExpr: string,
   issuesVar: string,
   ctx: CodeGenContext,
@@ -42,7 +43,7 @@ export function generateSetValidation(
   code += emit`
     var ${idxVar}=0;
     for(var ${iterVar} of ${inputExpr}){
-      ${generateFn(ir.valueType, iterVar, `${pathExpr}.concat(${idxVar})`, issuesVar, ctx)}
+      ${generateFn(ir.valueType, iterVar, iterVar, `${pathExpr}.concat(${idxVar})`, issuesVar, ctx)}
       ${idxVar}++;
     }
   }`;

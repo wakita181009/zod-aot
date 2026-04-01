@@ -6,6 +6,7 @@ export function fastCheckString(ir: StringIR, x: string, ctx: CodeGenContext): s
   const parts: string[] = [`typeof ${x}==="string"`];
 
   for (const check of [...ir.checks].sort(checkPriority)) {
+    if (check.kind === "refine_effect") return null;
     switch (check.kind) {
       case "min_length":
         parts.push(`${x}.length>=${check.minimum}`);

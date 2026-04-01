@@ -6,6 +6,7 @@ import { emit } from "../emit.js";
 export function generateRecordValidation(
   ir: SchemaIR & { type: "record" },
   inputExpr: string,
+  outputExpr: string,
   pathExpr: string,
   issuesVar: string,
   ctx: CodeGenContext,
@@ -17,7 +18,7 @@ export function generateRecordValidation(
     }else{`;
 
   if (hasMutation(ir.valueType)) {
-    code += `${inputExpr}=Object.assign({},${inputExpr});`;
+    code += `${outputExpr}=Object.assign({},${inputExpr});`;
   }
 
   const keysVar = `__rk_${ctx.counter++}`;
@@ -32,11 +33,11 @@ export function generateRecordValidation(
     for(var ${idxVar}=0;${idxVar}<${keysVar}.length;${idxVar}++){
       var ${keyVar}=${keysVar}[${idxVar}];
       var ${keyIssuesVar}=[];
-      ${generateFn(ir.keyType, keyVar, keyPath, keyIssuesVar, ctx)}
+      ${generateFn(ir.keyType, keyVar, keyVar, keyPath, keyIssuesVar, ctx)}
       if(${keyIssuesVar}.length>0){
         ${issuesVar}.push({code:"invalid_key",origin:"record",path:${keyPath},issues:${keyIssuesVar}});
       }else{
-        ${generateFn(ir.valueType, valExpr, keyPath, issuesVar, ctx)}
+        ${generateFn(ir.valueType, valExpr, valExpr, keyPath, issuesVar, ctx)}
       }
     }
   }`;

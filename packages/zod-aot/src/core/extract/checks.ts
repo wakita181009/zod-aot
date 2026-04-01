@@ -1,11 +1,12 @@
-import type { CheckIR } from "../types.js";
+import type { CheckOrEffectIR } from "../types.js";
+import { tryCompileEffect } from "./effects.js";
 import type { ZodCheckSchema } from "./types.js";
 
 export function extractChecks(checks: ZodCheckSchema[]): {
-  checkIRs: CheckIR[];
+  checkIRs: CheckOrEffectIR[];
   hasFallback: boolean;
 } {
-  const checkIRs: CheckIR[] = [];
+  const checkIRs: CheckOrEffectIR[] = [];
   let hasFallback = false;
 
   for (const check of checks) {
@@ -62,11 +63,28 @@ export function extractChecks(checks: ZodCheckSchema[]): {
         });
         break;
       }
-      case "custom":
-        hasFallback = true;
+      case "custom": {
+        const source = tryCompileEffect(def.fn);
+        if (source) {
+          const message =
+            typeof def.error === "function" ? extractRefineMessage(def.error) : undefined;
+          checkIRs.push({ kind: "refine_effect", source, ...(message ? { message } : {}) });
+        } else {
+          hasFallback = true;
+        }
         break;
+      }
     }
   }
 
   return { checkIRs, hasFallback };
+}
+
+function extractRefineMessage(errorFn: (...args: unknown[]) => unknown): string | undefined {
+  try {
+    const result = errorFn({});
+    return typeof result === "string" ? result : undefined;
+  } catch {
+    return undefined;
+  }
 }

@@ -4,12 +4,13 @@ import { emit } from "../emit.js";
 export function generateDateValidation(
   ir: SchemaIR & { type: "date" },
   inputExpr: string,
+  outputExpr: string,
   pathExpr: string,
   issuesVar: string,
 ): string {
   let code = "";
   if (ir.coerce) {
-    code += emit`${inputExpr}=new Date(${inputExpr});`;
+    code += emit`${outputExpr}=new Date(${inputExpr});`;
   }
   code += emit`
     if(!(${inputExpr} instanceof Date)){

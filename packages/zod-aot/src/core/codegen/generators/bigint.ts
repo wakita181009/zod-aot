@@ -1,18 +1,19 @@
 import type { SchemaIR } from "../../types.js";
 import type { CodeGenContext } from "../context.js";
-import { checkPriority } from "../context.js";
+import { sortChecksPreservingEffects } from "../context.js";
 import { emit } from "../emit.js";
 
 export function generateBigIntValidation(
   ir: SchemaIR & { type: "bigint" },
   inputExpr: string,
+  outputExpr: string,
   pathExpr: string,
   issuesVar: string,
   _ctx: CodeGenContext,
 ): string {
   let code = "";
   if (ir.coerce) {
-    code += emit`try{${inputExpr}=BigInt(${inputExpr});}catch(_){}`;
+    code += emit`try{${outputExpr}=BigInt(${inputExpr});}catch(_){}`;
   }
   code += emit`
     if(typeof ${inputExpr}!=="bigint"){
@@ -21,7 +22,7 @@ export function generateBigIntValidation(
 
   if (ir.checks.length > 0) {
     code += `else{`;
-    for (const check of [...ir.checks].sort(checkPriority)) {
+    for (const check of sortChecksPreservingEffects([...ir.checks])) {
       switch (check.kind) {
         case "bigint_greater_than":
           if (check.inclusive) {

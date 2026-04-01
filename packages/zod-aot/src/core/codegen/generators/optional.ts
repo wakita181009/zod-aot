@@ -5,6 +5,7 @@ import { emit } from "../emit.js";
 export function generateOptionalValidation(
   ir: SchemaIR & { type: "optional" },
   inputExpr: string,
+  outputExpr: string,
   pathExpr: string,
   issuesVar: string,
   ctx: CodeGenContext,
@@ -12,7 +13,7 @@ export function generateOptionalValidation(
 ): string {
   return `${emit`
     if(${inputExpr}!==undefined){
-      ${generateFn(ir.inner, inputExpr, pathExpr, issuesVar, ctx)}
+      ${generateFn(ir.inner, inputExpr, outputExpr, pathExpr, issuesVar, ctx)}
     }
   `}\n`;
 }

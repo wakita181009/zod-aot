@@ -9,6 +9,7 @@ export function fastCheckNumber(ir: NumberIR, x: string): string | null {
   ];
 
   for (const check of [...ir.checks].sort(checkPriority)) {
+    if (check.kind === "refine_effect") return null;
     switch (check.kind) {
       case "number_format":
         switch (check.format) {

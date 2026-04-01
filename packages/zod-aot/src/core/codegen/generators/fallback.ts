@@ -4,6 +4,7 @@ import { emit } from "../emit.js";
 export function generateFallbackValidation(
   ir: FallbackIR,
   inputExpr: string,
+  outputExpr: string,
   pathExpr: string,
   issuesVar: string,
 ): string {
@@ -21,7 +22,7 @@ export function generateFallbackValidation(
             {path:${pathExpr}.concat(${iVar}[${jVar}].path)}));
         }
       }else{
-        ${inputExpr}=${rVar}.data;
+        ${outputExpr}=${rVar}.data;
       }
     `}\n`;
   }

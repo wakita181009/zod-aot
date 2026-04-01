@@ -5,6 +5,7 @@ import { emit } from "../emit.js";
 export function generateNullableValidation(
   ir: SchemaIR & { type: "nullable" },
   inputExpr: string,
+  outputExpr: string,
   pathExpr: string,
   issuesVar: string,
   ctx: CodeGenContext,
@@ -12,7 +13,7 @@ export function generateNullableValidation(
 ): string {
   return `${emit`
     if(${inputExpr}!==null){
-      ${generateFn(ir.inner, inputExpr, pathExpr, issuesVar, ctx)}
+      ${generateFn(ir.inner, inputExpr, outputExpr, pathExpr, issuesVar, ctx)}
     }
   `}\n`;
 }

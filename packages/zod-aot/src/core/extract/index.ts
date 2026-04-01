@@ -111,6 +111,14 @@ function extractSchemaInner(
         const propPath = `${p}.shape[${JSON.stringify(key)}]`;
         properties[key] = extractSchema(value, fallbacks, propPath, v);
       }
+      if (def.checks && def.checks.length > 0) {
+        const { checkIRs, hasFallback } = extractChecks(def.checks);
+        if (hasFallback) return makeFallback("refine", zodSchema, fallbacks, p);
+        const refineChecks = checkIRs.filter((c) => c.kind === "refine_effect");
+        if (refineChecks.length > 0) {
+          return { type: "object", properties, checks: refineChecks };
+        }
+      }
       return { type: "object", properties };
     }
 

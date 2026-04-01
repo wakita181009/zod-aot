@@ -7,14 +7,14 @@ import { compileIR } from "../helpers.js";
 describe("codegen — recursiveRef", () => {
   it("generates self-call with correct function name", () => {
     const ctx: CodeGenContext = { preamble: [], counter: 0, fnName: "safeParse_tree" };
-    const code = generateRecursiveRefValidation("input", "[]", "__issues", ctx);
+    const code = generateRecursiveRefValidation("input", "input", "[]", "__issues", ctx);
     expect(code).toContain("safeParse_tree(input)");
     expect(code).toContain("__rec_r0");
   });
 
   it("increments counter for unique variable names", () => {
     const ctx: CodeGenContext = { preamble: [], counter: 5, fnName: "safeParse_node" };
-    const code = generateRecursiveRefValidation("v", "p", "iss", ctx);
+    const code = generateRecursiveRefValidation("v", "v", "p", "iss", ctx);
     expect(code).toContain("__rec_r5");
     expect(code).toContain("__rec_i5");
     expect(code).toContain("__rec_j5");
@@ -23,14 +23,20 @@ describe("codegen — recursiveRef", () => {
 
   it("merges error issues with path on failure", () => {
     const ctx: CodeGenContext = { preamble: [], counter: 0, fnName: "safeParse_test" };
-    const code = generateRecursiveRefValidation("input", '["children",0]', "__issues", ctx);
+    const code = generateRecursiveRefValidation(
+      "input",
+      "input",
+      '["children",0]',
+      "__issues",
+      ctx,
+    );
     expect(code).toContain(".concat(");
     expect(code).toContain(".path)");
   });
 
   it("writes back data on success", () => {
     const ctx: CodeGenContext = { preamble: [], counter: 0, fnName: "safeParse_test" };
-    const code = generateRecursiveRefValidation("input", "[]", "__issues", ctx);
+    const code = generateRecursiveRefValidation("input", "input", "[]", "__issues", ctx);
     expect(code).toContain("input=__rec_r0.data");
   });
 

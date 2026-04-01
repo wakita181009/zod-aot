@@ -935,15 +935,22 @@ describe("integration — SchemaIR is JSON-serializable", () => {
   });
 });
 
-describe("integration — fallback for non-compilable schemas", () => {
-  it("transform schema produces fallback IR", () => {
+describe("integration — effect compilation and fallback for non-compilable schemas", () => {
+  it("zero-capture transform schema produces EffectIR", () => {
     const schema = z.string().transform((v) => parseInt(v, 10));
     const ir = extractSchema(schema);
-    expect(ir.type).toBe("fallback");
+    expect(ir.type).toBe("effect");
   });
 
-  it("refine schema produces fallback IR", () => {
+  it("zero-capture refine schema produces StringIR with refine_effect check", () => {
     const schema = z.string().refine((v) => v.length > 0);
+    const ir = extractSchema(schema);
+    expect(ir.type).toBe("string");
+  });
+
+  it("captured-variable transform still produces fallback IR", () => {
+    const prefix = "hello";
+    const schema = z.string().transform((v) => prefix + v);
     const ir = extractSchema(schema);
     expect(ir.type).toBe("fallback");
   });
@@ -2406,6 +2413,430 @@ describe("integration — additional real-world schemas match Zod", () => {
       null,
     ]) {
       assertSameResult(schema, input, "dbRow");
+    }
+  });
+});
+
+// ─── Effect Compilation (end-to-end) ────────────────────────────────────────
+
+describe("integration — zero-capture transform (effect compilation)", () => {
+  it("string.transform(v => v.toUpperCase()) matches Zod", () => {
+    const schema = z.string().transform((v) => v.toUpperCase());
+    const safeParse = compileWithFallbacks(schema, "strUpper");
+
+    for (const input of ["hello", "WORLD", "", 42, null]) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+      if (aotResult.success) {
+        expect(aotResult.data).toEqual(zodResult.data);
+      }
+    }
+  });
+
+  it("string.transform(v => parseInt(v, 10)) matches Zod", () => {
+    const schema = z.string().transform((v) => parseInt(v, 10));
+    const safeParse = compileWithFallbacks(schema, "strParse");
+
+    for (const input of ["42", "0", "abc", "", 123, null]) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+      if (aotResult.success) {
+        expect(aotResult.data).toEqual(zodResult.data);
+      }
+    }
+  });
+
+  it("number.transform(v => Math.round(v)) matches Zod", () => {
+    const schema = z.number().transform((v) => Math.round(v));
+    const safeParse = compileWithFallbacks(schema, "numRound");
+
+    for (const input of [3.7, 3.2, 0, -1.5, "not a number", null]) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+      if (aotResult.success) {
+        expect(aotResult.data).toEqual(zodResult.data);
+      }
+    }
+  });
+
+  it("string.min(3).transform(v => v.toLowerCase()) validates then transforms", () => {
+    const schema = z
+      .string()
+      .min(3)
+      .transform((v) => v.toLowerCase());
+    const safeParse = compileWithFallbacks(schema, "minThenLower");
+
+    for (const input of ["HELLO", "Hi", "ABC", "", 42]) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+      if (aotResult.success) {
+        expect(aotResult.data).toEqual(zodResult.data);
+      }
+    }
+  });
+
+  it("object with transform property compiles without fallback", () => {
+    const schema = z.object({
+      name: z.string().min(1),
+      slug: z.string().transform((v) => v.toLowerCase()),
+      score: z.number().transform((v) => Math.round(v)),
+    });
+
+    const safeParse = compileWithFallbacks(schema, "objTransform");
+
+    for (const input of [
+      { name: "Alice", slug: "HELLO-WORLD", score: 95.7 },
+      { name: "Bob", slug: "test", score: 0 },
+      { name: "", slug: "test", score: 1 },
+      { name: "Alice", slug: 42, score: 1 },
+      null,
+    ]) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+      if (aotResult.success) {
+        expect(aotResult.data).toEqual(zodResult.data);
+      }
+    }
+  });
+
+  it("array of transform elements matches Zod", () => {
+    const schema = z.array(z.string().transform((v) => v.trim()));
+    const safeParse = compileWithFallbacks(schema, "arrTrim");
+
+    for (const input of [[" hello ", " world "], [], ["no-trim"], [42], "not array"]) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+      if (aotResult.success) {
+        expect(aotResult.data).toEqual(zodResult.data);
+      }
+    }
+  });
+
+  it("optional transform matches Zod", () => {
+    const schema = z.object({
+      label: z.optional(z.string().transform((v) => v.toUpperCase())),
+    });
+    const safeParse = compileWithFallbacks(schema, "optTransform");
+
+    for (const input of [{ label: "hello" }, { label: undefined }, {}, { label: 42 }, null]) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+      if (aotResult.success) {
+        expect(aotResult.data).toEqual(zodResult.data);
+      }
+    }
+  });
+
+  it("nullable transform matches Zod", () => {
+    const schema = z.object({
+      value: z.nullable(z.string().transform((v) => v.trim())),
+    });
+    const safeParse = compileWithFallbacks(schema, "nullableTransformE2E");
+
+    for (const input of [{ value: " hello " }, { value: null }, { value: 42 }, null]) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+      if (aotResult.success) {
+        expect(aotResult.data).toEqual(zodResult.data);
+      }
+    }
+  });
+});
+
+describe("integration — zero-capture refine (effect compilation)", () => {
+  it("string.refine(v => v.includes('@')) matches Zod success/failure", () => {
+    const schema = z.string().refine((v) => v.includes("@"));
+    const safeParse = compileWithFallbacks(schema, "strRefine");
+
+    for (const input of ["a@b.com", "no-at", "", 42, null]) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+    }
+  });
+
+  it("number.refine(v => v % 2 === 0) matches Zod", () => {
+    const schema = z.number().refine((v) => v % 2 === 0);
+    const safeParse = compileWithFallbacks(schema, "numEven");
+
+    for (const input of [2, 4, 0, 3, 5, -2, "two", null]) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+    }
+  });
+
+  it("string.min(3).refine(v => v.startsWith('a')) validates checks then refine", () => {
+    const schema = z
+      .string()
+      .min(3)
+      .refine((v) => v.startsWith("a"));
+    const safeParse = compileWithFallbacks(schema, "minThenRefine");
+
+    for (const input of ["abc", "ab", "bcd", "abcdef", "", 42]) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+    }
+  });
+
+  it("object with refine property matches Zod", () => {
+    const schema = z.object({
+      email: z.string().refine((v) => v.includes("@")),
+      age: z.number().refine((v) => v >= 18),
+    });
+    const safeParse = compileWithFallbacks(schema, "objRefine");
+
+    for (const input of [
+      { email: "a@b.com", age: 25 },
+      { email: "invalid", age: 25 },
+      { email: "a@b.com", age: 10 },
+      { email: "invalid", age: 10 },
+      null,
+    ]) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+    }
+  });
+
+  it("object-level refine z.object({...}).refine(fn) matches Zod", () => {
+    const schema = z
+      .object({
+        password: z.string().min(1),
+        confirm: z.string().min(1),
+      })
+      .refine((v) => v.password === v.confirm);
+    const safeParse = compileWithFallbacks(schema, "objLevelRefine");
+
+    for (const input of [
+      { password: "abc", confirm: "abc" },
+      { password: "abc", confirm: "xyz" },
+      { password: "", confirm: "" },
+      null,
+    ]) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+    }
+  });
+});
+
+describe("integration — mixed effect + standard compilation", () => {
+  it("object with transform, refine, and plain fields matches Zod", () => {
+    const schema = z.object({
+      name: z.string().min(1),
+      slug: z.string().transform((v) => v.toLowerCase()),
+      active: z.boolean(),
+      score: z.number().refine((v) => v >= 0),
+    });
+    const safeParse = compileWithFallbacks(schema, "mixed");
+
+    for (const input of [
+      { name: "Alice", slug: "HELLO", active: true, score: 95 },
+      { name: "Alice", slug: "HELLO", active: true, score: -1 },
+      { name: "", slug: "test", active: true, score: 0 },
+      { name: "Alice", slug: 42, active: true, score: 0 },
+      null,
+    ]) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+      if (aotResult.success) {
+        expect(aotResult.data).toEqual(zodResult.data);
+      }
+    }
+  });
+
+  it("deep nested object with transforms matches Zod", () => {
+    const schema = z.object({
+      users: z.array(
+        z.object({
+          name: z.string().transform((v) => v.trim()),
+          age: z.number().transform((v) => Math.floor(v)),
+          tags: z.array(z.string().transform((v) => v.toLowerCase())),
+        }),
+      ),
+    });
+    const safeParse = compileWithFallbacks(schema, "deepTransform");
+
+    for (const input of [
+      {
+        users: [
+          { name: " Alice ", age: 25.7, tags: ["ADMIN", " User "] },
+          { name: "Bob", age: 30, tags: [] },
+        ],
+      },
+      { users: [] },
+      { users: [{ name: "A", age: "bad", tags: [] }] },
+      null,
+    ]) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+      if (aotResult.success) {
+        expect(aotResult.data).toEqual(zodResult.data);
+      }
+    }
+  });
+
+  it("union with transform option matches Zod", () => {
+    const schema = z.union([
+      z.string().transform((v) => v.toUpperCase()),
+      z.number().transform((v) => String(v)),
+    ]);
+    const safeParse = compileWithFallbacks(schema, "unionTransform");
+
+    for (const input of ["hello", 42, true, null]) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+      if (aotResult.success) {
+        expect(aotResult.data).toEqual(zodResult.data);
+      }
+    }
+  });
+});
+
+describe("integration — refine custom message", () => {
+  it("refine with string message preserves message in error", () => {
+    const schema = z.string().refine((v) => v.includes("@"), "must contain @");
+    const safeParse = compileWithFallbacks(schema, "refineMsg");
+
+    const result = safeParse("no-at");
+    expect(result.success).toBe(false);
+    const issue = result.error?.issues[0] as { message: string; code: string };
+    expect(issue.code).toBe("custom");
+    expect(issue.message).toBe("must contain @");
+  });
+
+  it("refine with object message preserves message in error", () => {
+    const schema = z.string().refine((v) => v.length > 0, { message: "cannot be empty" });
+    const safeParse = compileWithFallbacks(schema, "refineObjMsg");
+
+    const result = safeParse("");
+    expect(result.success).toBe(false);
+    const issue = result.error?.issues[0] as { message: string };
+    expect(issue.message).toBe("cannot be empty");
+  });
+
+  it("refine without message uses default 'Invalid'", () => {
+    const schema = z.string().refine((v) => v.length > 0);
+    const safeParse = compileWithFallbacks(schema, "refineNoMsg");
+
+    const result = safeParse("");
+    expect(result.success).toBe(false);
+    const issue = result.error?.issues[0] as { message: string };
+    expect(issue.message).toBe("Invalid");
+  });
+});
+
+describe("integration — check ordering with refine_effect", () => {
+  it("refine before min: issue code order matches Zod", () => {
+    const schema = z
+      .string()
+      .refine((v) => v.startsWith("x"), "must start with x")
+      .min(10);
+    const safeParse = compileWithFallbacks(schema, "refineOrder");
+
+    // Input fails both: refine (doesn't start with x) and min (len 2 < 10)
+    const zodResult = schema.safeParse("ab");
+    const aotResult = safeParse("ab");
+    expect(aotResult.success).toBe(false);
+    expect(zodResult.success).toBe(false);
+
+    // Compare issue code order (not messages — standard check messages are not compiled)
+    const zodCodes = zodResult.error?.issues.map((i) => i.code);
+    const aotCodes = (aotResult.error?.issues as { code: string }[]).map((i) => i.code);
+    expect(aotCodes).toEqual(zodCodes);
+  });
+});
+
+describe("integration — catch + transform combo", () => {
+  it("catch value is transformed", () => {
+    const schema = z
+      .number()
+      .catch(0)
+      .transform((v) => v * 2);
+    const safeParse = compileWithFallbacks(schema, "catchTransform");
+
+    // Valid number: transformed
+    const r1 = schema.safeParse(5);
+    const a1 = safeParse(5);
+    expect(a1.success).toBe(r1.success);
+    if (a1.success) expect(a1.data).toBe(r1.data);
+
+    // Invalid (catch kicks in, then transform): catch=0, transform=0*2=0
+    const r2 = schema.safeParse("bad");
+    const a2 = safeParse("bad");
+    expect(a2.success).toBe(r2.success);
+    if (a2.success) expect(a2.data).toBe(r2.data);
+  });
+});
+
+describe("integration — default + transform combo", () => {
+  it("default value is transformed", () => {
+    const schema = z
+      .string()
+      .default("hello")
+      .transform((v) => v.toUpperCase());
+    const safeParse = compileWithFallbacks(schema, "defaultTransform");
+
+    // Provided value: transformed
+    const r1 = schema.safeParse("world");
+    const a1 = safeParse("world");
+    expect(a1.success).toBe(r1.success);
+    if (a1.success) expect(a1.data).toBe(r1.data);
+
+    // Undefined (default kicks in): "hello" → "HELLO"
+    const r2 = schema.safeParse(undefined);
+    const a2 = safeParse(undefined);
+    expect(a2.success).toBe(r2.success);
+    if (a2.success) expect(a2.data).toBe(r2.data);
+  });
+});
+
+describe("integration — ctx-aware effects fall back to Zod", () => {
+  it("superRefine with ctx falls back to Zod and matches behavior", () => {
+    const schema = z.string().superRefine((val, ctx) => {
+      if (val.length < 3) {
+        ctx.addIssue({ code: "custom", message: "too short" });
+      }
+    });
+    const safeParse = compileWithFallbacks(schema, "superRefineCtx");
+
+    for (const input of ["hello", "ab", "", 42, null]) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+    }
+  });
+
+  it("transform with ctx falls back to Zod and matches behavior", () => {
+    const schema = z.string().transform((val, ctx) => {
+      if (val.length === 0) {
+        ctx.addIssue({ code: "custom", message: "empty" });
+        return z.NEVER;
+      }
+      return val.toUpperCase();
+    });
+    const safeParse = compileWithFallbacks(schema, "transformCtx");
+
+    for (const input of ["hello", "", 42]) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+      if (aotResult.success && zodResult.success) {
+        expect(aotResult.data).toEqual(zodResult.data);
+      }
     }
   });
 });

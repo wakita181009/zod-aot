@@ -25,7 +25,7 @@ export function generateValidator(
   // Fast Path: generate a boolean expression for eligible schemas
   const fastExpr = generateFastCheck(ir, "input", ctx);
 
-  const bodyCode = generateValidation(ir, "input", "[]", "__issues", ctx);
+  const bodyCode = generateValidation(ir, "__data", "__data", "[]", "__issues", ctx);
 
   const auxiliaryFunctions: string[] = [];
   const code = ["/* zod-aot */", ...ctx.preamble].join("\n");
@@ -49,6 +49,7 @@ export function generateValidator(
 
   functionDefParts.push(
     `var __issues=[];`,
+    `var __data=input;`,
     bodyCode,
     `if(__issues.length>0){`,
     `for(var __fi=0;__fi<__issues.length;__fi++){`,
@@ -57,7 +58,7 @@ export function generateValidator(
     `}`,
     `return{success:false,error:{issues:__issues}};`,
     `}`,
-    `return{success:true,data:input};`,
+    `return{success:true,data:__data};`,
     `}`,
   );
 

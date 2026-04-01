@@ -6,6 +6,7 @@ import { emit } from "../emit.js";
 export function generateTupleValidation(
   ir: SchemaIR & { type: "tuple" },
   inputExpr: string,
+  outputExpr: string,
   pathExpr: string,
   issuesVar: string,
   ctx: CodeGenContext,
@@ -19,7 +20,7 @@ export function generateTupleValidation(
     }else{`;
 
   if (ir.items.some(hasMutation) || (ir.rest !== null && hasMutation(ir.rest))) {
-    code += `${inputExpr}=${inputExpr}.slice();`;
+    code += `${outputExpr}=${inputExpr}.slice();`;
   }
 
   // Reject extra elements when no rest element is defined
@@ -34,7 +35,7 @@ export function generateTupleValidation(
     const itemIR = ir.items[i] as SchemaIR;
     const elemExpr = `${inputExpr}[${i}]`;
     const elemPath = `${pathExpr}.concat(${i})`;
-    code += generateFn(itemIR, elemExpr, elemPath, issuesVar, ctx);
+    code += generateFn(itemIR, elemExpr, elemExpr, elemPath, issuesVar, ctx);
   }
 
   if (ir.rest !== null) {
@@ -43,7 +44,7 @@ export function generateTupleValidation(
     const restPath = `${pathExpr}.concat(${idxVar})`;
     code += emit`
       for(var ${idxVar}=${len};${idxVar}<${inputExpr}.length;${idxVar}++){
-        ${generateFn(ir.rest, restExpr, restPath, issuesVar, ctx)}
+        ${generateFn(ir.rest, restExpr, restExpr, restPath, issuesVar, ctx)}
       }`;
   }
 

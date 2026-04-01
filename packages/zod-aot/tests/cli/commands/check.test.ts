@@ -41,7 +41,7 @@ describe("check (schema compilability)", () => {
     }
   });
 
-  it("transform schema has fallback", async () => {
+  it("captured-variable transform schema has fallback", async () => {
     const schemas = await discoverSchemas(path.join(fixturesDir, "with-fallback.ts"));
     expect(schemas.length).toBe(1);
 
@@ -235,12 +235,15 @@ describe("runCheck --fail-under", () => {
   });
 
   it("exits with 1 when coverage is below threshold", async () => {
+    // Use superRefine (non-compilable) to ensure fallback and coverage < 100%
     mockDiscoverSchemas.mockResolvedValueOnce([
       {
         exportName: "testSchema",
         schema: z.object({
           name: z.string(),
-          slug: z.string().transform((v) => v.toLowerCase()),
+          slug: z.string().superRefine((val, ctx) => {
+            if (val.length < 1) ctx.addIssue({ code: "custom", message: "too short" });
+          }),
         }),
       },
     ]);
@@ -550,12 +553,15 @@ describe("runCheck --fail-under + --json", () => {
   });
 
   it("outputs JSON and exits with 1 when below threshold", async () => {
+    // Use superRefine (non-compilable) to ensure fallback and coverage < 100%
     mockDiscoverSchemas.mockResolvedValueOnce([
       {
         exportName: "testSchema",
         schema: z.object({
           name: z.string(),
-          slug: z.string().transform((v) => v.toLowerCase()),
+          slug: z.string().superRefine((val, ctx) => {
+            if (val.length < 1) ctx.addIssue({ code: "custom", message: "too short" });
+          }),
         }),
       },
     ]);

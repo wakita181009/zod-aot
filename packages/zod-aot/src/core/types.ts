@@ -77,6 +77,21 @@ export type CheckIR =
   | CheckStartsWith
   | CheckEndsWith;
 
+// ─── Refine Effect Check IR ────────────────────────────────────────────────
+// Inline refine effects compiled via fn.toString(). Inserted into checks[]
+// arrays preserving original Zod check ordering.
+
+export interface RefineEffectCheckIR {
+  kind: "refine_effect";
+  /** fn.toString() result, e.g. "v => v.includes('@')" */
+  source: string;
+  /** Custom error message from .refine(fn, "message") or .refine(fn, { message }) */
+  message?: string;
+}
+
+/** A check entry that may be a compiled check or an inline refine effect. */
+export type CheckOrEffectIR = CheckIR | RefineEffectCheckIR;
+
 // ─── Date Check IR ──────────────────────────────────────────────────────────
 
 export interface CheckDateGreaterThan {
@@ -137,13 +152,13 @@ export type SetCheckIR = CheckMinSize | CheckMaxSize;
 
 export interface StringIR {
   type: "string";
-  checks: CheckIR[];
+  checks: CheckOrEffectIR[];
   coerce?: boolean;
 }
 
 export interface NumberIR {
   type: "number";
-  checks: CheckIR[];
+  checks: CheckOrEffectIR[];
   coerce?: boolean;
 }
 
@@ -211,12 +226,14 @@ export interface EnumIR {
 export interface ObjectIR {
   type: "object";
   properties: Record<string, SchemaIR>;
+  /** Object-level refine effects from z.object({...}).refine(fn) */
+  checks?: RefineEffectCheckIR[];
 }
 
 export interface ArrayIR {
   type: "array";
   element: SchemaIR;
-  checks: CheckIR[];
+  checks: CheckOrEffectIR[];
 }
 
 export interface TupleIR {
@@ -292,6 +309,17 @@ export interface PipeIR {
   out: SchemaIR;
 }
 
+// ─── Schema IR: Effects ───────────────────────────────────────────────────
+
+export interface TransformEffectIR {
+  type: "effect";
+  effectKind: "transform";
+  /** fn.toString() result, e.g. "v => v.toLowerCase()" */
+  source: string;
+  /** The input schema to validate before applying the transform */
+  inner: SchemaIR;
+}
+
 // ─── Schema IR: Special ────────────────────────────────────────────────────
 
 export interface FallbackIR {
@@ -352,6 +380,8 @@ export type SchemaIR =
   | ReadonlyIR
   | DefaultIR
   | PipeIR
+  // Effects
+  | TransformEffectIR
   // Special
   | TemplateLiteralIR
   | CatchIR

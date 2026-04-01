@@ -8,6 +8,9 @@ export function fastCheckObject(
   ctx: CodeGenContext,
   generateFn: GenerateFastCheckFn,
 ): string | null {
+  // Object with refine effects is not eligible for Fast Path
+  if (ir.checks && ir.checks.length > 0) return null;
+
   const parts: string[] = [`typeof ${x}==="object"`, `${x}!==null`, `!Array.isArray(${x})`];
 
   for (const [key, propIR] of Object.entries(ir.properties)) {

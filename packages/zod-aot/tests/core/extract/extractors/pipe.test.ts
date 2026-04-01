@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import type { FallbackEntry } from "#src/core/extract/index.js";
 import { extractSchema } from "#src/core/extract/index.js";
-import type { FallbackIR, PipeIR, StringIR } from "#src/core/types.js";
+import type { FallbackIR, PipeIR, StringIR, TransformEffectIR } from "#src/core/types.js";
 
 describe("extractSchema — pipe", () => {
   it("extracts string-to-string pipe with checks", () => {
@@ -32,12 +32,24 @@ describe("extractSchema — pipe", () => {
     expect((ir.out as StringIR).checks).toContainEqual({ kind: "max_length", maximum: 50 });
   });
 
-  it("partially falls back when pipe output contains a transform", () => {
+  it("compiles zero-capture transform in pipe output as EffectIR", () => {
     const schema = z.string().pipe(z.string().transform((v) => v.toUpperCase()));
+    // Outer pipe wraps inner transform (which becomes EffectIR)
     const ir = extractSchema(schema) as PipeIR;
-    // Outer pipe is still extracted; only the inner transform part falls back
     expect(ir.type).toBe("pipe");
     expect(ir.in.type).toBe("string");
+    const effectIR = ir.out as TransformEffectIR;
+    expect(effectIR.type).toBe("effect");
+    expect(effectIR.effectKind).toBe("transform");
+    expect(effectIR.source).toContain("toUpperCase");
+  });
+
+  it("falls back when pipe output has captured-variable transform", () => {
+    const suffix = "_suffix";
+    const schema = z.string().pipe(z.string().transform((v) => v + suffix));
+    // Outer pipe wraps inner transform (which falls back due to capture)
+    const ir = extractSchema(schema) as PipeIR;
+    expect(ir.type).toBe("pipe");
     expect(ir.out.type).toBe("fallback");
     expect((ir.out as FallbackIR).reason).toBe("transform");
   });
@@ -49,9 +61,17 @@ describe("extractSchema — pipe", () => {
     expect(fallbacks).toHaveLength(0);
   });
 
-  it("produces fallback entry for transform inside pipe", () => {
+  it("does not produce fallback entries for zero-capture transform in pipe", () => {
     const fallbacks: FallbackEntry[] = [];
     const schema = z.string().pipe(z.string().transform((v) => v.toUpperCase()));
+    extractSchema(schema, fallbacks);
+    expect(fallbacks).toHaveLength(0);
+  });
+
+  it("produces fallback entry for captured-variable transform in pipe", () => {
+    const fallbacks: FallbackEntry[] = [];
+    const suffix = "_suffix";
+    const schema = z.string().pipe(z.string().transform((v) => v + suffix));
     extractSchema(schema, fallbacks);
     expect(fallbacks).toHaveLength(1);
   });

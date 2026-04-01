@@ -3,6 +3,7 @@ import { emit } from "../emit.js";
 
 export function generateRecursiveRefValidation(
   inputExpr: string,
+  outputExpr: string,
   pathExpr: string,
   issuesVar: string,
   ctx: CodeGenContext,
@@ -20,7 +21,7 @@ export function generateRecursiveRefValidation(
           {path:${pathExpr}.concat(${iVar}[${jVar}].path)}));
       }
     }else{
-      ${inputExpr}=${rVar}.data;
+      ${outputExpr}=${rVar}.data;
     }
   `}\n`;
 }

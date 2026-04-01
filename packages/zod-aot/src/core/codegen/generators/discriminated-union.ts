@@ -6,6 +6,7 @@ import { emit } from "../emit.js";
 export function generateDiscriminatedUnionValidation(
   ir: SchemaIR & { type: "discriminatedUnion" },
   inputExpr: string,
+  _outputExpr: string,
   pathExpr: string,
   issuesVar: string,
   ctx: CodeGenContext,
@@ -25,7 +26,7 @@ export function generateDiscriminatedUnionValidation(
     const option = ir.options[index] as SchemaIR;
     code += emit`
       case ${escapeString(value)}:
-        ${generateFn(option, objVar, pathExpr, issuesVar, ctx)}
+        ${generateFn(option, objVar, objVar, pathExpr, issuesVar, ctx)}
         break;`;
   }
 

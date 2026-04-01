@@ -6,6 +6,7 @@ import { emit } from "../emit.js";
 export function generateArrayValidation(
   ir: SchemaIR & { type: "array" },
   inputExpr: string,
+  outputExpr: string,
   pathExpr: string,
   issuesVar: string,
   ctx: CodeGenContext,
@@ -17,7 +18,7 @@ export function generateArrayValidation(
     }else{`;
 
   if (hasMutation(ir.element)) {
-    code += `${inputExpr}=${inputExpr}.slice();`;
+    code += `${outputExpr}=${inputExpr}.slice();`;
   }
 
   for (const check of ir.checks) {
@@ -50,7 +51,7 @@ export function generateArrayValidation(
   const elemPath = `${pathExpr}.concat(${idxVar})`;
   code += emit`
     for(var ${idxVar}=0;${idxVar}<${inputExpr}.length;${idxVar}++){
-      ${generateFn(ir.element, elemExpr, elemPath, issuesVar, ctx)}
+      ${generateFn(ir.element, elemExpr, elemExpr, elemPath, issuesVar, ctx)}
     }
   }`;
   return `${code}\n`;
