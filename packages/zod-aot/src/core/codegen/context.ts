@@ -122,8 +122,8 @@ export function hasMutation(ir: SchemaIR): boolean {
  * Used by fast-check generators (which never encounter refine_effect).
  */
 export function checkPriority(
-  a: CheckIR | CheckOrEffectIR | BigIntCheckIR | DateCheckIR,
-  b: CheckIR | CheckOrEffectIR | BigIntCheckIR | DateCheckIR,
+  a: CheckIR | BigIntCheckIR | DateCheckIR,
+  b: CheckIR | BigIntCheckIR | DateCheckIR,
 ): number {
   return (CHECK_PRIORITY[a.kind] ?? 99) - (CHECK_PRIORITY[b.kind] ?? 99);
 }

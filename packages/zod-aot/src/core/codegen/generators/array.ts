@@ -2,6 +2,7 @@ import type { SchemaIR } from "../../types.js";
 import type { CodeGenContext, GenerateValidationFn } from "../context.js";
 import { hasMutation } from "../context.js";
 import { emit } from "../emit.js";
+import { generateRefineCheck } from "./effect.js";
 
 export function generateArrayValidation(
   ir: SchemaIR & { type: "array" },
@@ -42,6 +43,9 @@ export function generateArrayValidation(
           }else if(${inputExpr}.length>${check.length}){
             ${issuesVar}.push({code:"too_big",maximum:${check.length},origin:"array",inclusive:true,exact:true,input:${inputExpr},path:${pathExpr}});
           }`;
+        break;
+      case "refine_effect":
+        code += generateRefineCheck(check, inputExpr, pathExpr, issuesVar);
         break;
     }
   }

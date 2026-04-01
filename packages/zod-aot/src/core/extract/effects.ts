@@ -69,8 +69,9 @@ export function tryCompileEffect(fn: unknown): string | undefined {
     return undefined;
   }
 
-  // Reject async functions
+  // Reject async and generator functions
   if ("async" in ast && (ast as { async?: boolean }).async) return undefined;
+  if ("generator" in ast && (ast as { generator?: boolean }).generator) return undefined;
 
   // Collect parameter names
   const params = new Set<string>();
@@ -165,6 +166,12 @@ function collectIdentifierRefs(node: Node, refs: Set<string>): void {
     return;
   }
 
+  // `this` in arrow functions captures from enclosing scope — treat as external capture
+  if (node.type === "ThisExpression") {
+    refs.add("this");
+    return;
+  }
+
   // Skip property access identifiers (obj.prop — "prop" is not a reference)
   if (node.type === "MemberExpression") {
     const member = node as Node & { object: Node; property: Node; computed: boolean };
@@ -172,6 +179,16 @@ function collectIdentifierRefs(node: Node, refs: Set<string>): void {
     if (member.computed) {
       collectIdentifierRefs(member.property, refs);
     }
+    return;
+  }
+
+  // Object literal properties: skip non-computed keys, only walk values
+  if (node.type === "Property") {
+    const prop = node as Node & { key: Node; value: Node; computed: boolean };
+    if (prop.computed) {
+      collectIdentifierRefs(prop.key, refs);
+    }
+    collectIdentifierRefs(prop.value, refs);
     return;
   }
 

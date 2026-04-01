@@ -170,10 +170,9 @@ describe("tryCompileEffect", () => {
     expect(tryCompileEffect(fn)).toBeDefined();
   });
 
-  it("rejects function returning object literal (property keys detected as captures)", () => {
-    // Known limitation: object literal property keys are seen as identifier references
+  it("compiles function returning object literal", () => {
     const fn = (v: string) => ({ value: v, length: v.length });
-    expect(tryCompileEffect(fn)).toBeUndefined();
+    expect(tryCompileEffect(fn)).toBeDefined();
   });
 
   it("compiles function with nested destructuring in parameter", () => {
@@ -182,8 +181,8 @@ describe("tryCompileEffect", () => {
     expect(tryCompileEffect(fn)).toBeDefined();
   });
 
-  it("rejects function with object literal in arguments (property keys as captures)", () => {
-    // The object keys "code" and "message" are detected as external captures
+  it("rejects function with ctx parameter (2+ params) even with object literal", () => {
+    // Rejected because fn.length >= 2 (ctx argument)
     const fn = (val: string, ctx: { addIssue: (arg: unknown) => void }) => {
       if (val.length < 1) ctx.addIssue({ code: "custom", message: "too short" });
     };

@@ -46,6 +46,7 @@ export interface DiagnosticResult {
 /** Schema types that block Fast Path eligibility. */
 const FAST_PATH_BLOCKERS = new Set<string>([
   "fallback",
+  "effect",
   "default",
   "catch",
   "date",
@@ -132,6 +133,9 @@ function* iterChildren(ir: SchemaIR, parentPath: string): Generator<[string, Sch
     case "pipe":
       yield [`${parentPath}[in]`, ir.in];
       yield [`${parentPath}[out]`, ir.out];
+      break;
+    case "effect":
+      yield [`${parentPath}[inner]`, ir.inner];
       break;
   }
 }
