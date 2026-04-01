@@ -72,6 +72,50 @@ export function escapeString(s: string): string {
 }
 
 /**
+ * Check if a SchemaIR tree contains any value-mutating operations
+ * (coerce, default, catch) that would write back to the input expression.
+ * Used by container generators to decide whether to shallow-clone.
+ */
+export function hasMutation(ir: SchemaIR): boolean {
+  switch (ir.type) {
+    case "string":
+    case "number":
+    case "boolean":
+    case "bigint":
+    case "date":
+      return ir.coerce === true;
+    case "default":
+    case "catch":
+      return true;
+    case "object":
+      return Object.values(ir.properties).some(hasMutation);
+    case "array":
+      return hasMutation(ir.element);
+    case "tuple":
+      return ir.items.some(hasMutation) || (ir.rest !== null && hasMutation(ir.rest));
+    case "record":
+      return hasMutation(ir.valueType);
+    case "optional":
+    case "nullable":
+    case "readonly":
+      return hasMutation(ir.inner);
+    case "union":
+    case "discriminatedUnion":
+      return ir.options.some(hasMutation);
+    case "intersection":
+      return hasMutation(ir.left) || hasMutation(ir.right);
+    case "pipe":
+      return hasMutation(ir.in) || hasMutation(ir.out);
+    case "set":
+      return hasMutation(ir.valueType);
+    case "map":
+      return hasMutation(ir.keyType) || hasMutation(ir.valueType);
+    default:
+      return false;
+  }
+}
+
+/**
  * Sort comparator for CheckIR: cheapest/most-discriminating checks first.
  * Used as `[...ir.checks].sort(checkPriority)`.
  */

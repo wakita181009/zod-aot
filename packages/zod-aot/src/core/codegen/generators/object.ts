@@ -1,6 +1,6 @@
 import type { SchemaIR } from "../../types.js";
 import type { CodeGenContext, GenerateValidationFn } from "../context.js";
-import { escapeString } from "../context.js";
+import { escapeString, hasMutation } from "../context.js";
 import { emit } from "../emit.js";
 
 export function generateObjectValidation(
@@ -16,8 +16,11 @@ export function generateObjectValidation(
       ${issuesVar}.push({code:"invalid_type",expected:"object",input:${inputExpr},path:${pathExpr}});
     }else{`;
 
+  const needsClone = Object.values(ir.properties).some(hasMutation);
   const objVar = `__o_${ctx.counter++}`;
-  code += `var ${objVar}=${inputExpr};`;
+  code += needsClone
+    ? `var ${objVar}=Object.assign({},${inputExpr});`
+    : `var ${objVar}=${inputExpr};`;
 
   for (const [key, propIR] of Object.entries(ir.properties)) {
     const propExpr = `${objVar}[${escapeString(key)}]`;
@@ -25,6 +28,9 @@ export function generateObjectValidation(
     code += generateFn(propIR, propExpr, propPath, issuesVar, ctx);
   }
 
+  if (needsClone) {
+    code += `${inputExpr}=${objVar};`;
+  }
   code += `}\n`;
   return code;
 }

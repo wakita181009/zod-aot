@@ -1,5 +1,6 @@
 import type { SchemaIR } from "../../types.js";
 import type { CodeGenContext, GenerateValidationFn } from "../context.js";
+import { hasMutation } from "../context.js";
 import { emit } from "../emit.js";
 
 export function generateTupleValidation(
@@ -16,6 +17,10 @@ export function generateTupleValidation(
     if(!Array.isArray(${inputExpr})){
       ${issuesVar}.push({code:"invalid_type",expected:"tuple",input:${inputExpr},path:${pathExpr}});
     }else{`;
+
+  if (ir.items.some(hasMutation) || (ir.rest !== null && hasMutation(ir.rest))) {
+    code += `${inputExpr}=${inputExpr}.slice();`;
+  }
 
   // Reject extra elements when no rest element is defined
   if (ir.rest === null) {

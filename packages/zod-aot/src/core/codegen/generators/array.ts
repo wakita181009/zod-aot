@@ -1,5 +1,6 @@
 import type { SchemaIR } from "../../types.js";
 import type { CodeGenContext, GenerateValidationFn } from "../context.js";
+import { hasMutation } from "../context.js";
 import { emit } from "../emit.js";
 
 export function generateArrayValidation(
@@ -14,6 +15,10 @@ export function generateArrayValidation(
     if(!Array.isArray(${inputExpr})){
       ${issuesVar}.push({code:"invalid_type",expected:"array",input:${inputExpr},path:${pathExpr}});
     }else{`;
+
+  if (hasMutation(ir.element)) {
+    code += `${inputExpr}=${inputExpr}.slice();`;
+  }
 
   for (const check of ir.checks) {
     switch (check.kind) {

@@ -1,5 +1,6 @@
 import type { SchemaIR } from "../../types.js";
 import type { CodeGenContext, GenerateValidationFn } from "../context.js";
+import { hasMutation } from "../context.js";
 import { emit } from "../emit.js";
 
 export function generateRecordValidation(
@@ -14,6 +15,10 @@ export function generateRecordValidation(
     if(typeof ${inputExpr}!=="object"||${inputExpr}===null||Array.isArray(${inputExpr})){
       ${issuesVar}.push({code:"invalid_type",expected:"record",input:${inputExpr},path:${pathExpr}});
     }else{`;
+
+  if (hasMutation(ir.valueType)) {
+    code += `${inputExpr}=Object.assign({},${inputExpr});`;
+  }
 
   const keysVar = `__rk_${ctx.counter++}`;
   const idxVar = `__ri_${ctx.counter++}`;
