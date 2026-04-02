@@ -99,6 +99,7 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "@types/picomatch": "^4.0.2",
+    "fast-check": "^4.6.0",
     "typescript": "catalog:",
     "zod": "catalog:"
   },
