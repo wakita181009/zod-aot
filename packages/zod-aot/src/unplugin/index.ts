@@ -3,9 +3,16 @@ import type { BuildStats } from "./transform.js";
 import { log, shouldTransform, transformCode } from "./transform.js";
 import type { ZodAotPluginOptions } from "./types.js";
 
+/** Module-level cache shared across plugin instances (e.g. Next.js client + server compilers). */
+const transformCache = new Map<string, string>();
+
+/** @internal Exposed for testing only. */
+export function _clearTransformCache(): void {
+  transformCache.clear();
+}
+
 export const unplugin = createUnplugin((options?: ZodAotPluginOptions) => {
   const stats: BuildStats = { files: 0, schemas: 0, optimized: 0, failed: 0 };
-  const cache = new Map<string, string>();
   const verbose = options?.verbose === true;
 
   return {
@@ -17,7 +24,7 @@ export const unplugin = createUnplugin((options?: ZodAotPluginOptions) => {
     },
 
     async transform(code: string, id: string) {
-      const cached = cache.get(id);
+      const cached = transformCache.get(id);
       if (cached) return { code: cached, map: null };
 
       const result = await transformCode(code, id, {
@@ -32,7 +39,7 @@ export const unplugin = createUnplugin((options?: ZodAotPluginOptions) => {
         },
       });
       if (!result) return;
-      cache.set(id, result);
+      transformCache.set(id, result);
       return { code: result, map: null };
     },
 
@@ -48,7 +55,7 @@ export const unplugin = createUnplugin((options?: ZodAotPluginOptions) => {
       stats.schemas = 0;
       stats.optimized = 0;
       stats.failed = 0;
-      cache.clear();
+      transformCache.clear();
     },
   };
 });

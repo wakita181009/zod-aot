@@ -1,11 +1,14 @@
 import path from "node:path";
 import type { UnpluginContextMeta, UnpluginOptions } from "unplugin";
-import { describe, expect, it } from "vitest";
-import { unplugin } from "#src/unplugin/index.js";
+import { beforeEach, describe, expect, it } from "vitest";
+import { _clearTransformCache, unplugin } from "#src/unplugin/index.js";
 
 const meta = { framework: "vite" } as UnpluginContextMeta;
 
 describe("unplugin factory", () => {
+  beforeEach(() => {
+    _clearTransformCache();
+  });
   it("creates a plugin with correct name", () => {
     const plugin = unplugin.raw({}, meta) as UnpluginOptions;
     expect(plugin.name).toBe("zod-aot");
@@ -125,6 +128,50 @@ describe("unplugin factory", () => {
     const result = await transform(code, fixturePath);
     expect(result).toBeDefined();
     expect(result?.code).toContain("safeParse_validateUser");
+  });
+
+  it("cache is shared across plugin instances (cross-compiler dedup)", async () => {
+    const pluginA = unplugin.raw({ verbose: true }, meta) as UnpluginOptions;
+    const pluginB = unplugin.raw({ verbose: true }, meta) as UnpluginOptions;
+    const transformA = pluginA.transform as (
+      code: string,
+      id: string,
+    ) => Promise<{ code: string; map: null } | undefined>;
+    const transformB = pluginB.transform as (
+      code: string,
+      id: string,
+    ) => Promise<{ code: string; map: null } | undefined>;
+    const buildEndB = pluginB.buildEnd as () => void;
+
+    const fixturesDir = path.resolve(import.meta.dirname, "../fixtures");
+    const fixturePath = path.join(fixturesDir, "simple-schema.ts");
+
+    const code = [
+      'import { z } from "zod";',
+      'import { compile } from "zod-aot";',
+      "const UserSchema = z.object({ name: z.string().min(1), age: z.number().int().positive() });",
+      "export const validateUser = compile(UserSchema);",
+    ].join("\n");
+
+    // Plugin A (compiler 1) transforms the file
+    const first = await transformA(code, fixturePath);
+    // Plugin B (compiler 2) should get cache hit from plugin A
+    const second = await transformB(code, fixturePath);
+
+    expect(first).toBeDefined();
+    expect(second).toBeDefined();
+    expect(second?.code).toBe(first?.code);
+
+    // Plugin B's buildEnd should not log summary (stats.schemas === 0 due to cache hit)
+    const logs: string[] = [];
+    const originalLog = console.log;
+    console.log = (...args: unknown[]) => logs.push(args.join(" "));
+    try {
+      buildEndB();
+      expect(logs.find((l) => l.includes("Build summary"))).toBeUndefined();
+    } finally {
+      console.log = originalLog;
+    }
   });
 
   it("verbose stats count each file only once despite duplicate transforms", async () => {
