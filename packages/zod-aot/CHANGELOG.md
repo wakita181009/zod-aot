@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.17.0](https://github.com/wakita181009/zod-aot/compare/v0.16.3...v0.17.0) (2026-04-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* `JSON.stringify(result.error)` output changes because ZodError marks `issues` as non-enumerable. Use `error.issues` directly instead of serializing the error object. This matches Zod's own behavior.
+
+### Features
+
+* return real ZodError from generated validators ([#108](https://github.com/wakita181009/zod-aot/issues/108)) ([f1eb4bf](https://github.com/wakita181009/zod-aot/commit/f1eb4bf14b7c411e559d1d27e1545a1f2a79d79c))
+
 ## [0.16.3](https://github.com/wakita181009/zod-aot/compare/v0.16.2...v0.16.3) (2026-04-02)
 
 
