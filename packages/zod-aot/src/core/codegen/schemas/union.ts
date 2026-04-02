@@ -1,5 +1,6 @@
 import type { SchemaIR, UnionIR } from "../../types.js";
 import type { FastGen, SlowGen } from "../context.js";
+import { hasMutation } from "../context.js";
 import { emit } from "../emit.js";
 
 export function slowUnion(ir: SchemaIR & { type: "union" }, g: SlowGen): string {
@@ -7,26 +8,52 @@ export function slowUnion(ir: SchemaIR & { type: "union" }, g: SlowGen): string 
   const errorsVar = g.temp("ue");
   let code = `var ${resultVar}=false;var ${errorsVar}=[];`;
 
+  // If any option can mutate output (default, catch, coerce, effect),
+  // each branch gets its own temp output to prevent cross-branch leaks.
+  const needsOutputIsolation = ir.options.some(hasMutation);
+
   for (const option of ir.options) {
     const tmpIssues = g.temp("ui");
-    // Apply __msg to inner branch issues so they have messages when included in union errors
     const innerIdx = g.temp("ufi");
-    code += emit`
-      if(!${resultVar}){
-        var ${tmpIssues}=[];
-        ${g.visit(option, { issues: tmpIssues })}
-        if(${tmpIssues}.length===0){
-          ${resultVar}=true;
-        }else{
-          if(typeof __msg==="function"){
-            for(var ${innerIdx}=0;${innerIdx}<${tmpIssues}.length;${innerIdx}++){
-              ${tmpIssues}[${innerIdx}].message=__msg(${tmpIssues}[${innerIdx}]);
-              delete ${tmpIssues}[${innerIdx}].input;
+
+    if (needsOutputIsolation) {
+      const tmpOutput = g.temp("uo");
+      code += emit`
+        if(!${resultVar}){
+          var ${tmpIssues}=[];
+          var ${tmpOutput}=${g.input};
+          ${g.visit(option, { issues: tmpIssues, input: tmpOutput, output: tmpOutput })}
+          if(${tmpIssues}.length===0){
+            ${resultVar}=true;
+            ${g.output}=${tmpOutput};
+          }else{
+            if(typeof __msg==="function"){
+              for(var ${innerIdx}=0;${innerIdx}<${tmpIssues}.length;${innerIdx}++){
+                ${tmpIssues}[${innerIdx}].message=__msg(${tmpIssues}[${innerIdx}]);
+                delete ${tmpIssues}[${innerIdx}].input;
+              }
             }
+            ${errorsVar}.push(${tmpIssues});
           }
-          ${errorsVar}.push(${tmpIssues});
-        }
-      }`;
+        }`;
+    } else {
+      code += emit`
+        if(!${resultVar}){
+          var ${tmpIssues}=[];
+          ${g.visit(option, { issues: tmpIssues })}
+          if(${tmpIssues}.length===0){
+            ${resultVar}=true;
+          }else{
+            if(typeof __msg==="function"){
+              for(var ${innerIdx}=0;${innerIdx}<${tmpIssues}.length;${innerIdx}++){
+                ${tmpIssues}[${innerIdx}].message=__msg(${tmpIssues}[${innerIdx}]);
+                delete ${tmpIssues}[${innerIdx}].input;
+              }
+            }
+            ${errorsVar}.push(${tmpIssues});
+          }
+        }`;
+    }
   }
 
   code += emit`

@@ -72,6 +72,28 @@ describe("slow-path — union", () => {
     expect(safeParse(null).success).toBe(false);
   });
 
+  it("failed branch with default does not leak output mutation to next branch", () => {
+    // z.union([z.string().default("x").min(5), z.undefined()])
+    // Input: undefined
+    // Branch 1: default writes output="x", then min(5) fails ("x".length < 5)
+    // Branch 2: z.undefined() should succeed with data=undefined, not "x"
+    const ir: UnionIR = {
+      type: "union",
+      options: [
+        {
+          type: "default",
+          inner: { type: "string", checks: [{ kind: "min_length", minimum: 5 }] },
+          defaultValue: "x",
+        },
+        { type: "undefined" },
+      ],
+    };
+    const safeParse = compileIR(ir);
+    const result = safeParse(undefined);
+    expect(result.success).toBe(true);
+    expect(result.data).toBe(undefined);
+  });
+
   // M1: unionErrors should contain per-branch error details
   it("union error includes per-branch errors in unionErrors", () => {
     const ir: UnionIR = {
@@ -85,9 +107,9 @@ describe("slow-path — union", () => {
     const result = safeParse(true);
     expect(result.success).toBe(false);
     const issue = result.error?.issues[0] as Record<string, unknown>;
-    expect(issue.code).toBe("invalid_union");
+    expect(issue["code"]).toBe("invalid_union");
     // errors should contain one flat array per failed branch
-    const errors = issue.errors as Record<string, unknown>[][];
+    const errors = issue["errors"] as Record<string, unknown>[][];
     expect(errors).toHaveLength(2);
     expect(errors[0]?.length).toBeGreaterThanOrEqual(1);
     expect(errors[1]?.length).toBeGreaterThanOrEqual(1);
