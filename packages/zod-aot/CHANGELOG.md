@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.1](https://github.com/wakita181009/zod-aot/compare/v0.17.0...v0.17.1) (2026-04-02)
+
+
+### Bug Fixes
+
+* add try/catch to coerce codegen for number, string, and date ([#110](https://github.com/wakita181009/zod-aot/issues/110)) ([61ab4af](https://github.com/wakita181009/zod-aot/commit/61ab4af49d6f26b5134818a9a1d4ca7b591c7aca))
+
 ## [0.17.0](https://github.com/wakita181009/zod-aot/compare/v0.16.3...v0.17.0) (2026-04-02)
 
 
