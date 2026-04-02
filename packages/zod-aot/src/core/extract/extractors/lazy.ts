@@ -1,22 +1,15 @@
 import type { SchemaIR } from "../../types.js";
-import { makeFallback } from "../fallback.js";
-import type { ExtractFn, FallbackEntry, ZodSchema } from "../types.js";
+import type { ExtractorContext, ZodSchema } from "../types.js";
 
-export function extractLazy(
-  schema: ZodSchema,
-  zodSchema: unknown,
-  p: string,
-  fallbacks: FallbackEntry[] | undefined,
-  recurse: ExtractFn,
-  visiting?: Set<unknown>,
-): SchemaIR {
+export function extractLazy(_def: unknown, ctx: ExtractorContext): SchemaIR {
+  const schema = ctx.schema as ZodSchema;
   const innerSchema = schema._zod.innerType;
   if (!innerSchema) {
-    return makeFallback("lazy", zodSchema, fallbacks, p);
+    return ctx.fallback("lazy");
   }
   // Cycle detection: if we've already visited this resolved schema, emit a recursive ref
-  if (visiting?.has(innerSchema)) {
+  if (ctx.visiting.has(innerSchema)) {
     return { type: "recursiveRef" };
   }
-  return recurse(innerSchema, fallbacks, `${p}._zod.innerType`, visiting);
+  return ctx.visit(innerSchema, "._zod.innerType");
 }

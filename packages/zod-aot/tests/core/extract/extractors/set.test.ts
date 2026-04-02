@@ -58,9 +58,14 @@ describe("extractSchema — set", () => {
         checks: [{ _zod: undefined }],
         valueType: {},
       } as never,
-      "test",
-      undefined,
-      () => ({ type: "string", checks: [] }),
+      {
+        schema: {},
+        path: "test",
+        fallbacks: undefined,
+        visiting: new Set(),
+        visit: () => ({ type: "string", checks: [] }),
+        fallback: (reason) => ({ type: "fallback", reason }),
+      } as never,
     ) as SetIR;
     expect(ir.type).toBe("set");
     expect(ir.checks).toBeUndefined();

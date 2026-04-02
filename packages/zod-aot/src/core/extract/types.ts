@@ -69,10 +69,61 @@ export interface FallbackEntry {
   accessPath: string;
 }
 
-/** Signature for the recursive extractSchema function, passed to extractors. */
-export type ExtractFn = (
-  zodSchema: unknown,
-  fallbacks?: FallbackEntry[],
-  currentPath?: string,
-  visiting?: Set<unknown>,
-) => import("../types.js").SchemaIR;
+// ─── Supported Zod def.type values ──────────────────────────────────────────
+
+/** All Zod v4 def.type values that zod-aot supports. */
+export type SupportedZodDefType =
+  | "boolean"
+  | "null"
+  | "undefined"
+  | "any"
+  | "unknown"
+  | "symbol"
+  | "void"
+  | "nan"
+  | "never"
+  | "literal"
+  | "enum"
+  | "optional"
+  | "nullable"
+  | "readonly"
+  | "intersection"
+  | "string"
+  | "number"
+  | "bigint"
+  | "date"
+  | "object"
+  | "array"
+  | "tuple"
+  | "record"
+  | "set"
+  | "map"
+  | "union"
+  | "default"
+  | "pipe"
+  | "lazy"
+  | "catch"
+  | "template_literal";
+
+// ─── Extractor context ──────────────────────────────────────────────────────
+
+/** Context object for extractor functions. Unifies the varied parameter patterns. */
+export interface ExtractorContext {
+  /** Raw Zod schema reference (for fallback entries and schema._zod access). */
+  readonly schema: unknown;
+  /** Navigation path from root, e.g. '._zod.def.innerType' */
+  readonly path: string;
+  /** Fallback entries collector (undefined if partial fallback disabled). */
+  readonly fallbacks: FallbackEntry[] | undefined;
+  /** Cycle detection set for lazy resolution. */
+  readonly visiting: Set<unknown>;
+
+  /** Recursively extract a child schema. Manages visiting set automatically. */
+  visit(childSchema: unknown, pathSuffix?: string): import("../types.js").SchemaIR;
+
+  /** Create a fallback entry for non-compilable sub-schemas. */
+  fallback(reason: import("../types.js").FallbackIR["reason"]): import("../types.js").FallbackIR;
+}
+
+/** Extractor function signature — registered in extractRegistry. */
+export type Extractor = (def: ZodDef, ctx: ExtractorContext) => import("../types.js").SchemaIR;

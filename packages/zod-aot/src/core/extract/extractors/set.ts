@@ -1,14 +1,8 @@
 import type { SchemaIR, SetCheckIR } from "../../types.js";
-import type { ExtractFn, FallbackEntry, ZodDef } from "../types.js";
+import type { ExtractorContext, ZodDef } from "../types.js";
 
-export function extractSet(
-  def: ZodDef,
-  p: string,
-  fallbacks: FallbackEntry[] | undefined,
-  recurse: ExtractFn,
-  visiting?: Set<unknown>,
-): SchemaIR {
-  const valueType = recurse(def.valueType, fallbacks, `${p}._zod.def.valueType`, visiting);
+export function extractSet(def: ZodDef, ctx: ExtractorContext): SchemaIR {
+  const valueType = ctx.visit(def.valueType, "._zod.def.valueType");
   const setChecks: SetCheckIR[] = [];
   if (def.checks) {
     for (const check of def.checks) {

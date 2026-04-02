@@ -1,14 +1,8 @@
 import type { SchemaIR } from "../../types.js";
 import { extractChecks } from "../checks.js";
-import { makeFallback } from "../fallback.js";
-import type { FallbackEntry, ZodDef } from "../types.js";
+import type { ExtractorContext, ZodDef } from "../types.js";
 
-export function extractString(
-  def: ZodDef,
-  zodSchema: unknown,
-  p: string,
-  fallbacks: FallbackEntry[] | undefined,
-): SchemaIR {
+export function extractString(def: ZodDef, ctx: ExtractorContext): SchemaIR {
   const coerce = def.coerce ? { coerce: true as const } : {};
   // String format schemas (z.email(), z.url(), z.uuid())
   if (def.check === "string_format") {
@@ -23,6 +17,6 @@ export function extractString(
     return { type: "string", checks: [], ...coerce };
   }
   const { checkIRs, hasFallback } = extractChecks(def.checks);
-  if (hasFallback) return makeFallback("refine", zodSchema, fallbacks, p);
+  if (hasFallback) return ctx.fallback("refine");
   return { type: "string", checks: checkIRs, ...coerce };
 }

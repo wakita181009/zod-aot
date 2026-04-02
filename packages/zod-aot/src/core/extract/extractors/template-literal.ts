@@ -1,14 +1,9 @@
 import type { SchemaIR } from "../../types.js";
-import { makeFallback } from "../fallback.js";
-import type { FallbackEntry, ZodSchema } from "../types.js";
+import type { ExtractorContext, ZodSchema } from "../types.js";
 
-export function extractTemplateLiteral(
-  schema: ZodSchema,
-  zodSchema: unknown,
-  p: string,
-  fallbacks: FallbackEntry[] | undefined,
-): SchemaIR {
+export function extractTemplateLiteral(_def: unknown, ctx: ExtractorContext): SchemaIR {
+  const schema = ctx.schema as ZodSchema;
   const pattern = schema._zod.pattern;
-  if (!pattern) return makeFallback("unsupported", zodSchema, fallbacks, p);
+  if (!pattern) return ctx.fallback("unsupported");
   return { type: "templateLiteral", pattern: pattern.source };
 }

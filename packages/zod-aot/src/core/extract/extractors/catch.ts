@@ -1,17 +1,9 @@
 import type { SchemaIR } from "../../types.js";
-import { makeFallback } from "../fallback.js";
-import type { ExtractFn, FallbackEntry, ZodDef } from "../types.js";
+import type { ExtractorContext, ZodDef } from "../types.js";
 
-export function extractCatch(
-  def: ZodDef,
-  zodSchema: unknown,
-  p: string,
-  fallbacks: FallbackEntry[] | undefined,
-  recurse: ExtractFn,
-  visiting?: Set<unknown>,
-): SchemaIR {
-  const inner = recurse(def.innerType, fallbacks, `${p}._zod.def.innerType`, visiting);
-  if (inner.type === "fallback") return makeFallback("unsupported", zodSchema, fallbacks, p);
+export function extractCatch(def: ZodDef, ctx: ExtractorContext): SchemaIR {
+  const inner = ctx.visit(def.innerType, "._zod.def.innerType");
+  if (inner.type === "fallback") return ctx.fallback("unsupported");
 
   let defaultValue: unknown;
   try {
@@ -20,15 +12,15 @@ export function extractCatch(
       input: undefined,
     });
   } catch {
-    return makeFallback("unsupported", zodSchema, fallbacks, p);
+    return ctx.fallback("unsupported");
   }
 
-  if (defaultValue instanceof Date) return makeFallback("unsupported", zodSchema, fallbacks, p);
+  if (defaultValue instanceof Date) return ctx.fallback("unsupported");
   if (defaultValue !== undefined) {
     try {
       JSON.stringify(defaultValue);
     } catch {
-      return makeFallback("unsupported", zodSchema, fallbacks, p);
+      return ctx.fallback("unsupported");
     }
   }
 

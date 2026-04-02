@@ -106,14 +106,19 @@ describe("extractSchema — discriminatedUnion", () => {
           },
         ],
       } as never,
-      "test",
-      undefined,
-      ((opt: unknown) => {
-        const o = opt as { _zod: { def: { type: string } } };
-        return o._zod.def.type === "object"
-          ? { type: "object" as const, properties: {} }
-          : { type: o._zod.def.type as "string", checks: [] };
-      }) as never,
+      {
+        schema: {},
+        path: "test",
+        fallbacks: undefined,
+        visiting: new Set(),
+        visit: ((opt: unknown) => {
+          const o = opt as { _zod: { def: { type: string } } };
+          return o._zod.def.type === "object"
+            ? { type: "object" as const, properties: {} }
+            : { type: o._zod.def.type as "string", checks: [] };
+        }) as never,
+        fallback: (reason: string) => ({ type: "fallback", reason }),
+      } as never,
     ) as DiscriminatedUnionIR;
     expect(ir.type).toBe("discriminatedUnion");
     expect(ir.mapping).toEqual({ b: 1 });

@@ -1,17 +1,9 @@
 import type { SchemaIR } from "../../types.js";
-import type { ExtractFn, FallbackEntry, ZodDef, ZodSchema } from "../types.js";
+import type { ExtractorContext, ZodDef, ZodSchema } from "../types.js";
 
-export function extractUnion(
-  def: ZodDef,
-  p: string,
-  fallbacks: FallbackEntry[] | undefined,
-  recurse: ExtractFn,
-  visiting?: Set<unknown>,
-): SchemaIR {
+export function extractUnion(def: ZodDef, ctx: ExtractorContext): SchemaIR {
   if (def.discriminator) {
-    const options = def.options.map((opt, i) =>
-      recurse(opt, fallbacks, `${p}._zod.def.options[${i}]`, visiting),
-    );
+    const options = def.options.map((opt, i) => ctx.visit(opt, `._zod.def.options[${i}]`));
     const mapping: Record<string, number> = {};
     for (let i = 0; i < def.options.length; i++) {
       const opt = def.options[i] as ZodSchema;
@@ -30,8 +22,6 @@ export function extractUnion(
   }
   return {
     type: "union",
-    options: def.options.map((opt, i) =>
-      recurse(opt, fallbacks, `${p}._zod.def.options[${i}]`, visiting),
-    ),
+    options: def.options.map((opt, i) => ctx.visit(opt, `._zod.def.options[${i}]`)),
   };
 }
