@@ -75,12 +75,16 @@ export function fastArray(ir: ArrayIR, g: FastGen): string | null {
     }
   }
 
-  // Element validation via .every()
+  // Element validation via preamble helper (avoids .every() closure allocation)
   const elemVar = g.temp("fe");
   const elemCheck = g.visit(ir.element, { input: elemVar });
   if (elemCheck === null) return null;
   if (elemCheck !== "true") {
-    parts.push(`${x}.every(${elemVar}=>${elemCheck})`);
+    const helperName = g.temp("ae");
+    g.ctx.preamble.push(
+      `function ${helperName}(a){for(var __i=0;__i<a.length;__i++){var ${elemVar}=a[__i];if(!(${elemCheck}))return false;}return true;}`,
+    );
+    parts.push(`${helperName}(${x})`);
   }
 
   return parts.join("&&");

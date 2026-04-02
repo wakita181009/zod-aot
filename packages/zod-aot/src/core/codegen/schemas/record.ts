@@ -40,9 +40,12 @@ export function fastRecord(ir: RecordIR, g: FastGen): string | null {
   const x = g.input;
   const parts: string[] = [`typeof ${x}==="object"`, `${x}!==null`, `!Array.isArray(${x})`];
 
+  // Use a placeholder for the object reference inside the helper function.
+  // The helper receives the object as parameter 'o', so val access is o[key].
   const kv = g.temp("rk");
+  const helperObj = "__ro";
   const keyCheck = g.visit(ir.keyType, { input: kv });
-  const valCheck = g.visit(ir.valueType, { input: `${x}[${kv}]` });
+  const valCheck = g.visit(ir.valueType, { input: `${helperObj}[${kv}]` });
   if (keyCheck === null || valCheck === null) return null;
 
   const conditions: string[] = [];
@@ -50,7 +53,11 @@ export function fastRecord(ir: RecordIR, g: FastGen): string | null {
   if (valCheck !== "true") conditions.push(valCheck);
 
   if (conditions.length > 0) {
-    parts.push(`Object.keys(${x}).every(${kv}=>${conditions.join("&&")})`);
+    const helperName = g.temp("re");
+    g.ctx.preamble.push(
+      `function ${helperName}(${helperObj}){var __k=Object.keys(${helperObj});for(var __i=0;__i<__k.length;__i++){var ${kv}=__k[__i];if(!(${conditions.join("&&")}))return false;}return true;}`,
+    );
+    parts.push(`${helperName}(${x})`);
   }
 
   return parts.join("&&");
