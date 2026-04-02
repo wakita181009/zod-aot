@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.3](https://github.com/wakita181009/zod-aot/compare/v0.16.2...v0.16.3) (2026-04-02)
+
+
+### Bug Fixes
+
+* deduplicate unplugin transform for webpack multi-layer builds ([#105](https://github.com/wakita181009/zod-aot/issues/105)) ([9e4f295](https://github.com/wakita181009/zod-aot/commit/9e4f2958fd8ed75bde7f540362581e9ef793759f))
+
 ## [0.16.2](https://github.com/wakita181009/zod-aot/compare/v0.16.1...v0.16.2) (2026-04-02)
 
 
