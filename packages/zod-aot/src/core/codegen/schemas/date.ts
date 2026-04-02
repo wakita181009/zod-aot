@@ -55,7 +55,13 @@ export function slowDate(ir: DateIR, g: SlowGen): string {
 }
 
 export function fastDate(ir: DateIR, g: FastGen): string | null {
-  if (ir.coerce) return null;
+  if (ir.coerce && !g.probeMode) return null;
+
+  // Probe mode with coerce: check if new Date(input) would produce a valid Date.
+  if (ir.coerce && g.probeMode) {
+    const x = g.input;
+    return `(${x} instanceof Date&&!Number.isNaN(${x}.getTime())||typeof ${x}==="string"&&!Number.isNaN(Date.parse(${x}))||typeof ${x}==="number"&&!Number.isNaN(new Date(${x}).getTime()))`;
+  }
 
   const x = g.input;
   const parts: string[] = [`${x} instanceof Date`, `!Number.isNaN(${x}.getTime())`];

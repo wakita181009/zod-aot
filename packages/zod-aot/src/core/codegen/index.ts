@@ -8,6 +8,11 @@ export type { CodeGenResult } from "./context.js";
 /**
  * Generate optimized validation code from SchemaIR.
  *
+ * Three-phase validation:
+ *   1. Fast Path — pure boolean guard, zero allocation (pure schemas only)
+ *   2. Warm Path — probe (boolean) + materialize (minimal allocation for coerce/default/catch)
+ *   3. Slow Path — full error-collecting validation
+ *
  * - `code`: preamble declarations (Sets, RegExps, etc.) — deterministic for the same IR
  * - `functionDef`: full function expression string referencing preamble vars via closure
  *
@@ -21,10 +26,14 @@ export function generateValidator(
   const fnName = `safeParse_${name}`;
   const ctx: CodeGenContext = { preamble: [], counter: 0, fnName };
 
-  // Fast Path: generate a boolean expression for eligible schemas
+  // Phase 1: Fast Path — pure boolean expression for eligible schemas
   const fg = createFastGen("input", ctx);
   const fastExpr = generateFast(ir, fg);
 
+  // Phase 2 (future): Probe + Warm Path for mutation schemas (coerce/default/catch).
+  // probeMode on FastGen generates probe expressions; Warm Path materializes mutations.
+
+  // Phase 3: Slow Path — full error-collecting validation
   const sg = createSlowGen("__data", "__data", "[]", "__issues", ctx);
   const slowCode = generateSlow(ir, sg);
 
@@ -32,7 +41,7 @@ export function generateValidator(
 
   const functionDefParts = [`function ${fnName}(input){`];
 
-  // Prepend fast path guard if eligible
+  // Emit fast path guard if eligible (pure schemas — no mutations)
   if (fastExpr !== null && fastExpr !== "true") {
     functionDefParts.push(`if(${fastExpr}){return{success:true,data:input};}`);
   } else if (fastExpr === "true") {

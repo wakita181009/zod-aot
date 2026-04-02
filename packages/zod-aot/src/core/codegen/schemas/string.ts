@@ -102,8 +102,14 @@ export function slowString(ir: StringIR, g: SlowGen): string {
 }
 
 export function fastString(ir: StringIR, g: FastGen): string | null {
-  if (ir.coerce) return null;
+  if (ir.coerce && !g.probeMode) return null;
   if (ir.checks.some((c) => c.kind === "refine_effect")) return null;
+
+  // Probe mode with coerce: String(x) never throws for primitives, always succeeds.
+  // Constraints are verified by the Warm Path after coercion.
+  if (ir.coerce && g.probeMode) {
+    return "true";
+  }
 
   const x = g.input;
   const parts: string[] = [`typeof ${x}==="string"`];

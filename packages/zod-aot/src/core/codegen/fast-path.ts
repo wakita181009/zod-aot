@@ -90,12 +90,18 @@ const fastRegistry = {
 
 // ─── Factory ─────────────────────────────────────────────────────────────────
 
-export function createFastGen(inputExpr: string, ctx: CodeGenContext): FastGen {
+export function createFastGen(
+  inputExpr: string,
+  ctx: CodeGenContext,
+  options?: { probeMode?: boolean },
+): FastGen {
+  const probeMode = options?.probeMode ?? false;
   return {
     input: inputExpr,
     ctx,
+    probeMode,
     visit(ir, overrides) {
-      return generateFast(ir, createFastGen(overrides?.input ?? inputExpr, ctx));
+      return generateFast(ir, createFastGen(overrides?.input ?? inputExpr, ctx, { probeMode }));
     },
     temp(prefix) {
       return `__${prefix}_${ctx.counter++}`;

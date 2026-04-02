@@ -58,7 +58,14 @@ export function slowBigInt(ir: BigIntIR, g: SlowGen): string {
 }
 
 export function fastBigInt(ir: BigIntIR, g: FastGen): string | null {
-  if (ir.coerce) return null;
+  if (ir.coerce && !g.probeMode) return null;
+
+  // Probe mode with coerce: BigInt(x) succeeds for bigint, integer numbers, integer strings.
+  if (ir.coerce && g.probeMode) {
+    const x = g.input;
+    const re = g.regex("bi", "^-?\\\\d+$");
+    return `(typeof ${x}==="bigint"||typeof ${x}==="number"&&Number.isInteger(${x})||typeof ${x}==="string"&&${re}.test(${x}))`;
+  }
 
   const x = g.input;
   const parts: string[] = [`typeof ${x}==="bigint"`];

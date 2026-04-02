@@ -100,10 +100,19 @@ export function slowNumber(ir: NumberIR, g: SlowGen): string {
 }
 
 export function fastNumber(ir: NumberIR, g: FastGen): string | null {
-  if (ir.coerce) return null;
+  if (ir.coerce && !g.probeMode) return null;
   if (ir.checks.some((c) => c.kind === "refine_effect")) return null;
 
   const x = g.input;
+
+  // Probe mode with coerce: check that Number(input) would produce a valid number.
+  // Constraints (int, min, max) are verified by the Warm Path after coercion.
+  if (ir.coerce && g.probeMode) {
+    const t = g.temp("cn");
+    g.ctx.preamble.push(`var ${t};`);
+    return `(typeof ${x}==="number"?!Number.isNaN(${x})&&Number.isFinite(${x}):(typeof ${x}==="string"||typeof ${x}==="boolean"||${x}===null)&&(${t}=Number(${x}),!Number.isNaN(${t})&&Number.isFinite(${t})))`;
+  }
+
   const parts: string[] = [
     `typeof ${x}==="number"`,
     `!Number.isNaN(${x})`,

@@ -16,6 +16,8 @@ export function slowBoolean(ir: BooleanIR, g: SlowGen): string {
 }
 
 export function fastBoolean(ir: BooleanIR, g: FastGen): string | null {
-  if (ir.coerce) return null;
+  if (ir.coerce && !g.probeMode) return null;
+  // Probe mode with coerce: Boolean(x) never throws, always succeeds.
+  if (ir.coerce && g.probeMode) return "true";
   return `typeof ${g.input}==="boolean"`;
 }

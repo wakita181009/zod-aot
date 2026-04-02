@@ -56,6 +56,13 @@ export interface FastGen {
   readonly ctx: CodeGenContext;
 
   /**
+   * When true, fast generators ignore coerce/mutation constraints and generate
+   * probe expressions that validate whether coercion would succeed.
+   * Used by Warm Path: probe checks validity, warm code materializes mutations.
+   */
+  readonly probeMode: boolean;
+
+  /**
    * Recursively generate fast-check expression for a child IR node.
    * Returns null if any child is ineligible for fast path.
    */
