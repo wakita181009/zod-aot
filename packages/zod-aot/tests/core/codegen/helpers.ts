@@ -1,3 +1,4 @@
+import { ZodRealError } from "zod";
 import type { CodeGenContext } from "#src/core/codegen/context.js";
 import { createFastGen, generateFast } from "#src/core/codegen/fast-path.js";
 import { generateValidator } from "#src/core/codegen/index.js";
@@ -16,11 +17,13 @@ export function compileIR(
   });
   const fn =
     fallbackSchemas && fallbackSchemas.length > 0
-      ? new Function("__fb", `${result.code}\nreturn ${result.functionDef};`)
-      : new Function(`${result.code}\nreturn ${result.functionDef};`);
-  return (fallbackSchemas && fallbackSchemas.length > 0 ? fn(fallbackSchemas) : fn()) as (
-    input: unknown,
-  ) => {
+      ? new Function("__ZodError", "__fb", `${result.code}\nreturn ${result.functionDef};`)
+      : new Function("__ZodError", `${result.code}\nreturn ${result.functionDef};`);
+  return (
+    fallbackSchemas && fallbackSchemas.length > 0
+      ? fn(ZodRealError, fallbackSchemas)
+      : fn(ZodRealError)
+  ) as (input: unknown) => {
     success: boolean;
     data?: unknown;
     error?: { issues: unknown[] };

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { z } from "zod";
+import { ZodRealError, z } from "zod";
 import { generateValidator } from "#src/core/codegen/index.js";
 import type { FallbackEntry } from "#src/core/extract/index.js";
 import { extractSchema } from "#src/core/extract/index.js";
@@ -39,7 +39,7 @@ describe("generateIIFE()", () => {
     const info = makeInfo("validateNum", z.number());
     const iife = generateIIFE("NumSchema", info);
 
-    expect(iife).toContain("throw Object.assign");
+    expect(iife).toContain("throw r.error");
   });
 
   it("includes __fb when schema has fallbacks (captured-variable transform)", () => {
@@ -146,8 +146,8 @@ describe("generateIIFE() — runtime execution", () => {
   function executeIIFE(schema: CompiledSchemaInfo, options?: { zodCompat?: boolean }) {
     const iife = generateIIFE("Schema", schema, options);
     const __msg = z.config().localeError;
-    const fn = new Function("Schema", "__msg", `return ${iife};`);
-    return fn({}, __msg) as {
+    const fn = new Function("Schema", "__msg", "__ZodError", `return ${iife};`);
+    return fn({}, __msg, ZodRealError) as {
       parse: (input: unknown) => unknown;
       safeParse: (input: unknown) => {
         success: boolean;
@@ -181,7 +181,7 @@ describe("generateIIFE() — runtime execution", () => {
   it("parse throws on invalid input", () => {
     const validator = executeIIFE(makeInfo("validateUser", simpleSchema));
 
-    expect(() => validator.parse({ name: 123 })).toThrow("Validation failed");
+    expect(() => validator.parse({ name: 123 })).toThrow();
     expect(validator.parse({ name: "Alice", age: 30 })).toEqual({ name: "Alice", age: 30 });
   });
 
@@ -203,7 +203,7 @@ describe("generateIIFE() — runtime execution", () => {
   it("parseAsync rejects for invalid input", async () => {
     const validator = executeIIFE(makeInfo("validateUser", simpleSchema));
 
-    await expect(validator.parseAsync({ name: 123 })).rejects.toThrow("Validation failed");
+    await expect(validator.parseAsync({ name: 123 })).rejects.toThrow();
   });
 
   it("produces error messages when __msg is provided", () => {

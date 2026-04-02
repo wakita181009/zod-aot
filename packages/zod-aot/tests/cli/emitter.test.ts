@@ -64,7 +64,9 @@ describe("generateCompiledFileContent()", () => {
       "./test.ts",
     );
 
-    expect(content).toContain('import { config as __zodAotConfig } from "zod"');
+    expect(content).toContain(
+      'import { config as __zodAotConfig, ZodRealError as __ZodError } from "zod"',
+    );
     // __msg is declared at file level (once per file)
     expect(content).toContain("var __msg=__zodAotConfig().localeError;");
   });

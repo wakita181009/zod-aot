@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { z } from "zod";
+import { ZodRealError, z } from "zod";
 import { generateValidator } from "#src/core/codegen/index.js";
 import type { FallbackEntry } from "#src/core/extract/index.js";
 import { extractSchema } from "#src/core/extract/index.js";
@@ -12,8 +12,8 @@ import type { SafeParseResult, SchemaIR } from "#src/core/types.js";
 function compileZodSchema(schema: z.ZodType, name = "test") {
   const ir = extractSchema(schema);
   const result = generateValidator(ir, name);
-  const fn = new Function(`${result.code}\nreturn ${result.functionDef};`);
-  return fn() as (input: unknown) => {
+  const fn = new Function("__ZodError", `${result.code}\nreturn ${result.functionDef};`);
+  return fn(ZodRealError) as (input: unknown) => {
     success: boolean;
     data?: unknown;
     error?: { issues: unknown[] };
@@ -977,12 +977,13 @@ function compileWithFallbacks(schema: z.ZodType, name = "test") {
   const result = generateValidator(ir, name, { fallbackCount: fallbackEntries.length });
   const fallbackSchemas = fallbackEntries.map((e) => e.schema);
   return fallbackSchemas.length > 0
-    ? (new Function("__fb", `${result.code}\nreturn ${result.functionDef};`)(fallbackSchemas) as (
-        input: unknown,
-      ) => SafeParseResult<unknown>)
-    : (new Function(`${result.code}\nreturn ${result.functionDef};`)() as (
-        input: unknown,
-      ) => SafeParseResult<unknown>);
+    ? (new Function("__ZodError", "__fb", `${result.code}\nreturn ${result.functionDef};`)(
+        ZodRealError,
+        fallbackSchemas,
+      ) as (input: unknown) => SafeParseResult<unknown>)
+    : (new Function("__ZodError", `${result.code}\nreturn ${result.functionDef};`)(
+        ZodRealError,
+      ) as (input: unknown) => SafeParseResult<unknown>);
 }
 
 describe("integration — partial fallback (mixed compilable + non-compilable)", () => {
@@ -2713,9 +2714,11 @@ describe("integration — refine custom message", () => {
 
     const result = safeParse("no-at");
     expect(result.success).toBe(false);
-    const issue = result.error?.issues[0] as { message: string; code: string };
-    expect(issue.code).toBe("custom");
-    expect(issue.message).toBe("must contain @");
+    if (!result.success) {
+      const issue = result.error.issues[0] as { message: string; code: string };
+      expect(issue.code).toBe("custom");
+      expect(issue.message).toBe("must contain @");
+    }
   });
 
   it("refine with object message preserves message in error", () => {
@@ -2724,8 +2727,10 @@ describe("integration — refine custom message", () => {
 
     const result = safeParse("");
     expect(result.success).toBe(false);
-    const issue = result.error?.issues[0] as { message: string };
-    expect(issue.message).toBe("cannot be empty");
+    if (!result.success) {
+      const issue = result.error.issues[0] as { message: string };
+      expect(issue.message).toBe("cannot be empty");
+    }
   });
 
   it("refine without message uses default 'Invalid'", () => {
@@ -2734,8 +2739,10 @@ describe("integration — refine custom message", () => {
 
     const result = safeParse("");
     expect(result.success).toBe(false);
-    const issue = result.error?.issues[0] as { message: string };
-    expect(issue.message).toBe("Invalid");
+    if (!result.success) {
+      const issue = result.error.issues[0] as { message: string };
+      expect(issue.message).toBe("Invalid");
+    }
   });
 });
 
@@ -2754,9 +2761,11 @@ describe("integration — check ordering with refine_effect", () => {
     expect(zodResult.success).toBe(false);
 
     // Compare issue code order (not messages — standard check messages are not compiled)
-    const zodCodes = zodResult.error?.issues.map((i) => i.code);
-    const aotCodes = (aotResult.error?.issues as { code: string }[]).map((i) => i.code);
-    expect(aotCodes).toEqual(zodCodes);
+    if (!zodResult.success && !aotResult.success) {
+      const zodCodes = zodResult.error.issues.map((i) => i.code);
+      const aotCodes = (aotResult.error.issues as { code: string }[]).map((i) => i.code);
+      expect(aotCodes).toEqual(zodCodes);
+    }
   });
 });
 

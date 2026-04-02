@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { z } from "zod";
+import { ZodRealError, type z } from "zod";
 import {
   findSchemaFiles,
   generateFile,
@@ -335,9 +335,9 @@ describe("generate E2E", () => {
     if (!schema) return;
     const ir = extractSchema(schema.schema);
     const result = generateValidator(ir, schema.exportName);
-    const safeParseFn = new Function(`${result.code}\nreturn ${result.functionDef};`)() as (
-      input: unknown,
-    ) => SafeParseResult<unknown>;
+    const safeParseFn = new Function("__ZodError", `${result.code}\nreturn ${result.functionDef};`)(
+      ZodRealError,
+    ) as (input: unknown) => SafeParseResult<unknown>;
 
     // Valid input
     const validResult = safeParseFn({ name: "Alice", age: 25 });
@@ -385,9 +385,9 @@ describe("generate E2E", () => {
     const zodSchema = schema.schema as z.ZodType;
     const ir = extractSchema(schema.schema);
     const result = generateValidator(ir, schema.exportName);
-    const safeParseFn = new Function(`${result.code}\nreturn ${result.functionDef};`)() as (
-      input: unknown,
-    ) => SafeParseResult<unknown>;
+    const safeParseFn = new Function("__ZodError", `${result.code}\nreturn ${result.functionDef};`)(
+      ZodRealError,
+    ) as (input: unknown) => SafeParseResult<unknown>;
 
     const validInput = { name: "Bob", age: 30 };
     const zodResult = zodSchema.safeParse(validInput);
@@ -406,9 +406,9 @@ describe("generate E2E", () => {
     const zodSchema = schema.schema as z.ZodType;
     const ir = extractSchema(schema.schema);
     const result = generateValidator(ir, schema.exportName);
-    const safeParseFn = new Function(`${result.code}\nreturn ${result.functionDef};`)() as (
-      input: unknown,
-    ) => SafeParseResult<unknown>;
+    const safeParseFn = new Function("__ZodError", `${result.code}\nreturn ${result.functionDef};`)(
+      ZodRealError,
+    ) as (input: unknown) => SafeParseResult<unknown>;
 
     const invalidInput = { name: "", age: -1 };
     const zodResult = zodSchema.safeParse(invalidInput);
