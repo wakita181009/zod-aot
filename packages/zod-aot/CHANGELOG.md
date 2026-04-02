@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.2](https://github.com/wakita181009/zod-aot/compare/v0.15.1...v0.15.2) (2026-04-02)
+
+
+### Bug Fixes
+
+* use glob matching for unplugin include/exclude options ([ac25982](https://github.com/wakita181009/zod-aot/commit/ac25982ead021ae71a85c519bc265a58642b12ef))
+
 ## [0.15.1](https://github.com/wakita181009/zod-aot/compare/v0.15.0...v0.15.1) (2026-04-01)
 
 
