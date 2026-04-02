@@ -13,7 +13,7 @@ import { refineCheck } from "./effect.js";
 export function slowString(ir: StringIR, g: SlowGen): string {
   let code = "";
   if (ir.coerce) {
-    code += emit`${g.output}=String(${g.input});`;
+    code += emit`try{${g.output}=String(${g.input});}catch(_){}`;
   }
   code += emit`
     if(typeof ${g.input}!=="string"){

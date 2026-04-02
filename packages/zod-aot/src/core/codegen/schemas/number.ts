@@ -7,7 +7,7 @@ import { refineCheck } from "./effect.js";
 export function slowNumber(ir: NumberIR, g: SlowGen): string {
   let code = "";
   if (ir.coerce) {
-    code += emit`${g.output}=Number(${g.input});`;
+    code += emit`try{${g.output}=Number(${g.input});}catch(_){}`;
   }
   code += emit`
     if(typeof ${g.input}!=="number"){

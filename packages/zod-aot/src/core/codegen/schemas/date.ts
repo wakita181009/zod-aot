@@ -5,7 +5,7 @@ import { emit } from "../emit.js";
 export function slowDate(ir: DateIR, g: SlowGen): string {
   let code = "";
   if (ir.coerce) {
-    code += emit`${g.output}=new Date(${g.input});`;
+    code += emit`try{${g.output}=new Date(${g.input});}catch(_){}`;
   }
   code += emit`
     if(!(${g.input} instanceof Date)){
