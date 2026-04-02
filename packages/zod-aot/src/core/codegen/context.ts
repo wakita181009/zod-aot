@@ -129,6 +129,7 @@ export function hasMutation(ir: SchemaIR): boolean {
     case "default":
     case "catch":
     case "effect":
+    case "fallback":
       return true;
     case "object":
       return Object.values(ir.properties).some(hasMutation);
@@ -160,7 +161,7 @@ export function hasMutation(ir: SchemaIR): boolean {
 
 /**
  * Sort comparator for CheckIR: cheapest/most-discriminating checks first.
- * Used by fast-check generators (which never encounter refine_effect).
+ * Used by fast-path generators (which never encounter refine_effect).
  */
 export function checkPriority(
   a: CheckIR | BigIntCheckIR | DateCheckIR,

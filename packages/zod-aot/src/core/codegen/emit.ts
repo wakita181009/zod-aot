@@ -2,7 +2,7 @@
  * Tagged template literal that strips newlines and leading whitespace.
  * Allows writing generated code with readable indentation while producing minified output.
  *
- * Used exclusively by Slow Path generators (codegen/generators/).
+ * Used exclusively by Slow Path generators (codegen/schemas/).
  */
 export function emit(
   strings: TemplateStringsArray,
