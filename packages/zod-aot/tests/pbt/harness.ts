@@ -99,21 +99,7 @@ export function assertParity(
   options?: ParityOptions,
 ): void {
   const zodResult = zodSchema.safeParse(input);
-
-  // AOT generated code may throw on inputs that Zod handles gracefully
-  // (e.g., Number(Symbol()) throws TypeError, but Zod catches it internally).
-  // When AOT throws, treat it as failure and compare with Zod's result.
-  let aotResult: ReturnType<SafeParseFn>;
-  try {
-    aotResult = generatedSafeParse(input);
-  } catch {
-    // AOT threw — Zod should also fail for this input.
-    // If Zod succeeds but AOT throws, that's a real bug worth investigating.
-    if (zodResult.success) {
-      expect.unreachable(`AOT threw but Zod succeeded for input: ${String(input)}`);
-    }
-    return; // Both failed (Zod via error result, AOT via exception). Acceptable divergence.
-  }
+  const aotResult = generatedSafeParse(input);
 
   // Level 1: success/failure must match
   expect(aotResult.success).toBe(zodResult.success);
