@@ -55,7 +55,7 @@ export function generateValidator(
     `if(typeof __msg==="function")__issues[__fi].message=__msg(__issues[__fi]);`,
     `delete __issues[__fi].input;`,
     `}`,
-    `return{success:false,error:{issues:__issues}};`,
+    `return{success:false,error:new __ZodError(__issues)};`,
     `}`,
     `return{success:true,data:__data};`,
     `}`,

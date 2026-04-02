@@ -10,7 +10,7 @@
  *   deno run -A packages/zod-aot/tests/compat.mjs
  */
 
-import { z } from "zod";
+import { ZodRealError, z } from "zod";
 import { generateValidator } from "../dist/core/codegen/index.js";
 import { extractSchema } from "../dist/core/extract/index.js";
 import { compile } from "../dist/index.js";
@@ -58,10 +58,10 @@ assert(typeof result.code === "string", "generateValidator produces code string"
 assert(result.code.length > 0, "generated code is non-empty");
 assert(typeof result.functionDef === "string", "generateValidator produces function def");
 
-// Compile and run the generated code (pass __msg for localeError message generation)
+// Compile and run the generated code (pass __msg and __ZodError for localeError + ZodError)
 const __msg = z.config().localeError;
-const fn = new Function("__msg", `${result.code}\nreturn ${result.functionDef};`);
-const safeParse = fn(__msg);
+const fn = new Function("__msg", "__ZodError", `${result.code}\nreturn ${result.functionDef};`);
+const safeParse = fn(__msg, ZodRealError);
 
 // Valid input
 const validInput = {

@@ -1,7 +1,7 @@
 // biome-ignore lint/correctness/noNodejsModules: need createRequire to read zod/package.json for version detection
 import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
-import { z } from "zod";
+import { ZodError, ZodRealError, z } from "zod";
 import { generateValidator } from "#src/core/codegen/index.js";
 import type { FallbackEntry } from "#src/core/extract/index.js";
 import { extractSchema } from "#src/core/extract/index.js";
@@ -30,14 +30,14 @@ function compileForErrorTest(schema: z.ZodType, name = "test") {
   const fallbackSchemas = fallbackEntries.map((e) => e.schema);
   const fn =
     fallbackSchemas.length > 0
-      ? new Function("__msg", "__fb", `${result.code}\nreturn ${result.functionDef};`)
-      : new Function("__msg", `${result.code}\nreturn ${result.functionDef};`);
-  return (fallbackSchemas.length > 0 ? fn(__msg, fallbackSchemas) : fn(__msg)) as (
-    input: unknown,
-  ) => {
+      ? new Function("__msg", "__ZodError", "__fb", `${result.code}\nreturn ${result.functionDef};`)
+      : new Function("__msg", "__ZodError", `${result.code}\nreturn ${result.functionDef};`);
+  return (
+    fallbackSchemas.length > 0 ? fn(__msg, ZodRealError, fallbackSchemas) : fn(__msg, ZodRealError)
+  ) as (input: unknown) => {
     success: boolean;
     data?: unknown;
-    error?: { issues: Record<string, unknown>[] };
+    error?: ZodError;
   };
 }
 
@@ -67,7 +67,9 @@ function assertSameErrors(schema: z.ZodType, input: unknown, name = "test") {
     const zodIssues = normalizeIssues(
       zodResult.error.issues as unknown as Record<string, unknown>[],
     );
-    const aotIssues = normalizeIssues(aotResult.error?.issues ?? []);
+    const aotIssues = normalizeIssues(
+      (aotResult.error?.issues ?? []) as unknown as Record<string, unknown>[],
+    );
     expect(aotIssues).toEqual(zodIssues);
   }
 }
@@ -501,5 +503,435 @@ describe("error compat — combined real-world schemas", () => {
       { username: "ab", email: "not-email", age: -1, role: "superadmin" },
       "userReg",
     );
+  });
+});
+
+// ─── ZodError Parity ──────────────────────────────────────────────────────────
+
+describe("ZodError parity — basics", () => {
+  it("safeParse error is instanceof ZodError and ZodRealError", () => {
+    const safeParse = compileForErrorTest(z.string(), "str");
+    const result = safeParse(42);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(ZodError);
+      expect(result.error).toBeInstanceOf(ZodRealError);
+    }
+  });
+
+  it("error instanceof Error (ZodRealError extends Error)", () => {
+    const safeParse = compileForErrorTest(z.string(), "str");
+    const result = safeParse(42);
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(Error);
+    }
+  });
+
+  it("success result has no error", () => {
+    const safeParse = compileForErrorTest(z.string(), "str");
+    const result = safeParse("hello");
+    expect(result.success).toBe(true);
+    expect(result.error).toBeUndefined();
+  });
+
+  it("error.issues is accessible and non-empty", () => {
+    const safeParse = compileForErrorTest(z.string(), "str");
+    const result = safeParse(42);
+    if (!result.success) {
+      expect(Array.isArray(result.error?.issues)).toBe(true);
+      expect(result.error?.issues.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("error.message is a non-empty string", () => {
+    const safeParse = compileForErrorTest(z.string(), "str");
+    const result = safeParse(42);
+    if (!result.success) {
+      expect(typeof result.error?.message).toBe("string");
+      expect((result.error?.message as string).length).toBeGreaterThan(0);
+    }
+  });
+
+  it("error.message is JSON of issues (same as Zod)", () => {
+    const schema = z.string();
+    const zodResult = schema.safeParse(42);
+    const safeParse = compileForErrorTest(schema, "str");
+    const aotResult = safeParse(42);
+    if (!zodResult.success && !aotResult.success) {
+      // Both should be parseable JSON
+      const zodParsed = JSON.parse(zodResult.error.message);
+      const aotParsed = JSON.parse(aotResult.error?.message ?? "[]");
+      // Same number of issues
+      expect(aotParsed.length).toBe(zodParsed.length);
+    }
+  });
+
+  it("error.name matches Zod", () => {
+    const zodResult = z.string().safeParse(42);
+    const safeParse = compileForErrorTest(z.string(), "str");
+    const aotResult = safeParse(42);
+    if (!zodResult.success && !aotResult.success) {
+      expect(aotResult.error?.name).toBe(zodResult.error.name);
+    }
+  });
+
+  it("error.toString() returns message", () => {
+    const safeParse = compileForErrorTest(z.string(), "str");
+    const result = safeParse(42);
+    if (!result.success) {
+      expect(result.error?.toString()).toBe(result.error?.message);
+    }
+  });
+});
+
+describe("ZodError parity — format()", () => {
+  it("simple schema type error", () => {
+    const schema = z.string().min(3);
+    const zodResult = schema.safeParse(42);
+    const safeParse = compileForErrorTest(schema, "str");
+    const aotResult = safeParse(42);
+    if (!zodResult.success && !aotResult.success) {
+      const zodFormatted = zodResult.error.format();
+      const aotFormatted = (aotResult.error as ZodError).format();
+      expect(aotFormatted._errors.length).toBeGreaterThan(0);
+      expect(aotFormatted._errors.length).toBe(zodFormatted._errors.length);
+    }
+  });
+
+  it("object with multiple wrong fields", () => {
+    const schema = z.object({ name: z.string(), age: z.number() });
+    const zodResult = schema.safeParse({ name: 42, age: "hello" });
+    const safeParse = compileForErrorTest(schema, "obj");
+    const aotResult = safeParse({ name: 42, age: "hello" });
+    if (!zodResult.success && !aotResult.success) {
+      const zodFmt = zodResult.error.format();
+      const aotFmt = (aotResult.error as ZodError).format();
+      expect("name" in aotFmt).toBe("name" in zodFmt);
+      expect("age" in aotFmt).toBe("age" in zodFmt);
+    }
+  });
+
+  it("deeply nested object (3 levels)", () => {
+    const schema = z.object({
+      level1: z.object({
+        level2: z.object({
+          value: z.number(),
+        }),
+      }),
+    });
+    const zodResult = schema.safeParse({ level1: { level2: { value: "bad" } } });
+    const safeParse = compileForErrorTest(schema, "deep");
+    const aotResult = safeParse({ level1: { level2: { value: "bad" } } });
+    if (!zodResult.success && !aotResult.success) {
+      const zodFmt = zodResult.error.format();
+      const aotFmt = (aotResult.error as ZodError).format();
+      expect("level1" in aotFmt).toBe("level1" in zodFmt);
+    }
+  });
+
+  it("array element errors appear in format()", () => {
+    const schema = z.array(z.number());
+    const zodResult = schema.safeParse([1, "bad", 3]);
+    const safeParse = compileForErrorTest(schema, "arr");
+    const aotResult = safeParse([1, "bad", 3]);
+    if (!zodResult.success && !aotResult.success) {
+      const zodFmt = zodResult.error.format();
+      const aotFmt = (aotResult.error as ZodError).format();
+      // Both should have error at index 1
+      expect("1" in aotFmt || 1 in aotFmt).toBe("1" in zodFmt || 1 in zodFmt);
+    }
+  });
+
+  it("object with missing and wrong-type fields", () => {
+    const schema = z.object({ name: z.string(), age: z.number(), active: z.boolean() });
+    const zodResult = schema.safeParse({ name: 42 });
+    const safeParse = compileForErrorTest(schema, "multi");
+    const aotResult = safeParse({ name: 42 });
+    if (!zodResult.success && !aotResult.success) {
+      const zodFmt = zodResult.error.format();
+      const aotFmt = (aotResult.error as ZodError).format();
+      expect("name" in aotFmt).toBe("name" in zodFmt);
+      expect("age" in aotFmt).toBe("age" in zodFmt);
+      expect("active" in aotFmt).toBe("active" in zodFmt);
+    }
+  });
+});
+
+describe("ZodError parity — flatten()", () => {
+  it("simple type error goes to formErrors", () => {
+    const schema = z.string();
+    const zodResult = schema.safeParse(42);
+    const safeParse = compileForErrorTest(schema, "str");
+    const aotResult = safeParse(42);
+    if (!zodResult.success && !aotResult.success) {
+      const zodFlat = zodResult.error.flatten();
+      const aotFlat = (aotResult.error as ZodError).flatten();
+      expect(aotFlat.formErrors.length).toBe(zodFlat.formErrors.length);
+      expect(Object.keys(aotFlat.fieldErrors).length).toBe(Object.keys(zodFlat.fieldErrors).length);
+    }
+  });
+
+  it("object field errors go to fieldErrors", () => {
+    const schema = z.object({ name: z.string(), age: z.number() });
+    const zodResult = schema.safeParse({ name: 42, age: "hello" });
+    const safeParse = compileForErrorTest(schema, "obj");
+    const aotResult = safeParse({ name: 42, age: "hello" });
+    if (!zodResult.success && !aotResult.success) {
+      const zodFlat = zodResult.error.flatten();
+      const aotFlat = (aotResult.error as ZodError).flatten();
+      expect(Object.keys(aotFlat.fieldErrors).sort()).toEqual(
+        Object.keys(zodFlat.fieldErrors).sort(),
+      );
+      expect(aotFlat.formErrors.length).toBe(zodFlat.formErrors.length);
+    }
+  });
+
+  it("flatten with custom mapper", () => {
+    const schema = z.object({ name: z.string() });
+    const safeParse = compileForErrorTest(schema, "obj");
+    const result = safeParse({ name: 42 });
+    if (!result.success) {
+      const flat = (result.error as ZodError).flatten((issue) => issue.code);
+      const fieldErrors = flat.fieldErrors as Record<string, string[]>;
+      expect(fieldErrors["name"]).toBeDefined();
+      expect(fieldErrors["name"]?.[0]).toBe("invalid_type");
+    }
+  });
+});
+
+describe("ZodError parity — schema types", () => {
+  it("number check errors produce ZodError", () => {
+    const safeParse = compileForErrorTest(z.number().min(5), "num");
+    const result = safeParse(2);
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(ZodError);
+      expect(result.error?.issues[0]?.code).toBe("too_small");
+    }
+  });
+
+  it("enum errors produce ZodError", () => {
+    const safeParse = compileForErrorTest(z.enum(["a", "b"]), "en");
+    const result = safeParse("c");
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(ZodError);
+    }
+  });
+
+  it("literal errors produce ZodError", () => {
+    const safeParse = compileForErrorTest(z.literal("hello"), "lit");
+    const result = safeParse("world");
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(ZodError);
+    }
+  });
+
+  it("boolean type error produces ZodError", () => {
+    const safeParse = compileForErrorTest(z.boolean(), "bool");
+    const result = safeParse("not bool");
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(ZodError);
+    }
+  });
+
+  it("bigint type error produces ZodError", () => {
+    const safeParse = compileForErrorTest(z.bigint(), "bi");
+    const result = safeParse(42);
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(ZodError);
+    }
+  });
+
+  it("date type error produces ZodError", () => {
+    const safeParse = compileForErrorTest(z.date(), "dt");
+    const result = safeParse("not a date");
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(ZodError);
+    }
+  });
+
+  it("nullable inner error produces ZodError", () => {
+    const safeParse = compileForErrorTest(z.string().nullable(), "nul");
+    const result = safeParse(42);
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(ZodError);
+    }
+  });
+
+  it("optional inner error produces ZodError", () => {
+    const safeParse = compileForErrorTest(z.string().optional(), "opt");
+    const result = safeParse(42);
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(ZodError);
+    }
+  });
+
+  it("tuple errors produce ZodError", () => {
+    const safeParse = compileForErrorTest(z.tuple([z.string(), z.number()]), "tup");
+    const result = safeParse([42, "wrong"]);
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(ZodError);
+      expect(result.error?.issues.length).toBe(2);
+    }
+  });
+
+  it("record value error produces ZodError", () => {
+    const safeParse = compileForErrorTest(z.record(z.string(), z.number()), "rec");
+    const result = safeParse({ key: "not number" });
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(ZodError);
+    }
+  });
+
+  it("intersection errors produce ZodError", () => {
+    const schema = z.intersection(z.object({ a: z.string() }), z.object({ b: z.number() }));
+    const safeParse = compileForErrorTest(schema, "inter");
+    const result = safeParse({});
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(ZodError);
+      expect(result.error?.issues.length).toBeGreaterThanOrEqual(2);
+    }
+  });
+
+  it("discriminatedUnion errors produce ZodError", () => {
+    const schema = z.discriminatedUnion("type", [
+      z.object({ type: z.literal("a"), v: z.string() }),
+      z.object({ type: z.literal("b"), v: z.number() }),
+    ]);
+    const safeParse = compileForErrorTest(schema, "du");
+    const result = safeParse({ type: "a", v: 42 });
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(ZodError);
+    }
+  });
+
+  it("set type error produces ZodError", () => {
+    const safeParse = compileForErrorTest(z.set(z.string()), "setErr");
+    const result = safeParse("not a set");
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(ZodError);
+    }
+  });
+
+  it("map type error produces ZodError", () => {
+    const safeParse = compileForErrorTest(z.map(z.string(), z.number()), "mapErr");
+    const result = safeParse("not a map");
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(ZodError);
+    }
+  });
+
+  it("never schema always produces ZodError", () => {
+    const safeParse = compileForErrorTest(z.never(), "nev");
+    const result = safeParse("anything");
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(ZodError);
+    }
+  });
+
+  it("coerce string failure produces ZodError", () => {
+    const safeParse = compileForErrorTest(z.coerce.string().min(5), "coerceStr");
+    const result = safeParse("ab");
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(ZodError);
+    }
+  });
+});
+
+describe("ZodError parity — union", () => {
+  it("union error has issues", () => {
+    const schema = z.union([z.string(), z.number()]);
+    const safeParse = compileForErrorTest(schema, "union");
+    const result = safeParse(true);
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(ZodError);
+      expect(result.error?.issues.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("union error issue count matches Zod", () => {
+    const schema = z.union([z.string(), z.number()]);
+    const zodResult = schema.safeParse(true);
+    const safeParse = compileForErrorTest(schema, "union");
+    const aotResult = safeParse(true);
+    if (!zodResult.success && !aotResult.success) {
+      expect(aotResult.error?.issues.length).toBe(zodResult.error.issues.length);
+    }
+  });
+
+  it("three-way union error", () => {
+    const schema = z.union([z.string(), z.number(), z.boolean()]);
+    const safeParse = compileForErrorTest(schema, "tri");
+    const result = safeParse(null);
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(ZodError);
+    }
+  });
+});
+
+describe("ZodError parity — real-world combined", () => {
+  it("user form with all fields invalid", () => {
+    const schema = z.object({
+      username: z.string().min(3).max(20),
+      email: z.email(),
+      age: z.number().int().positive(),
+      role: z.enum(["user", "admin"]),
+    });
+    const safeParse = compileForErrorTest(schema, "form");
+    const result = safeParse({
+      username: "ab",
+      email: "not-email",
+      age: -1.5,
+      role: "superadmin",
+    });
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(ZodError);
+      // format() should group errors by field
+      const formatted = (result.error as ZodError).format();
+      expect("username" in formatted).toBe(true);
+      expect("email" in formatted).toBe(true);
+      expect("age" in formatted).toBe(true);
+      expect("role" in formatted).toBe(true);
+      // flatten() should have all fields
+      const flat = (result.error as ZodError).flatten();
+      expect(Object.keys(flat.fieldErrors).sort()).toEqual(["age", "email", "role", "username"]);
+    }
+  });
+
+  it("nested API response schema", () => {
+    const schema = z.object({
+      status: z.number(),
+      data: z.object({
+        users: z.array(
+          z.object({
+            id: z.number(),
+            name: z.string().min(1),
+          }),
+        ),
+      }),
+    });
+    const safeParse = compileForErrorTest(schema, "api");
+    const result = safeParse({
+      status: "ok",
+      data: { users: [{ id: "bad", name: "" }] },
+    });
+    if (!result.success) {
+      expect(result.error).toBeInstanceOf(ZodError);
+      // Should have errors for status, data.users[0].id, data.users[0].name
+      expect(result.error?.issues.length).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it("completely wrong type still produces valid ZodError", () => {
+    const schema = z.object({ a: z.string() });
+    const safeParse = compileForErrorTest(schema, "wrongType");
+    for (const input of [42, "string", true, null, undefined, []]) {
+      const result = safeParse(input);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toBeInstanceOf(ZodError);
+        expect(result.error?.issues.length).toBeGreaterThan(0);
+        expect(typeof result.error?.message).toBe("string");
+      }
+    }
   });
 });
