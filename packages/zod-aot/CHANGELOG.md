@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.2](https://github.com/wakita181009/zod-aot/compare/v0.16.1...v0.16.2) (2026-04-02)
+
+
+### Bug Fixes
+
+* add try/finally to dispatch() visiting cleanup and remove hardcoded registry count ([7046fb1](https://github.com/wakita181009/zod-aot/commit/7046fb1d64c80afa0d342d05c0bb56e92b08b199))
+
 ## [0.16.1](https://github.com/wakita181009/zod-aot/compare/v0.16.0...v0.16.1) (2026-04-02)
 
 
