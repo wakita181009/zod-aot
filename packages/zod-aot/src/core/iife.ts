@@ -47,7 +47,9 @@ export function generateIIFE(
       .split("\n")
       .filter((l) => l.trim() !== "" && l.trim() !== "/* zod-aot */"),
     codegenResult.functionDef,
+    codegenResult.isFunctionDef,
     `var __w=${init};`,
+    `__w.is=${extractFunctionName(codegenResult.isFunctionDef)};`,
     `__w.parse=function(input){const r=${fnName}(input);if(r.success)return r.data;throw r.error;};`,
     `__w.safeParse=${fnName};`,
     `__w.safeParseAsync=function(input){return Promise.resolve(${fnName}(input));};`,

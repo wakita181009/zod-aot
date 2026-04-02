@@ -8,6 +8,7 @@ describe("generateCompiledFileContent()", () => {
       code: "/* zod-aot */",
       functionDef:
         'function safeParse_test(input){\nvar __issues=[];\nif(typeof input!=="string"){__issues.push({code:"invalid_type",expected:"string",received:typeof input,path:[],message:"Expected string"});}\nif(__issues.length>0)return{success:false,error:{issues:__issues}};\nreturn{success:true,data:input};\n}',
+      isFunctionDef: "function is_test(input){return true;}",
       fallbackCount: 0,
     };
 
@@ -30,11 +31,13 @@ describe("generateCompiledFileContent()", () => {
     const result1: CodeGenResult = {
       code: "/* zod-aot */",
       functionDef: "function safeParse_a(input){\nreturn{success:true,data:input};\n}",
+      isFunctionDef: "function is_a(input){return true;}",
       fallbackCount: 0,
     };
     const result2: CodeGenResult = {
       code: "/* zod-aot */",
       functionDef: "function safeParse_b(input){\nreturn{success:true,data:input};\n}",
+      isFunctionDef: "function is_b(input){return true;}",
       fallbackCount: 0,
     };
 
@@ -56,6 +59,7 @@ describe("generateCompiledFileContent()", () => {
     const result: CodeGenResult = {
       code: "/* zod-aot */",
       functionDef: "function safeParse_test(input){\nreturn{success:true,data:input};\n}",
+      isFunctionDef: "function is_test(input){return true;}",
       fallbackCount: 0,
     };
 
@@ -75,6 +79,7 @@ describe("generateCompiledFileContent()", () => {
     const result: CodeGenResult = {
       code: "/* zod-aot */",
       functionDef: "function safeParse_test(input){\nreturn{success:true,data:input};\n}",
+      isFunctionDef: "function is_test(input){return true;}",
       fallbackCount: 0,
     };
 
@@ -93,6 +98,7 @@ describe("generateCompiledFileContent() — zodCompat: false", () => {
     const result: CodeGenResult = {
       code: "/* zod-aot */",
       functionDef: "function safeParse_test(input){\nreturn{success:true,data:input};\n}",
+      isFunctionDef: "function is_test(input){return true;}",
       fallbackCount: 0,
     };
 
@@ -110,6 +116,7 @@ describe("generateCompiledFileContent() — zodCompat: false", () => {
       code: "/* zod-aot */",
       functionDef:
         "function safeParse_test(input){\nvar __issues=[];\nreturn{success:true,data:input};\n}",
+      isFunctionDef: "function is_test(input){return true;}",
       fallbackCount: 1,
     };
 

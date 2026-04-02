@@ -13,6 +13,8 @@ const COMPILED_MARKER = Symbol.for("zod-aot:compiled");
 function createFallback<T>(zodSchema: unknown): CompiledSchema<T> {
   const facade = Object.create(zodSchema as object) as CompiledSchema<T>;
   facade.schema = zodSchema;
+  facade.is = (input: unknown) =>
+    (zodSchema as { safeParse(input: unknown): { success: boolean } }).safeParse(input).success;
   return facade;
 }
 

@@ -25,15 +25,22 @@ export function generateValidator(
   options?: { fallbackCount?: number },
 ): CodeGenResult {
   const fnName = `safeParse_${name}`;
+  const isFnName = `is_${name}`;
   const ctx: CodeGenContext = { preamble: [], counter: 0, fnName };
 
   // Phase 1: Fast Path — pure boolean expression for eligible schemas
   const fg = createFastGen("input", ctx);
   const fastExpr = generateFast(ir, fg);
 
+  // Probe expression for is(): ignores coerce/mutation constraints.
+  // Falls back to fastExpr for non-mutation schemas.
+  let isExpr: string | null = fastExpr;
+  if (fastExpr === null) {
+    const probeFg = createFastGen("input", ctx, { probeMode: true });
+    isExpr = generateFast(ir, probeFg);
+  }
+
   // Phase 2: Warm Path — handle mutation schemas where inner has a fast path.
-  // For default: if undefined → return default; if inner fast passes → return input.
-  // For catch: if inner fast passes → return input; else → return catch value.
   const warmPath = generateWarmPath(ir, ctx);
 
   // Phase 3: Slow Path — full error-collecting validation
@@ -42,6 +49,13 @@ export function generateValidator(
 
   const code = ["/* zod-aot */", ...ctx.preamble].join("\n");
 
+  // ─── is() function: pure boolean, equivalent to safeParse(input).success ───
+  const isFunctionDef =
+    isExpr !== null
+      ? `function ${isFnName}(input){return ${isExpr};}`
+      : `function ${isFnName}(input){return ${fnName}(input).success;}`;
+
+  // ─── safeParse() function ──────────────────────────────────────────────────
   const functionDefParts = [`function ${fnName}(input){`];
 
   // Emit fast path guard if eligible (pure schemas — no mutations)
@@ -58,6 +72,7 @@ export function generateValidator(
     return {
       code,
       functionDef: functionDefParts.join("\n"),
+      isFunctionDef,
       fallbackCount: options?.fallbackCount ?? 0,
     };
   }
@@ -79,5 +94,5 @@ export function generateValidator(
 
   const functionDef = functionDefParts.join("\n");
 
-  return { code, functionDef, fallbackCount: options?.fallbackCount ?? 0 };
+  return { code, functionDef, isFunctionDef, fallbackCount: options?.fallbackCount ?? 0 };
 }

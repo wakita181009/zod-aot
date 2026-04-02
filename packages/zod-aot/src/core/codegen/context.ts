@@ -3,6 +3,8 @@ import type { BigIntCheckIR, CheckIR, CheckOrEffectIR, DateCheckIR, SchemaIR } f
 export interface CodeGenResult {
   code: string;
   functionDef: string;
+  /** is_X() function definition. Pure boolean check, equivalent to safeParse(input).success. */
+  isFunctionDef: string;
   /** Number of fallback schemas referenced by __fb[N] in the generated code. 0 = no fallbacks. */
   fallbackCount: number;
 }

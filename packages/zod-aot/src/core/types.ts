@@ -419,6 +419,8 @@ export interface DiscoveredSchema {
 }
 
 export interface CompiledSchema<T> {
+  /** Returns true if input would pass validation. Equivalent to safeParse(input).success. */
+  is(input: unknown): boolean;
   parse(input: unknown): T;
   parseAsync(input: unknown): Promise<T>;
   safeParse(input: unknown): SafeParseResult<T>;
