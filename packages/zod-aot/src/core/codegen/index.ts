@@ -2,6 +2,7 @@ import type { SchemaIR } from "../types.js";
 import type { CodeGenContext, CodeGenResult } from "./context.js";
 import { createFastGen, generateFast } from "./fast-path.js";
 import { createSlowGen, generateSlow } from "./slow-path.js";
+import { generateWarmPath } from "./warm-path.js";
 
 export type { CodeGenResult } from "./context.js";
 
@@ -30,8 +31,10 @@ export function generateValidator(
   const fg = createFastGen("input", ctx);
   const fastExpr = generateFast(ir, fg);
 
-  // Phase 2 (future): Probe + Warm Path for mutation schemas (coerce/default/catch).
-  // probeMode on FastGen generates probe expressions; Warm Path materializes mutations.
+  // Phase 2: Warm Path — handle mutation schemas where inner has a fast path.
+  // For default: if undefined → return default; if inner fast passes → return input.
+  // For catch: if inner fast passes → return input; else → return catch value.
+  const warmPath = generateWarmPath(ir, ctx);
 
   // Phase 3: Slow Path — full error-collecting validation
   const sg = createSlowGen("__data", "__data", "[]", "__issues", ctx);
@@ -44,6 +47,10 @@ export function generateValidator(
   // Emit fast path guard if eligible (pure schemas — no mutations)
   if (fastExpr !== null && fastExpr !== "true") {
     functionDefParts.push(`if(${fastExpr}){return{success:true,data:input};}`);
+  } else if (warmPath !== null) {
+    // Warm path: default/catch with fast-path-eligible inner.
+    // Returns early for valid inputs without allocating issues array.
+    functionDefParts.push(warmPath);
   } else if (fastExpr === "true") {
     // Schema always succeeds (any/unknown) — skip slow path entirely
     functionDefParts.push(`return{success:true,data:input};`);
