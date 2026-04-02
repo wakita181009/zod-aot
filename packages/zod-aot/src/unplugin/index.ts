@@ -5,6 +5,7 @@ import type { ZodAotPluginOptions } from "./types.js";
 
 export const unplugin = createUnplugin((options?: ZodAotPluginOptions) => {
   const stats: BuildStats = { files: 0, schemas: 0, optimized: 0, failed: 0 };
+  const cache = new Map<string, string>();
   const verbose = options?.verbose === true;
 
   return {
@@ -16,6 +17,9 @@ export const unplugin = createUnplugin((options?: ZodAotPluginOptions) => {
     },
 
     async transform(code: string, id: string) {
+      const cached = cache.get(id);
+      if (cached) return { code: cached, map: null };
+
       const result = await transformCode(code, id, {
         zodCompat: options?.zodCompat,
         verbose,
@@ -28,6 +32,7 @@ export const unplugin = createUnplugin((options?: ZodAotPluginOptions) => {
         },
       });
       if (!result) return;
+      cache.set(id, result);
       return { code: result, map: null };
     },
 
@@ -43,6 +48,7 @@ export const unplugin = createUnplugin((options?: ZodAotPluginOptions) => {
       stats.schemas = 0;
       stats.optimized = 0;
       stats.failed = 0;
+      cache.clear();
     },
   };
 });
