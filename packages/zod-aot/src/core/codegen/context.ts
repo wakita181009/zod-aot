@@ -5,30 +5,71 @@ export interface CodeGenResult {
   functionDef: string;
   /** Number of fallback schemas referenced by __fb[N] in the generated code. 0 = no fallbacks. */
   fallbackCount: number;
-  /** Auxiliary function definitions (e.g. __fastCheck_* for recursiveRef). Emitted before the main function. */
-  auxiliaryFunctions?: string[];
 }
 
+/** Shared mutable state for code generation. Fast and slow paths share the same instance. */
 export interface CodeGenContext {
   preamble: string[];
   counter: number;
   fnName: string;
 }
 
-export type GenerateValidationFn = (
-  ir: SchemaIR,
-  inputExpr: string,
-  outputExpr: string,
-  pathExpr: string,
-  issuesVar: string,
-  ctx: CodeGenContext,
-) => string;
+// ─── Slow Path context ────────────────────────────────────────────────────────
 
-export type GenerateFastCheckFn = (
-  ir: SchemaIR,
-  inputExpr: string,
-  ctx: CodeGenContext,
-) => string | null;
+/** Context object for slow-path (error-collecting) generator functions. */
+export interface SlowGen {
+  readonly input: string;
+  readonly output: string;
+  readonly path: string;
+  readonly issues: string;
+  readonly ctx: CodeGenContext;
+
+  /**
+   * Recursively generate validation for a child IR node.
+   * All fields are inherited from parent unless overridden.
+   * Union generators use `{ issues }` to redirect child errors to temporary arrays.
+   * Container generators use `{ input, output, path }` for element traversal.
+   */
+  visit(
+    ir: SchemaIR,
+    overrides?: { input?: string; output?: string; path?: string; issues?: string },
+  ): string;
+
+  /** Generate a unique temp variable name: `__${prefix}_${counter++}` */
+  temp(prefix: string): string;
+
+  /** Add a regex to preamble and return the variable name. */
+  regex(prefix: string, pattern: string): string;
+
+  /** Add a Set to preamble and return the variable name. */
+  set(prefix: string, values: readonly unknown[]): string;
+}
+
+/** Slow-path generator function signature — registered in slowRegistry. */
+export type SlowGenerator<T extends SchemaIR = SchemaIR> = (ir: T, g: SlowGen) => string;
+
+// ─── Fast Path context ────────────────────────────────────────────────────────
+
+/** Context object for fast-path (boolean expression) generator functions. */
+export interface FastGen {
+  readonly input: string;
+  readonly ctx: CodeGenContext;
+
+  /**
+   * Recursively generate fast-check expression for a child IR node.
+   * Returns null if any child is ineligible for fast path.
+   */
+  visit(ir: SchemaIR, overrides?: { input?: string }): string | null;
+
+  /** Generate a unique temp variable name. */
+  temp(prefix: string): string;
+
+  /** Add a regex to preamble and return the variable name. */
+  regex(prefix: string, pattern: string): string;
+}
+
+/** Fast-path generator function signature — registered in fastRegistry. */
+export type FastGenerator<T extends SchemaIR = SchemaIR> = (ir: T, g: FastGen) => string | null;
 
 // Zod v4's email regex pattern (as a source string for new RegExp())
 export const EMAIL_REGEX_SOURCE = String.raw`^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$`;

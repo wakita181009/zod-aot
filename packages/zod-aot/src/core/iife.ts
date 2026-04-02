@@ -45,7 +45,6 @@ export function generateIIFE(
     ...codegenResult.code
       .split("\n")
       .filter((l) => l.trim() !== "" && l.trim() !== "/* zod-aot */"),
-    ...(codegenResult.auxiliaryFunctions ?? []),
     codegenResult.functionDef,
     `var __w=${init};`,
     `__w.parse=function(input){const r=${fnName}(input);if(r.success)return r.data;throw Object.assign(new Error("Validation failed"),r.error);};`,
