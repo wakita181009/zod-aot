@@ -10,6 +10,7 @@
     "./schemas/collections": "./schemas/collections/index.ts",
     "./schemas/unions": "./schemas/unions/index.ts",
     "./schemas/recursive": "./schemas/recursive/index.ts",
+    "./schemas/effects": "./schemas/effects/index.ts",
     "./schemas/real-world": "./schemas/real-world/index.ts"
   },
   "dependencies": {

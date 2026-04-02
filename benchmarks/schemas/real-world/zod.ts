@@ -17,7 +17,7 @@ export const EventLogSchema = z.object({
 
 export type EventLog = z.infer<typeof EventLogSchema>;
 
-// ─── Object with partial fallback (transform on one property) ───────────────
+// ─── Object with zero-capture transform (fully compiled since v0.16.0) ──────
 // ajv/typia excluded: transform() is a Zod-specific feature
 
 export const PartialFallbackObjectSchema = z.object({
@@ -31,7 +31,7 @@ export const PartialFallbackObjectSchema = z.object({
 
 export type PartialFallbackObject = z.infer<typeof PartialFallbackObjectSchema>;
 
-// ─── Array with partial fallback (transform in each item) ───────────────────
+// ─── Array with zero-capture transform (fully compiled since v0.16.0) ───────
 
 const FallbackItemSchema = z.object({
   id: z.number().int().positive(),

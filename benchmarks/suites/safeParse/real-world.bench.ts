@@ -30,10 +30,10 @@ describe("safeParse: event log (uuid + discUnion + tuple + record + date)", () =
 });
 
 // ─── Partial Fallback (zod vs zod-aot) ──────────────────────────────────────
-// These schemas contain transform(), so zod-aot uses partial fallback.
+// These schemas contain zero-capture transform(), fully optimized at build time since v0.16.0.
 // ajv/typia are excluded: transforms are a Zod-specific feature.
 
-describe("safeParse: partial fallback — object with transform", () => {
+describe("safeParse: object with zero-capture transform", () => {
   bench("zod", () => {
     PartialFallbackObjectSchema.safeParse(validPartialFallbackObject);
   });
@@ -45,7 +45,7 @@ describe("safeParse: partial fallback — object with transform", () => {
   });
 });
 
-describe("safeParse: partial fallback — array 10 items with transform", () => {
+describe("safeParse: array 10 items with zero-capture transform", () => {
   bench("zod", () => {
     FallbackArraySchema.safeParse(validFallbackArray10);
   });
@@ -57,7 +57,7 @@ describe("safeParse: partial fallback — array 10 items with transform", () => 
   });
 });
 
-describe("safeParse: partial fallback — array 50 items with transform", () => {
+describe("safeParse: array 50 items with zero-capture transform", () => {
   bench("zod", () => {
     FallbackArraySchema.safeParse(validFallbackArray50);
   });
