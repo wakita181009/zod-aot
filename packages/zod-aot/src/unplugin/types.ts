@@ -1,3 +1,38 @@
+export interface TransformOptions {
+  zodCompat?: boolean | undefined;
+  verbose?: boolean | undefined;
+  autoDiscover?: boolean | undefined;
+  onBuildStats?: (stats: BuildStats) => void;
+}
+
+export interface BuildStats {
+  files: number;
+  schemas: number;
+  optimized: number;
+  failed: number;
+}
+
+export class BuildStatsAccumulator implements BuildStats {
+  files = 0;
+  schemas = 0;
+  optimized = 0;
+  failed = 0;
+
+  add(s: BuildStats): void {
+    this.files += s.files;
+    this.schemas += s.schemas;
+    this.optimized += s.optimized;
+    this.failed += s.failed;
+  }
+
+  reset(): void {
+    this.files = 0;
+    this.schemas = 0;
+    this.optimized = 0;
+    this.failed = 0;
+  }
+}
+
 export interface ZodAotPluginOptions {
   /** Glob patterns to include (default: ["**\/*.ts", "**\/*.tsx"]) */
   include?: string[];

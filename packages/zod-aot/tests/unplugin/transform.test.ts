@@ -4,7 +4,6 @@ import { z } from "zod";
 import { generateValidator } from "#src/core/codegen/index.js";
 import { extractSchema } from "#src/core/extract/index.js";
 import {
-  type BuildStats,
   findExpressionEnd,
   removeCompileImport,
   rewriteSource,
@@ -12,6 +11,7 @@ import {
   shouldTransform,
   transformCode,
 } from "#src/unplugin/transform.js";
+import type { BuildStats } from "#src/unplugin/types.js";
 
 const fixturesDir = path.resolve(import.meta.dirname, "../fixtures");
 

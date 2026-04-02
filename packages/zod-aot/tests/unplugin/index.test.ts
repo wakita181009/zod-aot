@@ -129,6 +129,7 @@ describe("unplugin factory", () => {
 
   it("verbose stats count each file only once despite duplicate transforms", async () => {
     const logs: string[] = [];
+    // biome-ignore lint/suspicious/noConsole: intercept console.log to verify verbose output
     const originalLog = console.log;
     console.log = (...args: unknown[]) => logs.push(args.join(" "));
 

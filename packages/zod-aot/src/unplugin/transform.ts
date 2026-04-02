@@ -4,7 +4,7 @@ import { generateIIFE, ZOD_CONFIG_IMPORT, ZOD_MSG_DECLARATION } from "#src/core/
 import { type CompiledSchemaInfo, compileSchemas } from "#src/core/pipeline.js";
 import type { DiscoveredSchema } from "#src/core/types.js";
 import { discoverSchemas } from "#src/discovery.js";
-import type { ZodAotPluginOptions } from "./types.js";
+import type { TransformOptions, ZodAotPluginOptions } from "./types.js";
 
 /** Matches a runtime (non-type-only) import from "zod". */
 const HAS_RUNTIME_ZOD_IMPORT = /import\s+(?!type\s)[^;]*from\s+["']zod["']/;
@@ -27,20 +27,6 @@ export function shouldTransform(id: string, options?: ZodAotPluginOptions): bool
     return false;
 
   return true;
-}
-
-export interface BuildStats {
-  files: number;
-  schemas: number;
-  optimized: number;
-  failed: number;
-}
-
-interface TransformOptions {
-  zodCompat?: boolean | undefined;
-  verbose?: boolean | undefined;
-  autoDiscover?: boolean | undefined;
-  onBuildStats?: (stats: BuildStats) => void;
 }
 
 export function log(msg: string): void {
