@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.1](https://github.com/wakita181009/zod-aot/compare/v0.16.0...v0.16.1) (2026-04-02)
+
+
+### Bug Fixes
+
+* add missing fallback case to hasMutation() check ([#102](https://github.com/wakita181009/zod-aot/issues/102)) ([69eefab](https://github.com/wakita181009/zod-aot/commit/69eefab7bcc7ca666461f8f3d56fc341230cee6d))
+
 ## [0.16.0](https://github.com/wakita181009/zod-aot/compare/v0.15.2...v0.16.0) (2026-04-02)
 
 
