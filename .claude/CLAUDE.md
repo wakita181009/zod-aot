@@ -50,10 +50,10 @@ Key files:
 - `core/compile.ts`: `compile()` is NOT the optimizer — it's a Zod fallback + `COMPILED_MARKER` symbol for discovery
 - `core/pipeline.ts`: `compileSchemas()` — shared extract → generate pipeline, `CompiledSchemaInfo` type, `CompileSchemasOptions` with `onError` callback for graceful failure handling
 - `core/diagnostic.ts`: `diagnoseSchema()` — single-pass SchemaIR walker producing `DiagnosticResult` (tree, coverage, Fast Path eligibility, hints)
-- `core/codegen/fast-path/index.ts`: `generateFastCheck()` — Fast Path dispatcher + typed `fastRegistry` with `FastGen` context
-- `core/codegen/slow-path/index.ts`: `generateValidation()` — Slow Path dispatcher + typed `slowRegistry` with `SlowGen` context
-- `core/codegen/slow-path/effect.ts`: `generateTransformEffect()` — transform effect codegen, `generateRefineCheck()` — inline refine check codegen
-- `core/codegen/context.ts`: `sortChecksPreservingEffects()` — sorts compilable checks by cost while preserving refine_effect position
+- `core/codegen/fast-path.ts`: `generateFast()` — Fast Path dispatcher + typed `fastRegistry` with `FastGen` context
+- `core/codegen/slow-path.ts`: `generateSlow()` — Slow Path dispatcher + typed `slowRegistry` with `SlowGen` context
+- `core/codegen/schemas/effect.ts`: `slowEffect()` — transform effect codegen, `refineCheck()` — inline refine check codegen
+- `core/codegen/context.ts`: `SlowGen`/`FastGen` context interfaces, `SlowGenerator`/`FastGenerator` function types, `CodeGenContext`, `sortChecksPreservingEffects()`, `hasMutation()`, shared constants
 - `core/codegen/emit.ts`: `emit()` — tagged template for Slow Path code generation
 - `core/iife.ts`: `generateIIFE()` — shared IIFE generation for CLI emitter and unplugin transform (owns `extractFunctionName()`)
 - `discovery.ts`: `discoverSchemas()` loads file → scans exports with `isCompiledSchema()` or `isZodSchema()` (autoDiscover mode via `DiscoverOptions`)
@@ -155,7 +155,7 @@ Zero-capture `.transform()` and `.refine()` (inline arrow functions with no exte
 - `RefineEffectCheckIR`: inserted into `checks[]` arrays preserving Zod check ordering
 - `sortChecksPreservingEffects()`: reorders compilable checks by cost while keeping refine_effect entries at their original position
 - Zero-capture detection: acorn parses `fn.toString()`, collects identifier references, rejects functions with external captures, async, `this`, or 2+ parameters (ctx argument)
-- Key files: `core/extract/effects.ts` (tryCompileEffect), `core/codegen/slow-path/effect.ts` (generateTransformEffect, generateRefineCheck)
+- Key files: `core/extract/effects.ts` (tryCompileEffect), `core/codegen/schemas/effect.ts` (slowEffect, refineCheck)
 
 ### Fallback to Zod
 superRefine, custom, preprocess, lazy (non-recursive only — self-recursive lazy schemas are compiled via `recursiveRef`), transform/refine with external variable captures or ctx parameter
@@ -191,11 +191,11 @@ zod-aot/
 │       │   │       ├── index.ts     # generateValidator() — orchestrator (Fast Path + Slow Path)
 │       │   │       ├── context.ts   # SlowGen, FastGen interfaces, CodeGenContext, CodeGenResult, constants
 │       │   │       ├── emit.ts      # emit() tagged template — Slow Path utility
-│       │   │       ├── slow-path.ts # slowRegistry + createSlowGen() + generateValidation()
-│       │   │       ├── fast-path.ts # fastRegistry + createFastGen() + generateFastCheck()
+│       │   │       ├── slow-path.ts # slowRegistry + createSlowGen() + generateSlow()
+│       │   │       ├── fast-path.ts # fastRegistry + createFastGen() + generateFast()
 │       │   │       └── schemas/     # 1 file per schema type (slow + fast generators together)
 │       │   │           ├── string.ts, number.ts, ... # 34 per-type files
-│       │   │           └── effect.ts # generateTransformEffect(), generateRefineCheck()
+│       │   │           └── effect.ts # slowEffect(), refineCheck()
 │       │   ├── cli/              # CLI-specific (no unplugin deps)
 │       │   │   ├── index.ts      # CLI entry point (command parser, usage text)
 │       │   │   ├── logger.ts     # Colored logging (info/success/warn/error/dim), TTY-aware
