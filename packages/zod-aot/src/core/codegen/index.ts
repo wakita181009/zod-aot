@@ -1,10 +1,9 @@
 import type { SchemaIR } from "../types.js";
 import type { CodeGenContext, CodeGenResult } from "./context.js";
-import { generateFastCheck } from "./fast-check/index.js";
-import { generateValidation } from "./generators/index.js";
+import { createFastGen, generateFast } from "./fast-path.js";
+import { createSlowGen, generateSlow } from "./slow-path.js";
 
 export type { CodeGenResult } from "./context.js";
-export { generateFastCheck } from "./fast-check/index.js";
 
 /**
  * Generate optimized validation code from SchemaIR.
@@ -23,11 +22,12 @@ export function generateValidator(
   const ctx: CodeGenContext = { preamble: [], counter: 0, fnName };
 
   // Fast Path: generate a boolean expression for eligible schemas
-  const fastExpr = generateFastCheck(ir, "input", ctx);
+  const fg = createFastGen("input", ctx);
+  const fastExpr = generateFast(ir, fg);
 
-  const bodyCode = generateValidation(ir, "__data", "__data", "[]", "__issues", ctx);
+  const sg = createSlowGen("__data", "__data", "[]", "__issues", ctx);
+  const slowCode = generateSlow(ir, sg);
 
-  const auxiliaryFunctions: string[] = [];
   const code = ["/* zod-aot */", ...ctx.preamble].join("\n");
 
   const functionDefParts = [`function ${fnName}(input){`];
@@ -43,14 +43,13 @@ export function generateValidator(
       code,
       functionDef: functionDefParts.join("\n"),
       fallbackCount: options?.fallbackCount ?? 0,
-      auxiliaryFunctions,
     };
   }
 
   functionDefParts.push(
     `var __issues=[];`,
     `var __data=input;`,
-    bodyCode,
+    slowCode,
     `if(__issues.length>0){`,
     `for(var __fi=0;__fi<__issues.length;__fi++){`,
     `if(typeof __msg==="function")__issues[__fi].message=__msg(__issues[__fi]);`,
@@ -64,5 +63,5 @@ export function generateValidator(
 
   const functionDef = functionDefParts.join("\n");
 
-  return { code, functionDef, fallbackCount: options?.fallbackCount ?? 0, auxiliaryFunctions };
+  return { code, functionDef, fallbackCount: options?.fallbackCount ?? 0 };
 }
