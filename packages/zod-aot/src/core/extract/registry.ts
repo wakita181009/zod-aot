@@ -125,13 +125,13 @@ export function dispatch(
   const def = schema._zod.def;
 
   visiting.add(zodSchema);
-
-  const extractor = extractRegistry[def.type as SupportedZodDefType];
-  const ctx = createExtractorContext(zodSchema, path, fallbacks, visiting);
-  const ir = extractor
-    ? extractor(def, ctx)
-    : makeFallback("unsupported", zodSchema, fallbacks, path);
-
-  visiting.delete(zodSchema);
-  return ir;
+  try {
+    const extractor = extractRegistry[def.type as SupportedZodDefType];
+    const ctx = createExtractorContext(zodSchema, path, fallbacks, visiting);
+    return extractor
+      ? extractor(def, ctx)
+      : makeFallback("unsupported", zodSchema, fallbacks, path);
+  } finally {
+    visiting.delete(zodSchema);
+  }
 }
