@@ -4,7 +4,7 @@
  * safeParse can return success immediately without allocating an issues array.
  *
  * Returns `null` if the schema is not eligible for Fast Path (contains coerce,
- * default, catch, date, set/map, transform, refine, or other non-pure constructs).
+ * default, catch, set/map, transform, refine, or other non-pure constructs).
  */
 
 import type { SchemaIR } from "../types.js";
@@ -14,6 +14,7 @@ import { fastAny } from "./schemas/any.js";
 import { fastArray } from "./schemas/array.js";
 import { fastBigInt } from "./schemas/bigint.js";
 import { fastBoolean } from "./schemas/boolean.js";
+import { fastDate } from "./schemas/date.js";
 import { fastDiscriminatedUnion } from "./schemas/discriminated-union.js";
 import { fastEnum } from "./schemas/enum.js";
 import { fastIntersection } from "./schemas/intersection.js";
@@ -48,7 +49,7 @@ const fastRegistry = {
   number: fastNumber,
   boolean: fastBoolean,
   bigint: fastBigInt,
-  date: null, // statically ineligible
+  date: fastDate,
   symbol: fastSymbol,
   null: fastNull,
   undefined: fastUndefined,

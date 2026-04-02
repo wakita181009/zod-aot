@@ -46,9 +46,14 @@ describe("fastPathEligible", () => {
     expect(diagnoseSchema(ir).fastPathBlocker).toBe("catch");
   });
 
-  it("ineligible for date node", () => {
+  it("eligible for date node", () => {
     const ir: SchemaIR = { type: "date", checks: [] };
-    expect(diagnoseSchema(ir).fastPathBlocker).toBe("date");
+    expect(diagnoseSchema(ir).fastPathEligible).toBe(true);
+  });
+
+  it("ineligible for date with coerce", () => {
+    const ir: SchemaIR = { type: "date", checks: [], coerce: true };
+    expect(diagnoseSchema(ir).fastPathBlocker).toBe("coerce (date)");
   });
 
   it("ineligible for set node", () => {
@@ -80,7 +85,7 @@ describe("fastPathEligible", () => {
     expect(diagnoseSchema(ir).fastPathBlocker).toBe("coerce (number)");
   });
 
-  it("ineligible for nested blocker in object", () => {
+  it("eligible for object with date property", () => {
     const ir: SchemaIR = {
       type: "object",
       properties: {
@@ -88,7 +93,18 @@ describe("fastPathEligible", () => {
         created: { type: "date", checks: [] },
       },
     };
-    expect(diagnoseSchema(ir).fastPathBlocker).toBe("date");
+    expect(diagnoseSchema(ir).fastPathEligible).toBe(true);
+  });
+
+  it("ineligible for nested blocker in object", () => {
+    const ir: SchemaIR = {
+      type: "object",
+      properties: {
+        name: { type: "string", checks: [] },
+        data: { type: "set", valueType: { type: "string", checks: [] } },
+      },
+    };
+    expect(diagnoseSchema(ir).fastPathBlocker).toBe("set");
   });
 
   it("ineligible for nested blocker in array", () => {
@@ -168,13 +184,22 @@ describe("fastPathEligible", () => {
     expect(diagnoseSchema(ir).fastPathEligible).toBe(true);
   });
 
-  it("ineligible for tuple with ineligible rest", () => {
+  it("eligible for tuple with date rest", () => {
     const ir: SchemaIR = {
       type: "tuple",
       items: [{ type: "string", checks: [] }],
       rest: { type: "date", checks: [] },
     };
-    expect(diagnoseSchema(ir).fastPathBlocker).toBe("date");
+    expect(diagnoseSchema(ir).fastPathEligible).toBe(true);
+  });
+
+  it("ineligible for tuple with ineligible rest", () => {
+    const ir: SchemaIR = {
+      type: "tuple",
+      items: [{ type: "string", checks: [] }],
+      rest: { type: "set", valueType: { type: "string", checks: [] } },
+    };
+    expect(diagnoseSchema(ir).fastPathBlocker).toBe("set");
   });
 
   it("eligible for record of eligible types", () => {
@@ -442,13 +467,13 @@ describe("diagnoseSchema", () => {
     const ir: SchemaIR = {
       type: "object",
       properties: {
-        created: { type: "date", checks: [] },
+        data: { type: "set", valueType: { type: "string", checks: [] } },
       },
     };
     const result = diagnoseSchema(ir);
 
     expect(result.fastPathEligible).toBe(false);
-    expect(result.fastPathBlocker).toBe("date");
+    expect(result.fastPathBlocker).toBe("set");
   });
 
   it("fastPathBlocker is undefined when eligible", () => {

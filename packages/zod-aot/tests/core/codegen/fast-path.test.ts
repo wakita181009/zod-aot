@@ -70,7 +70,7 @@ describe("createFastGen", () => {
     it("returns null for ineligible schemas (propagation)", () => {
       const ctx = makeCtx();
       const g = createFastGen("input", ctx);
-      const ir: SchemaIR = { type: "date", checks: [], coerce: false };
+      const ir: SchemaIR = { type: "date", checks: [], coerce: true };
       const expr = g.visit(ir);
       expect(expr).toBeNull();
     });
@@ -116,7 +116,6 @@ describe("createFastGen", () => {
       const g = createFastGen("v", ctx);
 
       const ineligible: SchemaIR["type"][] = [
-        "date",
         "set",
         "map",
         "default",
@@ -242,8 +241,19 @@ describe("fast-path — dispatcher", () => {
     ).toBeNull();
   });
 
-  it("date → null", () => {
-    expect(compileFastCheck({ type: "date", checks: [] })).toBeNull();
+  it("date → fast check", () => {
+    const fn = compileFastCheck({ type: "date", checks: [] });
+    expect(fn).not.toBeNull();
+    const check = fn as (input: unknown) => boolean;
+    expect(check(new Date())).toBe(true);
+    expect(check(new Date("invalid"))).toBe(false);
+    expect(check("2024-01-01")).toBe(false);
+    expect(check(null)).toBe(false);
+    expect(check(42)).toBe(false);
+  });
+
+  it("date with coerce → null", () => {
+    expect(compileFastCheck({ type: "date", checks: [], coerce: true })).toBeNull();
   });
 
   it("set → null", () => {

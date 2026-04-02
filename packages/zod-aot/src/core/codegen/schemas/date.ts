@@ -1,5 +1,6 @@
 import type { DateIR } from "../../types.js";
-import type { SlowGen } from "../context.js";
+import type { FastGen, SlowGen } from "../context.js";
+import { checkPriority } from "../context.js";
 import { emit } from "../emit.js";
 
 export function slowDate(ir: DateIR, g: SlowGen): string {
@@ -51,4 +52,29 @@ export function slowDate(ir: DateIR, g: SlowGen): string {
   }
 
   return `${code}\n`;
+}
+
+export function fastDate(ir: DateIR, g: FastGen): string | null {
+  if (ir.coerce) return null;
+
+  const x = g.input;
+  const parts: string[] = [`${x} instanceof Date`, `!Number.isNaN(${x}.getTime())`];
+
+  for (const check of [...ir.checks].sort(checkPriority)) {
+    const timeExpr = `${x}.getTime()`;
+    switch (check.kind) {
+      case "date_greater_than":
+        parts.push(
+          check.inclusive ? `${timeExpr}>=${check.timestamp}` : `${timeExpr}>${check.timestamp}`,
+        );
+        break;
+      case "date_less_than":
+        parts.push(
+          check.inclusive ? `${timeExpr}<=${check.timestamp}` : `${timeExpr}<${check.timestamp}`,
+        );
+        break;
+    }
+  }
+
+  return parts.join("&&");
 }

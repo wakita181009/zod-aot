@@ -49,7 +49,6 @@ const FAST_PATH_BLOCKERS = new Set<string>([
   "effect",
   "default",
   "catch",
-  "date",
   "set",
   "map",
   "recursiveRef",
