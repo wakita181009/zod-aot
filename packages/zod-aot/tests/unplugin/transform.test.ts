@@ -77,6 +77,16 @@ describe("shouldTransform()", () => {
     expect(shouldTransform("/src/other.ts", { include: ["schemas"] })).toBe(false);
     expect(shouldTransform("/src/schemas.ts", { include: ["schemas"] })).toBe(true);
   });
+
+  it("supports glob patterns in exclude", () => {
+    expect(shouldTransform("/src/lib/env.ts", { exclude: ["**/lib/env.ts"] })).toBe(false);
+    expect(shouldTransform("/src/schemas.ts", { exclude: ["**/lib/env.ts"] })).toBe(true);
+  });
+
+  it("supports glob patterns in include", () => {
+    expect(shouldTransform("/src/schemas.ts", { include: ["**/schemas/**"] })).toBe(false);
+    expect(shouldTransform("/src/schemas/user.ts", { include: ["**/schemas/**"] })).toBe(true);
+  });
 });
 
 describe("removeCompileImport()", () => {

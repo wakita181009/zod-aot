@@ -1,4 +1,5 @@
 import { parseExpressionAt } from "acorn";
+import picomatch from "picomatch";
 import { generateIIFE, ZOD_CONFIG_IMPORT, ZOD_MSG_DECLARATION } from "#src/core/iife.js";
 import { type CompiledSchemaInfo, compileSchemas } from "#src/core/pipeline.js";
 import type { DiscoveredSchema } from "#src/core/types.js";
@@ -17,8 +18,13 @@ export function shouldTransform(id: string, options?: ZodAotPluginOptions): bool
   if (id.endsWith(".d.ts")) return false;
   if (id.endsWith(".compiled.ts") || id.endsWith(".compiled.js")) return false;
 
-  if (options?.exclude?.some((pattern) => id.includes(pattern))) return false;
-  if (options?.include && !options.include.some((pattern) => id.includes(pattern))) return false;
+  if (options?.exclude?.some((pattern) => picomatch.isMatch(id, pattern, { contains: true })))
+    return false;
+  if (
+    options?.include &&
+    !options.include.some((pattern) => picomatch.isMatch(id, pattern, { contains: true }))
+  )
+    return false;
 
   return true;
 }
