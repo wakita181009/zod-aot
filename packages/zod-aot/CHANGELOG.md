@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.0](https://github.com/wakita181009/zod-aot/compare/v0.15.2...v0.16.0) (2026-04-02)
+
+
+### Features
+
+* compile zero-capture refine/transform effects and separate input/output in codegen ([#95](https://github.com/wakita181009/zod-aot/issues/95)) ([b202c98](https://github.com/wakita181009/zod-aot/commit/b202c98bc62d5cb553830d787c659f655dc3328c))
+
 ## [0.15.2](https://github.com/wakita181009/zod-aot/compare/v0.15.1...v0.15.2) (2026-04-02)
 
 
