@@ -2,10 +2,12 @@ import type { SchemaIR } from "../../types.js";
 import type { CodeGenContext, GenerateValidationFn } from "../context.js";
 import { hasMutation } from "../context.js";
 import { emit } from "../emit.js";
+import { generateRefineCheck } from "./effect.js";
 
 export function generateArrayValidation(
   ir: SchemaIR & { type: "array" },
   inputExpr: string,
+  outputExpr: string,
   pathExpr: string,
   issuesVar: string,
   ctx: CodeGenContext,
@@ -17,7 +19,7 @@ export function generateArrayValidation(
     }else{`;
 
   if (hasMutation(ir.element)) {
-    code += `${inputExpr}=${inputExpr}.slice();`;
+    code += `${outputExpr}=${inputExpr}.slice();`;
   }
 
   for (const check of ir.checks) {
@@ -42,6 +44,9 @@ export function generateArrayValidation(
             ${issuesVar}.push({code:"too_big",maximum:${check.length},origin:"array",inclusive:true,exact:true,input:${inputExpr},path:${pathExpr}});
           }`;
         break;
+      case "refine_effect":
+        code += generateRefineCheck(check, inputExpr, pathExpr, issuesVar);
+        break;
     }
   }
 
@@ -50,7 +55,7 @@ export function generateArrayValidation(
   const elemPath = `${pathExpr}.concat(${idxVar})`;
   code += emit`
     for(var ${idxVar}=0;${idxVar}<${inputExpr}.length;${idxVar}++){
-      ${generateFn(ir.element, elemExpr, elemPath, issuesVar, ctx)}
+      ${generateFn(ir.element, elemExpr, elemExpr, elemPath, issuesVar, ctx)}
     }
   }`;
   return `${code}\n`;

@@ -13,6 +13,7 @@ export interface ZodCheckDef {
   prefix: string;
   suffix: string;
   fn: unknown;
+  error?: (...args: unknown[]) => unknown;
 }
 
 export interface ZodCheckSchema {
@@ -45,6 +46,8 @@ export interface ZodDef {
   defaultValue: unknown;
   coerce?: boolean;
   catchValue?: (ctx: unknown) => unknown;
+  /** Transform function reference (present when type is "transform"). */
+  transform?: unknown;
 }
 
 export interface ZodSchema {

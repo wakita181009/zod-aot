@@ -23,6 +23,7 @@ import type {
   RecordIR,
   StringIR,
   SymbolIR,
+  TransformEffectIR,
   TupleIR,
   UndefinedIR,
   UnionIR,
@@ -412,24 +413,24 @@ describe("extractSchema — intersection", () => {
 
 // ─── Fallback Detection ─────────────────────────────────────────────────────
 
-describe("extractSchema — fallback (non-compilable schemas)", () => {
-  it("returns fallback for transform", () => {
+describe("extractSchema — effect compilation (zero-capture transform/refine)", () => {
+  it("returns EffectIR for zero-capture transform", () => {
     const ir = extractSchema(z.string().transform((v) => parseInt(v, 10)));
-    expect(ir).toEqual<FallbackIR>({
-      type: "fallback",
-      reason: "transform",
-    });
+    expect(ir.type).toBe("effect");
+    const effectIR = ir as TransformEffectIR;
+    expect(effectIR.effectKind).toBe("transform");
+    expect(effectIR.source).toContain("parseInt");
+    expect(effectIR.inner.type).toBe("string");
   });
 
-  it("returns fallback for refine", () => {
+  it("returns StringIR with refine_effect check for zero-capture refine", () => {
     const ir = extractSchema(z.string().refine((v) => v.startsWith("a")));
-    expect(ir).toEqual<FallbackIR>({
-      type: "fallback",
-      reason: "refine",
-    });
+    expect(ir.type).toBe("string");
+    const strIR = ir as StringIR;
+    expect(strIR.checks).toContainEqual(expect.objectContaining({ kind: "refine_effect" }));
   });
 
-  it("returns fallback for superRefine", () => {
+  it("returns fallback for superRefine (ctx param prevents compilation)", () => {
     const ir = extractSchema(
       z.string().superRefine((val, ctx) => {
         if (val.length < 3) {
@@ -440,6 +441,17 @@ describe("extractSchema — fallback (non-compilable schemas)", () => {
     expect(ir).toEqual<FallbackIR>({
       type: "fallback",
       reason: "refine",
+    });
+  });
+});
+
+describe("extractSchema — fallback (non-compilable schemas)", () => {
+  it("returns fallback for transform with external capture", () => {
+    const prefix = "hello";
+    const ir = extractSchema(z.string().transform((v) => prefix + v));
+    expect(ir).toEqual<FallbackIR>({
+      type: "fallback",
+      reason: "transform",
     });
   });
 });
@@ -606,8 +618,8 @@ describe("extractSchema — edge cases", () => {
 
 // ─── Partial Fallback Collection ─────────────────────────────────────────────
 
-describe("extractSchema — partial fallback (FallbackEntry collection)", () => {
-  it("collects fallback entries for object with transform property", () => {
+describe("extractSchema — zero-capture transform produces EffectIR (no fallback)", () => {
+  it("object with zero-capture transform property produces EffectIR, no fallback entries", () => {
     const schema = z.object({
       name: z.string(),
       slug: z.string().transform((v) => v.toLowerCase()),
@@ -617,13 +629,15 @@ describe("extractSchema — partial fallback (FallbackEntry collection)", () => 
 
     expect(ir.type).toBe("object");
     expect(ir.properties["name"]?.type).toBe("string");
-    expect(ir.properties["slug"]?.type).toBe("fallback");
-    expect((ir.properties["slug"] as FallbackIR).fallbackIndex).toBe(0);
-    expect(fallbacks).toHaveLength(1);
-    expect(fallbacks[0]?.accessPath).toBe('.shape["slug"]');
+    expect(ir.properties["slug"]?.type).toBe("effect");
+    const effectIR = ir.properties["slug"] as TransformEffectIR;
+    expect(effectIR.effectKind).toBe("transform");
+    expect(effectIR.source).toContain("toLowerCase");
+    expect(effectIR.inner.type).toBe("string");
+    expect(fallbacks).toHaveLength(0);
   });
 
-  it("collects multiple fallback entries", () => {
+  it("zero-capture refine produces StringIR with refine_effect, no fallback entries", () => {
     const schema = z.object({
       a: z.string(),
       b: z.string().refine((v) => v.length > 0),
@@ -633,58 +647,52 @@ describe("extractSchema — partial fallback (FallbackEntry collection)", () => 
     const ir = extractSchema(schema, fallbacks) as ObjectIR;
 
     expect(ir.properties["a"]?.type).toBe("string");
-    expect((ir.properties["b"] as FallbackIR).fallbackIndex).toBe(0);
-    expect((ir.properties["c"] as FallbackIR).fallbackIndex).toBe(1);
-    expect(fallbacks).toHaveLength(2);
-    expect(fallbacks[0]?.accessPath).toBe('.shape["b"]');
-    expect(fallbacks[1]?.accessPath).toBe('.shape["c"]');
+    expect(ir.properties["b"]?.type).toBe("string");
+    expect(ir.properties["c"]?.type).toBe("number");
+    expect(fallbacks).toHaveLength(0);
   });
 
-  it("collects fallback for array element", () => {
+  it("array of zero-capture transform produces EffectIR element, no fallback entries", () => {
     const schema = z.array(z.string().transform((v) => parseInt(v, 10)));
     const fallbacks: FallbackEntry[] = [];
     const ir = extractSchema(schema, fallbacks) as ArrayIR;
 
     expect(ir.type).toBe("array");
-    expect(ir.element.type).toBe("fallback");
-    expect((ir.element as FallbackIR).fallbackIndex).toBe(0);
-    expect(fallbacks[0]?.accessPath).toBe("._zod.def.element");
+    expect(ir.element.type).toBe("effect");
+    expect(fallbacks).toHaveLength(0);
   });
 
-  it("collects fallback for optional inner", () => {
+  it("optional zero-capture transform produces EffectIR inner, no fallback entries", () => {
     const schema = z.optional(z.string().transform((v) => v.toUpperCase()));
     const fallbacks: FallbackEntry[] = [];
     const ir = extractSchema(schema, fallbacks);
 
     expect(ir.type).toBe("optional");
-    expect((ir as OptionalIR).inner.type).toBe("fallback");
-    expect(fallbacks[0]?.accessPath).toBe("._zod.def.innerType");
+    expect((ir as OptionalIR).inner.type).toBe("effect");
+    expect(fallbacks).toHaveLength(0);
   });
 
-  it("returns no fallbackIndex when called without fallbacks array", () => {
+  it("zero-capture transform without fallbacks array produces EffectIR", () => {
     const schema = z.object({
       name: z.string(),
       slug: z.string().transform((v) => v.toLowerCase()),
     });
     const ir = extractSchema(schema) as ObjectIR;
 
-    expect(ir.properties["slug"]?.type).toBe("fallback");
-    expect((ir.properties["slug"] as FallbackIR).fallbackIndex).toBeUndefined();
+    expect(ir.properties["slug"]?.type).toBe("effect");
   });
 
-  it("collects fallback for nullable inner", () => {
+  it("nullable zero-capture transform produces EffectIR inner, no fallback entries", () => {
     const schema = z.nullable(z.string().transform((v) => v.toUpperCase()));
     const fallbacks: FallbackEntry[] = [];
     const ir = extractSchema(schema, fallbacks) as NullableIR;
 
     expect(ir.type).toBe("nullable");
-    expect(ir.inner.type).toBe("fallback");
-    expect((ir.inner as FallbackIR).fallbackIndex).toBe(0);
-    expect(fallbacks).toHaveLength(1);
-    expect(fallbacks[0]?.accessPath).toBe("._zod.def.innerType");
+    expect(ir.inner.type).toBe("effect");
+    expect(fallbacks).toHaveLength(0);
   });
 
-  it("collects fallback for tuple item", () => {
+  it("tuple with zero-capture transform item produces EffectIR, no fallback entries", () => {
     const schema = z.tuple([z.string(), z.number().transform((v) => String(v))]);
     const fallbacks: FallbackEntry[] = [];
     const ir = extractSchema(schema, fallbacks) as TupleIR;
@@ -692,12 +700,11 @@ describe("extractSchema — partial fallback (FallbackEntry collection)", () => 
     expect(ir.type).toBe("tuple");
     expect(ir.items).toHaveLength(2);
     expect(ir.items[0]?.type).toBe("string");
-    expect(ir.items[1]?.type).toBe("fallback");
-    expect((ir.items[1] as FallbackIR).fallbackIndex).toBe(0);
-    expect(fallbacks[0]?.accessPath).toBe("._zod.def.items[1]");
+    expect(ir.items[1]?.type).toBe("effect");
+    expect(fallbacks).toHaveLength(0);
   });
 
-  it("collects fallback for tuple rest", () => {
+  it("tuple rest with zero-capture transform produces EffectIR, no fallback entries", () => {
     const schema = z.tuple([z.string()]).rest(z.number().transform((v) => String(v)));
     const fallbacks: FallbackEntry[] = [];
     const ir = extractSchema(schema, fallbacks) as TupleIR;
@@ -705,12 +712,11 @@ describe("extractSchema — partial fallback (FallbackEntry collection)", () => 
     expect(ir.type).toBe("tuple");
     expect(ir.items[0]?.type).toBe("string");
     expect(ir.rest).not.toBeNull();
-    expect(ir.rest?.type).toBe("fallback");
-    expect((ir.rest as FallbackIR).fallbackIndex).toBe(0);
-    expect(fallbacks[0]?.accessPath).toBe("._zod.def.rest");
+    expect(ir.rest?.type).toBe("effect");
+    expect(fallbacks).toHaveLength(0);
   });
 
-  it("collects fallback for record value", () => {
+  it("record with zero-capture transform value produces EffectIR, no fallback entries", () => {
     const schema = z.record(
       z.string(),
       z.string().transform((v) => v.trim()),
@@ -720,12 +726,11 @@ describe("extractSchema — partial fallback (FallbackEntry collection)", () => 
 
     expect(ir.type).toBe("record");
     expect(ir.keyType.type).toBe("string");
-    expect(ir.valueType.type).toBe("fallback");
-    expect((ir.valueType as FallbackIR).fallbackIndex).toBe(0);
-    expect(fallbacks[0]?.accessPath).toBe("._zod.def.valueType");
+    expect(ir.valueType.type).toBe("effect");
+    expect(fallbacks).toHaveLength(0);
   });
 
-  it("collects fallback for union option", () => {
+  it("union with zero-capture transform option produces EffectIR, no fallback entries", () => {
     const schema = z.union([z.string(), z.number().transform((v) => String(v))]);
     const fallbacks: FallbackEntry[] = [];
     const ir = extractSchema(schema, fallbacks) as UnionIR;
@@ -733,12 +738,11 @@ describe("extractSchema — partial fallback (FallbackEntry collection)", () => 
     expect(ir.type).toBe("union");
     expect(ir.options).toHaveLength(2);
     expect(ir.options[0]?.type).toBe("string");
-    expect(ir.options[1]?.type).toBe("fallback");
-    expect((ir.options[1] as FallbackIR).fallbackIndex).toBe(0);
-    expect(fallbacks[0]?.accessPath).toBe("._zod.def.options[1]");
+    expect(ir.options[1]?.type).toBe("effect");
+    expect(fallbacks).toHaveLength(0);
   });
 
-  it("collects fallback for discriminatedUnion option property", () => {
+  it("discriminatedUnion with zero-capture transform produces EffectIR, no fallback entries", () => {
     const schema = z.discriminatedUnion("type", [
       z.object({ type: z.literal("a"), value: z.string() }),
       z.object({ type: z.literal("b"), value: z.string().transform((v) => v.trim()) }),
@@ -751,11 +755,11 @@ describe("extractSchema — partial fallback (FallbackEntry collection)", () => 
     const opt0 = ir.options[0] as ObjectIR;
     expect(opt0.properties["value"]?.type).toBe("string");
     const opt1 = ir.options[1] as ObjectIR;
-    expect(opt1.properties["value"]?.type).toBe("fallback");
-    expect(fallbacks).toHaveLength(1);
+    expect(opt1.properties["value"]?.type).toBe("effect");
+    expect(fallbacks).toHaveLength(0);
   });
 
-  it("collects fallback for intersection side", () => {
+  it("intersection with zero-capture transform produces EffectIR, no fallback entries", () => {
     const schema = z.intersection(
       z.object({ a: z.string() }),
       z.object({ b: z.string().transform((v) => v.toLowerCase()) }),
@@ -766,11 +770,11 @@ describe("extractSchema — partial fallback (FallbackEntry collection)", () => 
     expect(ir.type).toBe("intersection");
     expect(ir.left.type).toBe("object");
     const rightObj = ir.right as ObjectIR;
-    expect(rightObj.properties["b"]?.type).toBe("fallback");
-    expect(fallbacks).toHaveLength(1);
+    expect(rightObj.properties["b"]?.type).toBe("effect");
+    expect(fallbacks).toHaveLength(0);
   });
 
-  it("collects fallback for readonly object with transform property", () => {
+  it("readonly object with zero-capture transform produces EffectIR, no fallback entries", () => {
     const schema = z
       .object({
         name: z.string(),
@@ -783,11 +787,11 @@ describe("extractSchema — partial fallback (FallbackEntry collection)", () => 
     expect(ir.type).toBe("readonly");
     expect(ir.inner.type).toBe("object");
     const objIR = ir.inner as ObjectIR;
-    expect(objIR.properties["slug"]?.type).toBe("fallback");
-    expect(fallbacks).toHaveLength(1);
+    expect(objIR.properties["slug"]?.type).toBe("effect");
+    expect(fallbacks).toHaveLength(0);
   });
 
-  it("collects fallback for default object with transform property", () => {
+  it("default object with zero-capture transform produces EffectIR, no fallback entries", () => {
     const schema = z
       .object({
         name: z.string(),
@@ -800,11 +804,11 @@ describe("extractSchema — partial fallback (FallbackEntry collection)", () => 
     expect(ir.type).toBe("default");
     expect(ir.inner.type).toBe("object");
     const objIR = ir.inner as ObjectIR;
-    expect(objIR.properties["slug"]?.type).toBe("fallback");
-    expect(fallbacks).toHaveLength(1);
+    expect(objIR.properties["slug"]?.type).toBe("effect");
+    expect(fallbacks).toHaveLength(0);
   });
 
-  it("collects fallback through deep nesting", () => {
+  it("deep nested zero-capture transform produces EffectIR, no fallback entries", () => {
     const schema = z.object({
       items: z.array(
         z.object({
@@ -822,19 +826,46 @@ describe("extractSchema — partial fallback (FallbackEntry collection)", () => 
     const elemIR = itemsIR.element as ObjectIR;
     expect(elemIR.type).toBe("object");
     expect(elemIR.properties["name"]?.type).toBe("string");
-    expect(elemIR.properties["value"]?.type).toBe("fallback");
-    expect((elemIR.properties["value"] as FallbackIR).fallbackIndex).toBe(0);
-    expect(fallbacks).toHaveLength(1);
+    expect(elemIR.properties["value"]?.type).toBe("effect");
+    expect(fallbacks).toHaveLength(0);
   });
 
-  it("stores the original Zod schema reference in fallback entries", () => {
+  it("zero-capture transform produces no fallback entries (no schema reference stored)", () => {
     const slugSchema = z.string().transform((v) => v.toLowerCase());
     const schema = z.object({ slug: slugSchema });
     const fallbacks: FallbackEntry[] = [];
     extractSchema(schema, fallbacks);
 
+    expect(fallbacks).toHaveLength(0);
+  });
+});
+
+describe("extractSchema — partial fallback (FallbackEntry collection with external captures)", () => {
+  it("collects fallback entries for object with captured-variable transform property", () => {
+    const prefix = "prefix_";
+    const schema = z.object({
+      name: z.string(),
+      slug: z.string().transform((v) => prefix + v),
+    });
+    const fallbacks: FallbackEntry[] = [];
+    const ir = extractSchema(schema, fallbacks) as ObjectIR;
+
+    expect(ir.type).toBe("object");
+    expect(ir.properties["name"]?.type).toBe("string");
+    expect(ir.properties["slug"]?.type).toBe("fallback");
+    expect((ir.properties["slug"] as FallbackIR).fallbackIndex).toBe(0);
     expect(fallbacks).toHaveLength(1);
-    // The stored schema should be the same Zod schema object
+    expect(fallbacks[0]?.accessPath).toBe('.shape["slug"]');
+  });
+
+  it("stores the original Zod schema reference in fallback entries for captured transform", () => {
+    const external = "captured";
+    const slugSchema = z.string().transform((v) => external + v);
+    const schema = z.object({ slug: slugSchema });
+    const fallbacks: FallbackEntry[] = [];
+    extractSchema(schema, fallbacks);
+
+    expect(fallbacks).toHaveLength(1);
     expect(fallbacks[0]?.schema).toBeDefined();
   });
 });

@@ -1,11 +1,14 @@
-import type { StringIR } from "../../types.js";
+import type { CheckIR, StringIR } from "../../types.js";
 import type { CodeGenContext } from "../context.js";
 import { checkPriority, EMAIL_REGEX_SOURCE, escapeString, UUID_REGEX_SOURCE } from "../context.js";
 
 export function fastCheckString(ir: StringIR, x: string, ctx: CodeGenContext): string | null {
-  const parts: string[] = [`typeof ${x}==="string"`];
+  if (ir.checks.some((c) => c.kind === "refine_effect")) return null;
 
-  for (const check of [...ir.checks].sort(checkPriority)) {
+  const parts: string[] = [`typeof ${x}==="string"`];
+  const checks = ir.checks.filter((c): c is CheckIR => c.kind !== "refine_effect");
+
+  for (const check of checks.sort(checkPriority)) {
     switch (check.kind) {
       case "min_length":
         parts.push(`${x}.length>=${check.minimum}`);

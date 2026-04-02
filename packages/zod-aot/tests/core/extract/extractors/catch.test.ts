@@ -39,10 +39,23 @@ describe("extractSchema — catch", () => {
     expect(ir.defaultValue).toEqual({ name: "anon" });
   });
 
-  it("falls back when inner type has transform", () => {
+  it("compiles catch wrapping zero-capture transform (now EffectIR inner)", () => {
     const schema = z
       .string()
       .transform((s) => s.toUpperCase())
+      .catch("DEFAULT");
+    const ir = extractSchema(schema) as CatchIR;
+    // Zero-capture transform is compiled as EffectIR, so catch can wrap it
+    expect(ir.type).toBe("catch");
+    expect(ir.inner.type).toBe("effect");
+    expect(ir.defaultValue).toBe("DEFAULT");
+  });
+
+  it("falls back when inner type has captured-variable transform", () => {
+    const external = "prefix_";
+    const schema = z
+      .string()
+      .transform((s) => external + s)
       .catch("DEFAULT");
     const ir = extractSchema(schema);
     expect(ir.type).toBe("fallback");

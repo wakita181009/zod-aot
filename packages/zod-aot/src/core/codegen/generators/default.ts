@@ -5,6 +5,7 @@ import { emit } from "../emit.js";
 export function generateDefaultValidation(
   ir: SchemaIR & { type: "default" },
   inputExpr: string,
+  outputExpr: string,
   pathExpr: string,
   issuesVar: string,
   ctx: CodeGenContext,
@@ -13,7 +14,7 @@ export function generateDefaultValidation(
   const defaultValueStr = JSON.stringify(ir.defaultValue);
   return `${emit`
     if(${inputExpr}===undefined){
-      ${inputExpr}=${defaultValueStr};
+      ${outputExpr}=${defaultValueStr};
     }
-  `}\n${generateFn(ir.inner, inputExpr, pathExpr, issuesVar, ctx)}`;
+  `}\n${generateFn(ir.inner, outputExpr, outputExpr, pathExpr, issuesVar, ctx)}`;
 }

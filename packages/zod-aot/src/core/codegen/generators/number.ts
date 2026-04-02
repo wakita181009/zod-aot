@@ -1,18 +1,20 @@
 import type { SchemaIR } from "../../types.js";
 import type { CodeGenContext } from "../context.js";
-import { checkPriority } from "../context.js";
+import { sortChecksPreservingEffects } from "../context.js";
 import { emit } from "../emit.js";
+import { generateRefineCheck } from "./effect.js";
 
 export function generateNumberValidation(
   ir: SchemaIR & { type: "number" },
   inputExpr: string,
+  outputExpr: string,
   pathExpr: string,
   issuesVar: string,
   _ctx: CodeGenContext,
 ): string {
   let code = "";
   if (ir.coerce) {
-    code += emit`${inputExpr}=Number(${inputExpr});`;
+    code += emit`${outputExpr}=Number(${inputExpr});`;
   }
   code += emit`
     if(typeof ${inputExpr}!=="number"){
@@ -25,7 +27,7 @@ export function generateNumberValidation(
 
   if (ir.checks.length > 0) {
     code += `else{`;
-    for (const check of [...ir.checks].sort(checkPriority)) {
+    for (const check of sortChecksPreservingEffects([...ir.checks])) {
       switch (check.kind) {
         case "greater_than":
           if (check.inclusive) {
@@ -92,6 +94,9 @@ export function generateNumberValidation(
             if(${inputExpr}%${check.value}!==0){
               ${issuesVar}.push({code:"not_multiple_of",divisor:${check.value},origin:"number",input:${inputExpr},path:${pathExpr}});
             }`;
+          break;
+        case "refine_effect":
+          code += generateRefineCheck(check, inputExpr, pathExpr, issuesVar);
           break;
       }
     }

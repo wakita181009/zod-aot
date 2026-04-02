@@ -1,4 +1,4 @@
-import type { ArrayIR } from "../../types.js";
+import type { ArrayIR, CheckIR } from "../../types.js";
 import type { CodeGenContext, GenerateFastCheckFn } from "../context.js";
 import { checkPriority } from "../context.js";
 
@@ -8,10 +8,13 @@ export function fastCheckArray(
   ctx: CodeGenContext,
   generateFn: GenerateFastCheckFn,
 ): string | null {
+  if (ir.checks.some((c) => c.kind === "refine_effect")) return null;
+
   const parts: string[] = [`Array.isArray(${x})`];
+  const checks = ir.checks.filter((c): c is CheckIR => c.kind !== "refine_effect");
 
   // Size checks
-  for (const check of [...ir.checks].sort(checkPriority)) {
+  for (const check of checks.sort(checkPriority)) {
     switch (check.kind) {
       case "min_length":
         parts.push(`${x}.length>=${check.minimum}`);

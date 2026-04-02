@@ -51,7 +51,9 @@ Key files:
 - `core/pipeline.ts`: `compileSchemas()` — shared extract → generate pipeline, `CompiledSchemaInfo` type, `CompileSchemasOptions` with `onError` callback for graceful failure handling
 - `core/diagnostic.ts`: `diagnoseSchema()` — single-pass SchemaIR walker producing `DiagnosticResult` (tree, coverage, Fast Path eligibility, hints)
 - `core/codegen/fast-check/index.ts`: `generateFastCheck()` — Fast Path dispatcher + trivial inline cases
-- `core/codegen/generators/index.ts`: `generateValidation()` — Slow Path dispatcher
+- `core/codegen/generators/index.ts`: `generateValidation()` — Slow Path dispatcher (receives both `inputExpr` for reads and `outputExpr` for writes/mutations)
+- `core/codegen/generators/effect.ts`: `generateTransformEffect()` — transform effect codegen, `generateRefineCheck()` — inline refine check codegen
+- `core/codegen/context.ts`: `sortChecksPreservingEffects()` — sorts compilable checks by cost while preserving refine_effect position
 - `core/codegen/emit.ts`: `emit()` — tagged template for Slow Path code generation
 - `core/iife.ts`: `generateIIFE()` — shared IIFE generation for CLI emitter and unplugin transform (owns `extractFunctionName()`)
 - `discovery.ts`: `discoverSchemas()` loads file → scans exports with `isCompiledSchema()` or `isZodSchema()` (autoDiscover mode via `DiscoverOptions`)
@@ -146,13 +148,22 @@ Plugin entries: `zod-aot/vite`, `zod-aot/webpack`, `zod-aot/esbuild`, `zod-aot/r
 
 string, number (int32, uint32, float32, float64), int, boolean, object, array, literal, enum, union, optional, nullable, null, undefined, tuple, record, intersection, discriminatedUnion, date, any, unknown, default, readonly, bigint, set, map, symbol, void, nan, never, pipe (non-transform), lazy (self-recursive via recursiveRef), templateLiteral, catch, coerce (string, number, boolean, bigint, date)
 
+### Effect Compilation (transform/refine)
+Zero-capture `.transform()` and `.refine()` (inline arrow functions with no external variable captures) are compiled into generated validators via `fn.toString()` + acorn AST analysis. The compiled code inlines the function call directly (e.g., `outputExpr = (v => v.toLowerCase())(inputExpr)`).
+
+- `TransformEffectIR`: wraps inner schema validation + inlined transform function call
+- `RefineEffectCheckIR`: inserted into `checks[]` arrays preserving Zod check ordering
+- `sortChecksPreservingEffects()`: reorders compilable checks by cost while keeping refine_effect entries at their original position
+- Zero-capture detection: acorn parses `fn.toString()`, collects identifier references, rejects functions with external captures, async, `this`, or 2+ parameters (ctx argument)
+- Key files: `core/extract/effects.ts` (tryCompileEffect), `core/codegen/generators/effect.ts` (generateTransformEffect, generateRefineCheck)
+
 ### Fallback to Zod
-transform, refine, superRefine, custom, preprocess, lazy (non-recursive only — self-recursive lazy schemas are compiled via `recursiveRef`)
+superRefine, custom, preprocess, lazy (non-recursive only — self-recursive lazy schemas are compiled via `recursiveRef`), transform/refine with external variable captures or ctx parameter
 
 ### Fast Path Eligibility
-Schemas without coerce, default, catch, date, set/map, transform, or refine are eligible for Fast Path (two-phase validation). The Fast Path generates a single boolean `&&` expression chain. If any nested part of a schema is ineligible, the entire schema falls back to Slow Path only (all-or-nothing).
+Schemas without coerce, default, catch, date, set/map, effect (transform/refine), or fallback are eligible for Fast Path (two-phase validation). The Fast Path generates a single boolean `&&` expression chain. If any nested part of a schema is ineligible, the entire schema falls back to Slow Path only (all-or-nothing).
 
-**Partial fallback strategy:** Even schemas containing transform etc. optimize compilable parts and delegate only incompilable parts to Zod.
+**Partial fallback strategy:** Even schemas containing captured-variable transform etc. optimize compilable parts and delegate only incompilable parts to Zod.
 
 ## Project Structure
 
@@ -171,19 +182,21 @@ zod-aot/
 │       │   │   ├── pipeline.ts   # compileSchemas() — shared extract→generate pipeline, onError callback
 │       │   │   ├── extract/      # extractSchema() — _zod.def → SchemaIR
 │       │   │   │   ├── index.ts  # extractSchema() main entry
-│       │   │   │   ├── checks.ts # Check extraction (string/number/bigint/date)
+│       │   │   │   ├── checks.ts # Check extraction (string/number/bigint/date), refine effect compilation
+│       │   │   │   ├── effects.ts # tryCompileEffect() — fn.toString() + acorn capture classification
 │       │   │   │   ├── fallback.ts # FallbackEntry tracking
 │       │   │   │   ├── types.ts  # Extractor types
 │       │   │   │   └── extractors/ # Per-type extractors (bigint, date, default, lazy (with cycle detection → recursiveRef), number, pipe, set, string, union)
 │       │   │   └── codegen/
 │       │   │       ├── index.ts  # generateValidator() — orchestrator (Fast Path + Slow Path)
-│       │   │       ├── context.ts # CodeGenContext, CodeGenResult, GenerateFastCheckFn, checkPriority(), shared constants
+│       │   │       ├── context.ts # CodeGenContext, CodeGenResult, GenerateFastCheckFn, checkPriority(), sortChecksPreservingEffects(), hasMutation(), shared constants
 │       │   │       ├── emit.ts   # emit() tagged template — Slow Path utility
 │       │   │       ├── fast-check/ # Fast Path (per-type boolean expression generators)
 │       │   │       │   ├── index.ts # generateFastCheck() dispatcher + trivial inline cases
 │       │   │       │   └── string.ts, number.ts, ... # 16 per-type fast-check helpers
 │       │   │       └── generators/ # Slow Path (per-type error-collecting code generators)
 │       │   │           ├── index.ts # generateValidation() dispatcher
+│       │   │           ├── effect.ts # generateTransformEffect(), generateRefineCheck()
 │       │   │           └── string.ts, number.ts, ... # 33 per-type generators
 │       │   ├── cli/              # CLI-specific (no unplugin deps)
 │       │   │   ├── index.ts      # CLI entry point (command parser, usage text)

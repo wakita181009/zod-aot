@@ -1,18 +1,25 @@
 import type { SchemaIR } from "../../types.js";
 import type { CodeGenContext } from "../context.js";
-import { checkPriority, EMAIL_REGEX_SOURCE, escapeString, UUID_REGEX_SOURCE } from "../context.js";
+import {
+  EMAIL_REGEX_SOURCE,
+  escapeString,
+  sortChecksPreservingEffects,
+  UUID_REGEX_SOURCE,
+} from "../context.js";
 import { emit } from "../emit.js";
+import { generateRefineCheck } from "./effect.js";
 
 export function generateStringValidation(
   ir: SchemaIR & { type: "string" },
   inputExpr: string,
+  outputExpr: string,
   pathExpr: string,
   issuesVar: string,
   ctx: CodeGenContext,
 ): string {
   let code = "";
   if (ir.coerce) {
-    code += emit`${inputExpr}=String(${inputExpr});`;
+    code += emit`${outputExpr}=String(${inputExpr});`;
   }
   code += emit`
     if(typeof ${inputExpr}!=="string"){
@@ -21,7 +28,7 @@ export function generateStringValidation(
 
   if (ir.checks.length > 0) {
     code += `else{`;
-    for (const check of [...ir.checks].sort(checkPriority)) {
+    for (const check of sortChecksPreservingEffects([...ir.checks])) {
       switch (check.kind) {
         case "min_length":
           code += emit`
@@ -60,6 +67,9 @@ export function generateStringValidation(
             if(!${inputExpr}.endsWith(${escapeString(check.suffix)})){
               ${issuesVar}.push({code:"invalid_format",format:"ends_with",suffix:${escapeString(check.suffix)},input:${inputExpr},path:${pathExpr}});
             }`;
+          break;
+        case "refine_effect":
+          code += generateRefineCheck(check, inputExpr, pathExpr, issuesVar);
           break;
         case "string_format": {
           let regexVar: string;

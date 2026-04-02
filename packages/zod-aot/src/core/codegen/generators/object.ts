@@ -2,10 +2,12 @@ import type { SchemaIR } from "../../types.js";
 import type { CodeGenContext, GenerateValidationFn } from "../context.js";
 import { escapeString, hasMutation } from "../context.js";
 import { emit } from "../emit.js";
+import { generateRefineCheck } from "./effect.js";
 
 export function generateObjectValidation(
   ir: SchemaIR & { type: "object" },
   inputExpr: string,
+  outputExpr: string,
   pathExpr: string,
   issuesVar: string,
   ctx: CodeGenContext,
@@ -25,12 +27,20 @@ export function generateObjectValidation(
   for (const [key, propIR] of Object.entries(ir.properties)) {
     const propExpr = `${objVar}[${escapeString(key)}]`;
     const propPath = `${pathExpr}.concat(${escapeString(key)})`;
-    code += generateFn(propIR, propExpr, propPath, issuesVar, ctx);
+    code += generateFn(propIR, propExpr, propExpr, propPath, issuesVar, ctx);
   }
 
   if (needsClone) {
-    code += `${inputExpr}=${objVar};`;
+    code += `${outputExpr}=${objVar};`;
   }
+
+  // Object-level refine effects: z.object({...}).refine(fn)
+  if (ir.checks) {
+    for (const check of ir.checks) {
+      code += generateRefineCheck(check, objVar, pathExpr, issuesVar);
+    }
+  }
+
   code += `}\n`;
   return code;
 }

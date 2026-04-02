@@ -18,12 +18,14 @@ describe("compileSchemas", () => {
   });
 
   it("collects fallbackEntries independently per schema", () => {
+    // Use captured-variable transforms to ensure fallback (zero-capture transforms are now compiled)
+    const external = "prefix_";
     const schemas = [
       {
         exportName: "withFallback",
         schema: z.object({
           name: z.string(),
-          slug: z.string().transform((v) => v.toLowerCase()),
+          slug: z.string().transform((v) => external + v),
         }),
       },
       {
@@ -39,7 +41,7 @@ describe("compileSchemas", () => {
     expect(results[1]?.codegenResult.fallbackCount).toBe(0);
   });
 
-  it("propagates fallbackCount to codegenResult", () => {
+  it("zero-capture transform/refine produce no fallback entries", () => {
     const schema = z.object({
       a: z.string().transform((v) => v),
       b: z.string(),
@@ -47,8 +49,23 @@ describe("compileSchemas", () => {
     });
     const results = compileSchemas([{ exportName: "test", schema }]);
 
+    // Zero-capture transform and refine are now compiled (no fallback)
+    expect(results[0]?.fallbackEntries.length).toBe(0);
+    expect(results[0]?.codegenResult.fallbackCount).toBe(0);
+  });
+
+  it("propagates fallbackCount to codegenResult for captured-variable transforms", () => {
+    const external1 = "a";
+    const external2 = "b";
+    const schema = z.object({
+      a: z.string().transform((v) => external1 + v),
+      b: z.string(),
+      c: z.number().transform((v) => v + Number(external2)),
+    });
+    const results = compileSchemas([{ exportName: "test", schema }]);
+
     expect(results[0]?.codegenResult.fallbackCount).toBe(results[0]?.fallbackEntries.length);
-    // a (transform) + c (refine)
+    // a (captured transform) + c (captured transform)
     expect(results[0]?.fallbackEntries.length).toBe(2);
   });
 

@@ -6,13 +6,14 @@ import { emit } from "../emit.js";
 export function generateBigIntValidation(
   ir: SchemaIR & { type: "bigint" },
   inputExpr: string,
+  outputExpr: string,
   pathExpr: string,
   issuesVar: string,
   _ctx: CodeGenContext,
 ): string {
   let code = "";
   if (ir.coerce) {
-    code += emit`try{${inputExpr}=BigInt(${inputExpr});}catch(_){}`;
+    code += emit`try{${outputExpr}=BigInt(${inputExpr});}catch(_){}`;
   }
   code += emit`
     if(typeof ${inputExpr}!=="bigint"){

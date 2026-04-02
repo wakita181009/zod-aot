@@ -1,14 +1,17 @@
-import type { NumberIR } from "../../types.js";
+import type { CheckIR, NumberIR } from "../../types.js";
 import { checkPriority } from "../context.js";
 
 export function fastCheckNumber(ir: NumberIR, x: string): string | null {
+  if (ir.checks.some((c) => c.kind === "refine_effect")) return null;
+
   const parts: string[] = [
     `typeof ${x}==="number"`,
     `!Number.isNaN(${x})`,
     `Number.isFinite(${x})`,
   ];
+  const checks = ir.checks.filter((c): c is CheckIR => c.kind !== "refine_effect");
 
-  for (const check of [...ir.checks].sort(checkPriority)) {
+  for (const check of checks.sort(checkPriority)) {
     switch (check.kind) {
       case "number_format":
         switch (check.format) {

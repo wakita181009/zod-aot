@@ -5,6 +5,7 @@ import { emit } from "../emit.js";
 export function generateMapValidation(
   ir: SchemaIR & { type: "map" },
   inputExpr: string,
+  _outputExpr: string,
   pathExpr: string,
   issuesVar: string,
   ctx: CodeGenContext,
@@ -20,8 +21,8 @@ export function generateMapValidation(
     }else{
       var ${idxVar}=0;
       for(var ${entryVar} of ${inputExpr}){
-        ${generateFn(ir.keyType, `${entryVar}[0]`, `${pathExpr}.concat(${idxVar},"key")`, issuesVar, ctx)}
-        ${generateFn(ir.valueType, `${entryVar}[1]`, `${pathExpr}.concat(${idxVar},"value")`, issuesVar, ctx)}
+        ${generateFn(ir.keyType, `${entryVar}[0]`, `${entryVar}[0]`, `${pathExpr}.concat(${idxVar},"key")`, issuesVar, ctx)}
+        ${generateFn(ir.valueType, `${entryVar}[1]`, `${entryVar}[1]`, `${pathExpr}.concat(${idxVar},"value")`, issuesVar, ctx)}
         ${idxVar}++;
       }
     }

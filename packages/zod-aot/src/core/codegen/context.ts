@@ -1,4 +1,4 @@
-import type { BigIntCheckIR, CheckIR, DateCheckIR, SchemaIR } from "../types.js";
+import type { BigIntCheckIR, CheckIR, CheckOrEffectIR, DateCheckIR, SchemaIR } from "../types.js";
 
 export interface CodeGenResult {
   code: string;
@@ -18,6 +18,7 @@ export interface CodeGenContext {
 export type GenerateValidationFn = (
   ir: SchemaIR,
   inputExpr: string,
+  outputExpr: string,
   pathExpr: string,
   issuesVar: string,
   ctx: CodeGenContext,
@@ -86,6 +87,7 @@ export function hasMutation(ir: SchemaIR): boolean {
       return ir.coerce === true;
     case "default":
     case "catch":
+    case "effect":
       return true;
     case "object":
       return Object.values(ir.properties).some(hasMutation);
@@ -117,11 +119,52 @@ export function hasMutation(ir: SchemaIR): boolean {
 
 /**
  * Sort comparator for CheckIR: cheapest/most-discriminating checks first.
- * Used as `[...ir.checks].sort(checkPriority)`.
+ * Used by fast-check generators (which never encounter refine_effect).
  */
 export function checkPriority(
   a: CheckIR | BigIntCheckIR | DateCheckIR,
   b: CheckIR | BigIntCheckIR | DateCheckIR,
 ): number {
   return (CHECK_PRIORITY[a.kind] ?? 99) - (CHECK_PRIORITY[b.kind] ?? 99);
+}
+
+/**
+ * Sort compilable checks by cost (cheapest first) while preserving
+ * the original position of refine_effect entries.
+ *
+ * Zod preserves insertion order for checks. Compilable checks (typeof, length,
+ * regex) are reordered for performance, but refine_effect entries stay at their
+ * original index to maintain semantic parity with Zod.
+ */
+export function sortChecksPreservingEffects<
+  T extends CheckIR | CheckOrEffectIR | BigIntCheckIR | DateCheckIR,
+>(checks: T[]): T[] {
+  const result: T[] = new Array(checks.length);
+  const compilable: { check: T; originalIndex: number }[] = [];
+
+  // First pass: place refine_effects at their original positions
+  for (let i = 0; i < checks.length; i++) {
+    const check = checks[i] as T;
+    if (check.kind === "refine_effect") {
+      result[i] = check;
+    } else {
+      compilable.push({ check, originalIndex: i });
+    }
+  }
+
+  // Sort compilable checks by priority (cheapest first)
+  compilable.sort(
+    (a, b) => (CHECK_PRIORITY[a.check.kind] ?? 99) - (CHECK_PRIORITY[b.check.kind] ?? 99),
+  );
+
+  // Fill remaining slots with sorted compilable checks
+  let ci = 0;
+  for (let i = 0; i < result.length; i++) {
+    if (result[i] === undefined) {
+      const entry = compilable[ci++] as (typeof compilable)[number];
+      result[i] = entry.check;
+    }
+  }
+
+  return result;
 }

@@ -43,6 +43,7 @@ export function generateFastCheck(
       return "true";
 
     // ── NOT ELIGIBLE ────────────────────────────────────────────────────
+    case "effect":
     case "fallback":
     case "default":
     case "catch":

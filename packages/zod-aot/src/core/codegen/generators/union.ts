@@ -5,6 +5,7 @@ import { emit } from "../emit.js";
 export function generateUnionValidation(
   ir: SchemaIR & { type: "union" },
   inputExpr: string,
+  outputExpr: string,
   pathExpr: string,
   issuesVar: string,
   ctx: CodeGenContext,
@@ -21,7 +22,7 @@ export function generateUnionValidation(
     code += emit`
       if(!${resultVar}){
         var ${tmpIssues}=[];
-        ${generateFn(option, inputExpr, pathExpr, tmpIssues, ctx)}
+        ${generateFn(option, inputExpr, outputExpr, pathExpr, tmpIssues, ctx)}
         if(${tmpIssues}.length===0){
           ${resultVar}=true;
         }else{

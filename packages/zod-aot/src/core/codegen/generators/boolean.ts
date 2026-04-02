@@ -4,12 +4,13 @@ import { emit } from "../emit.js";
 export function generateBooleanValidation(
   ir: SchemaIR & { type: "boolean" },
   inputExpr: string,
+  outputExpr: string,
   pathExpr: string,
   issuesVar: string,
 ): string {
   let code = "";
   if (ir.coerce) {
-    code += emit`${inputExpr}=Boolean(${inputExpr});`;
+    code += emit`${outputExpr}=Boolean(${inputExpr});`;
   }
   code += emit`
     if(typeof ${inputExpr}!=="boolean"){
