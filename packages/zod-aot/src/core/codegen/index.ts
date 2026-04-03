@@ -53,7 +53,7 @@ export function generateValidator(
     `if(__issues.length>0){`,
     `for(var __fi=0;__fi<__issues.length;__fi++){`,
     `if(typeof __msg==="function")__issues[__fi].message=__msg(__issues[__fi]);`,
-    `delete __issues[__fi].input;`,
+    `__issues[__fi].input=undefined;`,
     `}`,
     `return{success:false,error:new __ZodError(__issues)};`,
     `}`,

@@ -63,13 +63,17 @@ export function fastTuple(ir: TupleIR, g: FastGen): string | null {
     if (itemCheck !== "true") parts.push(itemCheck);
   }
 
-  // Rest element
+  // Rest element validation via preamble helper (avoids .slice().every() allocation)
   if (ir.rest !== null) {
     const rv = g.temp("tr");
     const restCheck = g.visit(ir.rest, { input: rv });
     if (restCheck === null) return null;
     if (restCheck !== "true") {
-      parts.push(`${x}.slice(${ir.items.length}).every(${rv}=>${restCheck})`);
+      const helperName = g.temp("te");
+      g.ctx.preamble.push(
+        `function ${helperName}(a,s){for(var __i=s;__i<a.length;__i++){var ${rv}=a[__i];if(!(${restCheck}))return false;}return true;}`,
+      );
+      parts.push(`${helperName}(${x},${ir.items.length})`);
     }
   }
 

@@ -34,13 +34,24 @@ export function slowDiscriminatedUnion(
 }
 
 export function fastDiscriminatedUnion(ir: DiscriminatedUnionIR, g: FastGen): string | null {
-  // Generate checks for each branch, keyed by discriminator value
-  const branchChecks: string[] = [];
-  for (const option of ir.options) {
-    const check = g.visit(option);
+  const x = g.input;
+  const discKey = escapeString(ir.discriminator);
+
+  // Generate switch-based dispatch for O(1) discriminator lookup
+  const helperName = g.temp("du");
+  const helperParam = g.temp("dx");
+  const cases: string[] = [];
+
+  for (const [value, index] of Object.entries(ir.mapping)) {
+    const option = ir.options[index] as SchemaIR;
+    const check = g.visit(option, { input: helperParam });
     if (check === null) return null;
-    branchChecks.push(`(${check})`);
+    cases.push(`case ${escapeString(value)}:return ${check};`);
   }
-  // Combine as || chain, wrapped for precedence safety
-  return `(${branchChecks.join("||")})`;
+
+  g.ctx.preamble.push(
+    `function ${helperName}(${helperParam}){switch(${helperParam}[${discKey}]){${cases.join("")}default:return false;}}`,
+  );
+
+  return `typeof ${x}==="object"&&${x}!==null&&!Array.isArray(${x})&&${helperName}(${x})`;
 }

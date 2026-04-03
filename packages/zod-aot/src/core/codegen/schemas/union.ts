@@ -30,7 +30,7 @@ export function slowUnion(ir: SchemaIR & { type: "union" }, g: SlowGen): string 
             if(typeof __msg==="function"){
               for(var ${innerIdx}=0;${innerIdx}<${tmpIssues}.length;${innerIdx}++){
                 ${tmpIssues}[${innerIdx}].message=__msg(${tmpIssues}[${innerIdx}]);
-                delete ${tmpIssues}[${innerIdx}].input;
+                ${tmpIssues}[${innerIdx}].input=undefined;
               }
             }
             ${errorsVar}.push(${tmpIssues});
@@ -47,7 +47,7 @@ export function slowUnion(ir: SchemaIR & { type: "union" }, g: SlowGen): string 
             if(typeof __msg==="function"){
               for(var ${innerIdx}=0;${innerIdx}<${tmpIssues}.length;${innerIdx}++){
                 ${tmpIssues}[${innerIdx}].message=__msg(${tmpIssues}[${innerIdx}]);
-                delete ${tmpIssues}[${innerIdx}].input;
+                ${tmpIssues}[${innerIdx}].input=undefined;
               }
             }
             ${errorsVar}.push(${tmpIssues});
