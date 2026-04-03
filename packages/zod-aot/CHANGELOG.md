@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.2](https://github.com/wakita181009/zod-aot/compare/v0.17.1...v0.17.2) (2026-04-03)
+
+
+### Bug Fixes
+
+* improve V8 JIT performance for generated validators ([#112](https://github.com/wakita181009/zod-aot/issues/112)) ([fdb3b71](https://github.com/wakita181009/zod-aot/commit/fdb3b71e8802d639aca602f15d6196ec7b6ed726))
+
 ## [0.17.1](https://github.com/wakita181009/zod-aot/compare/v0.17.0...v0.17.1) (2026-04-02)
 
 
