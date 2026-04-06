@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.3](https://github.com/wakita181009/zod-aot/compare/v0.17.2...v0.17.3) (2026-04-06)
+
+
+### Bug Fixes
+
+* deduplicate regex preambles and skip redundant NaN/isFinite guards for integer formats ([#115](https://github.com/wakita181009/zod-aot/issues/115)) ([c4cb9c2](https://github.com/wakita181009/zod-aot/commit/c4cb9c239d859ccacb58ec2e46771cb59b830c45))
+
 ## [0.17.2](https://github.com/wakita181009/zod-aot/compare/v0.17.1...v0.17.2) (2026-04-03)
 
 
