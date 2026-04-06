@@ -161,7 +161,9 @@ Zero-capture `.transform()` and `.refine()` (inline arrow functions with no exte
 superRefine, custom, preprocess, lazy (non-recursive only — self-recursive lazy schemas are compiled via `recursiveRef`), transform/refine with external variable captures or ctx parameter
 
 ### Fast Path Eligibility
-Schemas without coerce, default, catch, date, set/map, effect (transform/refine), or fallback are eligible for Fast Path (two-phase validation). The Fast Path generates a single boolean `&&` expression chain. If any nested part of a schema is ineligible, the entire schema falls back to Slow Path only (all-or-nothing).
+Schemas without coerce, default, catch, effect (transform), or fallback are eligible for Fast Path (two-phase validation). The Fast Path generates a single boolean `&&` expression chain. If any nested part of a schema is ineligible, the entire schema falls back to Slow Path only (all-or-nothing).
+
+**Fast Path supported types:** date (non-coerce: `instanceof Date && !isNaN(getTime()) && range checks`), set (`instanceof Set + size checks + preamble helper for element iteration`), map (`instanceof Map + preamble helper for key/value iteration`), and refine_effect (zero-capture refine predicates inlined as `(source)(input)` in the `&&` chain).
 
 **Partial fallback strategy:** Even schemas containing captured-variable transform etc. optimize compilable parts and delegate only incompilable parts to Zod.
 

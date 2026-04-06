@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { NumberIR, ObjectIR, StringIR, TransformEffectIR } from "#src/core/types.js";
-import { compileIR } from "../helpers.js";
+import type { ArrayIR, NumberIR, ObjectIR, StringIR, TransformEffectIR } from "#src/core/types.js";
+import { compileFastCheck, compileIR } from "../helpers.js";
 
 describe("slow-path — transform effect", () => {
   it("applies transform to string input on success", () => {
@@ -319,5 +319,154 @@ describe("slow-path — check ordering preserves refine_effect position", () => 
     const issues = result.error?.issues as { code: string }[];
     expect(issues[0]?.code).toBe("too_small");
     expect(issues[1]?.code).toBe("custom");
+  });
+});
+
+// ─── Fast Path — refine_effect ──────────────────────────────────────────────
+
+describe("fast-path — refine_effect (string)", () => {
+  it("passes when refine returns true", () => {
+    const ir: StringIR = {
+      type: "string",
+      checks: [{ kind: "refine_effect", source: 'v => v.includes("@")' }],
+    };
+    const fn = compileFastCheck(ir);
+    expect(fn?.("a@b.com")).toBe(true);
+  });
+
+  it("fails when refine returns false", () => {
+    const ir: StringIR = {
+      type: "string",
+      checks: [{ kind: "refine_effect", source: 'v => v.includes("@")' }],
+    };
+    const fn = compileFastCheck(ir);
+    expect(fn?.("no-at-sign")).toBe(false);
+  });
+
+  it("type check fails before refine runs", () => {
+    const ir: StringIR = {
+      type: "string",
+      checks: [{ kind: "refine_effect", source: "v => v.length > 0" }],
+    };
+    const fn = compileFastCheck(ir);
+    expect(fn?.(42)).toBe(false);
+  });
+
+  it("refine combined with standard checks", () => {
+    const ir: StringIR = {
+      type: "string",
+      checks: [
+        { kind: "min_length", minimum: 3 },
+        { kind: "refine_effect", source: "v => v.startsWith('a')" },
+      ],
+    };
+    const fn = compileFastCheck(ir);
+    expect(fn?.("abc")).toBe(true);
+    expect(fn?.("ab")).toBe(false);
+    expect(fn?.("bcd")).toBe(false);
+  });
+});
+
+describe("fast-path — refine_effect (number)", () => {
+  it("passes when number refine returns true", () => {
+    const ir: NumberIR = {
+      type: "number",
+      checks: [{ kind: "refine_effect", source: "v => v % 2 === 0" }],
+    };
+    const fn = compileFastCheck(ir);
+    expect(fn?.(4)).toBe(true);
+    expect(fn?.(3)).toBe(false);
+  });
+
+  it("refine combined with number range checks", () => {
+    const ir: NumberIR = {
+      type: "number",
+      checks: [
+        { kind: "greater_than", value: 0, inclusive: false },
+        { kind: "refine_effect", source: "v => v % 2 === 0" },
+      ],
+    };
+    const fn = compileFastCheck(ir);
+    expect(fn?.(4)).toBe(true);
+    expect(fn?.(3)).toBe(false);
+    expect(fn?.(0)).toBe(false);
+    expect(fn?.(-2)).toBe(false);
+  });
+});
+
+describe("fast-path — refine_effect (object)", () => {
+  it("passes when object-level refine returns true", () => {
+    const ir: ObjectIR = {
+      type: "object",
+      properties: {
+        password: { type: "string", checks: [] },
+        confirm: { type: "string", checks: [] },
+      },
+      checks: [{ kind: "refine_effect", source: "v => v.password === v.confirm" }],
+    };
+    const fn = compileFastCheck(ir);
+    expect(fn?.({ password: "abc", confirm: "abc" })).toBe(true);
+  });
+
+  it("fails when object-level refine returns false", () => {
+    const ir: ObjectIR = {
+      type: "object",
+      properties: {
+        password: { type: "string", checks: [] },
+        confirm: { type: "string", checks: [] },
+      },
+      checks: [{ kind: "refine_effect", source: "v => v.password === v.confirm" }],
+    };
+    const fn = compileFastCheck(ir);
+    expect(fn?.({ password: "abc", confirm: "xyz" })).toBe(false);
+  });
+
+  it("property check short-circuits before refine", () => {
+    const ir: ObjectIR = {
+      type: "object",
+      properties: {
+        a: { type: "number", checks: [] },
+      },
+      checks: [{ kind: "refine_effect", source: "v => v.a > 0" }],
+    };
+    const fn = compileFastCheck(ir);
+    expect(fn?.({ a: "not a number" })).toBe(false);
+  });
+});
+
+describe("fast-path — refine_effect (array)", () => {
+  it("passes when array refine returns true", () => {
+    const ir: ArrayIR = {
+      type: "array",
+      element: { type: "number", checks: [] },
+      checks: [{ kind: "refine_effect", source: "arr => arr[0] < arr[arr.length - 1]" }],
+    };
+    const fn = compileFastCheck(ir);
+    expect(fn?.([1, 2, 3])).toBe(true);
+  });
+
+  it("fails when array refine returns false", () => {
+    const ir: ArrayIR = {
+      type: "array",
+      element: { type: "number", checks: [] },
+      checks: [{ kind: "refine_effect", source: "arr => arr[0] < arr[arr.length - 1]" }],
+    };
+    const fn = compileFastCheck(ir);
+    expect(fn?.([3, 2, 1])).toBe(false);
+  });
+
+  it("refine combined with size checks", () => {
+    const ir: ArrayIR = {
+      type: "array",
+      element: { type: "string", checks: [] },
+      checks: [
+        { kind: "min_length", minimum: 1 },
+        { kind: "refine_effect", source: "arr => arr.includes('x')" },
+      ],
+    };
+    const fn = compileFastCheck(ir);
+    expect(fn?.(["x", "y"])).toBe(true);
+    expect(fn?.(["a", "b"])).toBe(false);
+    expect(fn?.([])).toBe(false);
   });
 });

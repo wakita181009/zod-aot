@@ -46,23 +46,28 @@ describe("fastPathEligible", () => {
     expect(diagnoseSchema(ir).fastPathBlocker).toBe("catch");
   });
 
-  it("ineligible for date node", () => {
+  it("eligible for date node (non-coerce)", () => {
     const ir: SchemaIR = { type: "date", checks: [] };
-    expect(diagnoseSchema(ir).fastPathBlocker).toBe("date");
+    expect(diagnoseSchema(ir).fastPathEligible).toBe(true);
   });
 
-  it("ineligible for set node", () => {
+  it("ineligible for coerced date", () => {
+    const ir: SchemaIR = { type: "date", checks: [], coerce: true };
+    expect(diagnoseSchema(ir).fastPathBlocker).toBe("coerce (date)");
+  });
+
+  it("eligible for set node", () => {
     const ir: SchemaIR = { type: "set", valueType: { type: "string", checks: [] } };
-    expect(diagnoseSchema(ir).fastPathBlocker).toBe("set");
+    expect(diagnoseSchema(ir).fastPathEligible).toBe(true);
   });
 
-  it("ineligible for map node", () => {
+  it("eligible for map node", () => {
     const ir: SchemaIR = {
       type: "map",
       keyType: { type: "string", checks: [] },
       valueType: { type: "number", checks: [] },
     };
-    expect(diagnoseSchema(ir).fastPathBlocker).toBe("map");
+    expect(diagnoseSchema(ir).fastPathEligible).toBe(true);
   });
 
   it("ineligible for recursiveRef node", () => {
@@ -85,10 +90,10 @@ describe("fastPathEligible", () => {
       type: "object",
       properties: {
         name: { type: "string", checks: [] },
-        created: { type: "date", checks: [] },
+        value: { type: "default", inner: { type: "string", checks: [] }, defaultValue: "" },
       },
     };
-    expect(diagnoseSchema(ir).fastPathBlocker).toBe("date");
+    expect(diagnoseSchema(ir).fastPathBlocker).toBe("default");
   });
 
   it("ineligible for nested blocker in array", () => {
@@ -172,9 +177,9 @@ describe("fastPathEligible", () => {
     const ir: SchemaIR = {
       type: "tuple",
       items: [{ type: "string", checks: [] }],
-      rest: { type: "date", checks: [] },
+      rest: { type: "default", inner: { type: "string", checks: [] }, defaultValue: "" },
     };
-    expect(diagnoseSchema(ir).fastPathBlocker).toBe("date");
+    expect(diagnoseSchema(ir).fastPathBlocker).toBe("default");
   });
 
   it("eligible for record of eligible types", () => {
@@ -367,8 +372,7 @@ describe("diagnoseSchema", () => {
 
     expect(result.total).toBe(1);
     expect(result.compilable).toBe(1);
-    expect(result.fastPathEligible).toBe(false);
-    expect(result.fastPathBlocker).toBe("set");
+    expect(result.fastPathEligible).toBe(true);
   });
 
   it("handles map key/value", () => {
@@ -381,7 +385,7 @@ describe("diagnoseSchema", () => {
 
     expect(result.total).toBe(2);
     expect(result.compilable).toBe(2);
-    expect(result.fastPathEligible).toBe(false);
+    expect(result.fastPathEligible).toBe(true);
   });
 
   it("handles pipe in/out", () => {
@@ -442,13 +446,13 @@ describe("diagnoseSchema", () => {
     const ir: SchemaIR = {
       type: "object",
       properties: {
-        created: { type: "date", checks: [] },
+        value: { type: "default", inner: { type: "string", checks: [] }, defaultValue: "" },
       },
     };
     const result = diagnoseSchema(ir);
 
     expect(result.fastPathEligible).toBe(false);
-    expect(result.fastPathBlocker).toBe("date");
+    expect(result.fastPathBlocker).toBe("default");
   });
 
   it("fastPathBlocker is undefined when eligible", () => {

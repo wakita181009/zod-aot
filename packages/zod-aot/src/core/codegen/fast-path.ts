@@ -4,7 +4,7 @@
  * safeParse can return success immediately without allocating an issues array.
  *
  * Returns `null` if the schema is not eligible for Fast Path (contains coerce,
- * default, catch, date, set/map, transform, refine, or other non-pure constructs).
+ * default, catch, transform, or other non-pure constructs).
  */
 
 import type { SchemaIR } from "../types.js";
@@ -14,10 +14,12 @@ import { fastAny } from "./schemas/any.js";
 import { fastArray } from "./schemas/array.js";
 import { fastBigInt } from "./schemas/bigint.js";
 import { fastBoolean } from "./schemas/boolean.js";
+import { fastDate } from "./schemas/date.js";
 import { fastDiscriminatedUnion } from "./schemas/discriminated-union.js";
 import { fastEnum } from "./schemas/enum.js";
 import { fastIntersection } from "./schemas/intersection.js";
 import { fastLiteral } from "./schemas/literal.js";
+import { fastMap } from "./schemas/map.js";
 import { fastNan } from "./schemas/nan.js";
 import { fastNever } from "./schemas/never.js";
 import { fastNull } from "./schemas/null.js";
@@ -29,6 +31,7 @@ import { fastPipe } from "./schemas/pipe.js";
 import { fastReadonly } from "./schemas/readonly.js";
 import { fastRecord } from "./schemas/record.js";
 import { fastRecursiveRef } from "./schemas/recursive-ref.js";
+import { fastSet } from "./schemas/set.js";
 import { fastString } from "./schemas/string.js";
 import { fastSymbol } from "./schemas/symbol.js";
 import { fastTemplateLiteral } from "./schemas/template-literal.js";
@@ -48,7 +51,7 @@ const fastRegistry = {
   number: fastNumber,
   boolean: fastBoolean,
   bigint: fastBigInt,
-  date: null, // statically ineligible
+  date: fastDate,
   symbol: fastSymbol,
   null: fastNull,
   undefined: fastUndefined,
@@ -64,8 +67,8 @@ const fastRegistry = {
   array: fastArray,
   tuple: fastTuple,
   record: fastRecord,
-  set: null, // statically ineligible
-  map: null, // statically ineligible
+  set: fastSet,
+  map: fastMap,
   // Unions & Intersections
   union: fastUnion,
   discriminatedUnion: fastDiscriminatedUnion,

@@ -54,8 +54,6 @@ export function slowArray(ir: SchemaIR & { type: "array" }, g: SlowGen): string 
 }
 
 export function fastArray(ir: ArrayIR, g: FastGen): string | null {
-  if (ir.checks.some((c) => c.kind === "refine_effect")) return null;
-
   const x = g.input;
   const parts: string[] = [`Array.isArray(${x})`];
   const checks = ir.checks.filter((c): c is CheckIR => c.kind !== "refine_effect");
@@ -81,6 +79,13 @@ export function fastArray(ir: ArrayIR, g: FastGen): string | null {
   if (elemCheck === null) return null;
   if (elemCheck !== "true") {
     parts.push(`${x}.every(${elemVar}=>${elemCheck})`);
+  }
+
+  // Refine effect checks (appended last — run after cheap checks short-circuit)
+  for (const check of ir.checks) {
+    if (check.kind === "refine_effect") {
+      parts.push(`(${check.source})(${x})`);
+    }
   }
 
   return parts.join("&&");

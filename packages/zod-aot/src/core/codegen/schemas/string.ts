@@ -103,7 +103,6 @@ export function slowString(ir: StringIR, g: SlowGen): string {
 
 export function fastString(ir: StringIR, g: FastGen): string | null {
   if (ir.coerce) return null;
-  if (ir.checks.some((c) => c.kind === "refine_effect")) return null;
 
   const x = g.input;
   const parts: string[] = [`typeof ${x}==="string"`];
@@ -156,6 +155,13 @@ export function fastString(ir: StringIR, g: FastGen): string | null {
         }
         break;
       }
+    }
+  }
+
+  // Refine effect checks (appended last — run after cheap checks short-circuit)
+  for (const check of ir.checks) {
+    if (check.kind === "refine_effect") {
+      parts.push(`(${check.source})(${x})`);
     }
   }
 
