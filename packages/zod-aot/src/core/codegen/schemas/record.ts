@@ -42,7 +42,7 @@ export function fastRecord(ir: RecordIR, g: FastGen): string | null {
 
   const kv = g.temp("rk");
   const keyCheck = g.visit(ir.keyType, { input: kv });
-  const valCheck = g.visit(ir.valueType, { input: `${x}[${kv}]` });
+  const valCheck = g.visit(ir.valueType, { input: `o[${kv}]` });
   if (keyCheck === null || valCheck === null) return null;
 
   const conditions: string[] = [];
@@ -50,7 +50,11 @@ export function fastRecord(ir: RecordIR, g: FastGen): string | null {
   if (valCheck !== "true") conditions.push(valCheck);
 
   if (conditions.length > 0) {
-    parts.push(`Object.keys(${x}).every(${kv}=>${conditions.join("&&")})`);
+    const helperName = g.temp("rf");
+    g.ctx.preamble.push(
+      `function ${helperName}(o){var ${kv},ks=Object.keys(o);for(var i=0;i<ks.length;i++){${kv}=ks[i];if(!(${conditions.join("&&")})){return false;}}return true;}`,
+    );
+    parts.push(`${helperName}(${x})`);
   }
 
   return parts.join("&&");
