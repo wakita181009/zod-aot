@@ -1,4 +1,11 @@
-import type { BigIntCheckIR, CheckIR, CheckOrEffectIR, DateCheckIR, SchemaIR } from "../types.js";
+import type {
+  BigIntCheckIR,
+  CheckIR,
+  CheckOrEffectIR,
+  DateCheckIR,
+  SchemaIR,
+  SetCheckIR,
+} from "../types.js";
 
 export interface CodeGenResult {
   code: string;
@@ -163,11 +170,11 @@ export function hasMutation(ir: SchemaIR): boolean {
 
 /**
  * Sort comparator for CheckIR: cheapest/most-discriminating checks first.
- * Used by fast-path generators (which never encounter refine_effect).
+ * Used by fast-path generators after filtering out refine_effect entries.
  */
 export function checkPriority(
-  a: CheckIR | BigIntCheckIR | DateCheckIR,
-  b: CheckIR | BigIntCheckIR | DateCheckIR,
+  a: CheckIR | BigIntCheckIR | DateCheckIR | SetCheckIR,
+  b: CheckIR | BigIntCheckIR | DateCheckIR | SetCheckIR,
 ): number {
   return (CHECK_PRIORITY[a.kind] ?? 99) - (CHECK_PRIORITY[b.kind] ?? 99);
 }

@@ -76,7 +76,11 @@ describe("createFastGen", () => {
     it("returns null for ineligible schemas (propagation)", () => {
       const ctx = makeCtx();
       const g = createFastGen("input", ctx);
-      const ir: SchemaIR = { type: "date", checks: [], coerce: false };
+      const ir: SchemaIR = {
+        type: "default",
+        inner: { type: "string", checks: [] },
+        defaultValue: "",
+      };
       const expr = g.visit(ir);
       expect(expr).toBeNull();
     });
@@ -121,15 +125,7 @@ describe("createFastGen", () => {
       const ctx = makeCtx();
       const g = createFastGen("v", ctx);
 
-      const ineligible: SchemaIR["type"][] = [
-        "date",
-        "set",
-        "map",
-        "default",
-        "catch",
-        "fallback",
-        "effect",
-      ];
+      const ineligible: SchemaIR["type"][] = ["default", "catch", "fallback", "effect"];
 
       for (const type of ineligible) {
         // Construct minimal IR for each type
@@ -248,19 +244,86 @@ describe("fast-path — dispatcher", () => {
     ).toBeNull();
   });
 
-  it("date → null", () => {
-    expect(compileFastCheck({ type: "date", checks: [] })).toBeNull();
+  it("date (non-coerce) → instanceof + getTime checks", () => {
+    const fn = compileFastCheck({ type: "date", checks: [] });
+    expect(fn?.(new Date())).toBe(true);
+    expect(fn?.(new Date("invalid"))).toBe(false);
+    expect(fn?.("2024-01-01")).toBe(false);
+    expect(fn?.(null)).toBe(false);
   });
 
-  it("set → null", () => {
-    expect(compileFastCheck({ type: "set", valueType: { type: "string", checks: [] } })).toBeNull();
+  it("date with coerce → null", () => {
+    expect(compileFastCheck({ type: "date", checks: [], coerce: true })).toBeNull();
   });
 
-  it("map → null", () => {
+  it("date with range checks", () => {
+    const minTs = new Date("2020-01-01").getTime();
+    const maxTs = new Date("2030-01-01").getTime();
+    const fn = compileFastCheck({
+      type: "date",
+      checks: [
+        { kind: "date_greater_than", value: "2020-01-01", timestamp: minTs, inclusive: true },
+        { kind: "date_less_than", value: "2030-01-01", timestamp: maxTs, inclusive: false },
+      ],
+    });
+    expect(fn?.(new Date("2025-01-01"))).toBe(true);
+    expect(fn?.(new Date("2020-01-01"))).toBe(true);
+    expect(fn?.(new Date("2019-12-31"))).toBe(false);
+    expect(fn?.(new Date("2030-01-01"))).toBe(false);
+  });
+
+  it("set of strings → instanceof + element check", () => {
+    const fn = compileFastCheck({ type: "set", valueType: { type: "string", checks: [] } });
+    expect(fn?.(new Set(["a", "b"]))).toBe(true);
+    expect(fn?.(new Set())).toBe(true);
+    expect(fn?.(new Set([1, 2]))).toBe(false);
+    expect(fn?.(["a"])).toBe(false);
+    expect(fn?.(null)).toBe(false);
+  });
+
+  it("set with size checks", () => {
+    const fn = compileFastCheck({
+      type: "set",
+      valueType: { type: "number", checks: [] },
+      checks: [
+        { kind: "min_size", minimum: 1 },
+        { kind: "max_size", maximum: 3 },
+      ],
+    });
+    expect(fn?.(new Set([1]))).toBe(true);
+    expect(fn?.(new Set([1, 2, 3]))).toBe(true);
+    expect(fn?.(new Set())).toBe(false);
+    expect(fn?.(new Set([1, 2, 3, 4]))).toBe(false);
+  });
+
+  it("set with ineligible element → null", () => {
+    expect(
+      compileFastCheck({
+        type: "set",
+        valueType: { type: "default", inner: { type: "string", checks: [] }, defaultValue: "" },
+      }),
+    ).toBeNull();
+  });
+
+  it("map of string→number → instanceof + entry checks", () => {
+    const fn = compileFastCheck({
+      type: "map",
+      keyType: { type: "string", checks: [] },
+      valueType: { type: "number", checks: [] },
+    });
+    expect(fn?.(new Map([["a", 1]]))).toBe(true);
+    expect(fn?.(new Map())).toBe(true);
+    expect(fn?.(new Map([[42, 1]]))).toBe(false);
+    expect(fn?.(new Map([["a", "b"]]))).toBe(false);
+    expect(fn?.({})).toBe(false);
+    expect(fn?.(null)).toBe(false);
+  });
+
+  it("map with ineligible key → null", () => {
     expect(
       compileFastCheck({
         type: "map",
-        keyType: { type: "string", checks: [] },
+        keyType: { type: "default", inner: { type: "string", checks: [] }, defaultValue: "" },
         valueType: { type: "number", checks: [] },
       }),
     ).toBeNull();

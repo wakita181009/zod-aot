@@ -36,9 +36,6 @@ export function slowObject(ir: SchemaIR & { type: "object" }, g: SlowGen): strin
 }
 
 export function fastObject(ir: ObjectIR, g: FastGen): string | null {
-  // Object with refine effects is not eligible for Fast Path
-  if (ir.checks && ir.checks.length > 0) return null;
-
   const x = g.input;
   const parts: string[] = [`typeof ${x}==="object"`, `${x}!==null`, `!Array.isArray(${x})`];
 
@@ -47,6 +44,15 @@ export function fastObject(ir: ObjectIR, g: FastGen): string | null {
     const propCheck = g.visit(propIR, { input: propExpr });
     if (propCheck === null) return null; // All-or-nothing
     parts.push(propCheck);
+  }
+
+  // Object-level refine effects (appended last — run after property checks short-circuit)
+  if (ir.checks) {
+    for (const check of ir.checks) {
+      if (check.kind === "refine_effect") {
+        parts.push(`(${check.source})(${x})`);
+      }
+    }
   }
 
   return parts.join("&&");

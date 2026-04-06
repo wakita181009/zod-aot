@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { SetIR } from "#src/core/types.js";
-import { compileIR } from "../helpers.js";
+import { compileFastCheck, compileIR } from "../helpers.js";
 
 describe("slow-path — set", () => {
   it("generates code that accepts a Set of strings", () => {
@@ -88,5 +88,78 @@ describe("slow-path — set", () => {
     const obj2 = { id: 2 };
     expect(safeParse(new Set([obj1, obj2])).success).toBe(true);
     expect(safeParse(new Set([{ id: "not number" }])).success).toBe(false);
+  });
+});
+
+describe("fast-path — set", () => {
+  it("accepts a Set of strings", () => {
+    const ir: SetIR = { type: "set", valueType: { type: "string", checks: [] } };
+    const fn = compileFastCheck(ir);
+    expect(fn?.(new Set(["a", "b"]))).toBe(true);
+    expect(fn?.(new Set())).toBe(true);
+  });
+
+  it("rejects non-Set values", () => {
+    const ir: SetIR = { type: "set", valueType: { type: "string", checks: [] } };
+    const fn = compileFastCheck(ir);
+    expect(fn?.(["a", "b"])).toBe(false);
+    expect(fn?.(null)).toBe(false);
+    expect(fn?.(42)).toBe(false);
+  });
+
+  it("validates Set elements", () => {
+    const ir: SetIR = { type: "set", valueType: { type: "number", checks: [] } };
+    const fn = compileFastCheck(ir);
+    expect(fn?.(new Set([1, 2, 3]))).toBe(true);
+    expect(fn?.(new Set([1, "a", 3]))).toBe(false);
+  });
+
+  it("validates min_size", () => {
+    const ir: SetIR = {
+      type: "set",
+      valueType: { type: "string", checks: [] },
+      checks: [{ kind: "min_size", minimum: 2 }],
+    };
+    const fn = compileFastCheck(ir);
+    expect(fn?.(new Set(["a", "b"]))).toBe(true);
+    expect(fn?.(new Set(["a"]))).toBe(false);
+  });
+
+  it("validates max_size", () => {
+    const ir: SetIR = {
+      type: "set",
+      valueType: { type: "string", checks: [] },
+      checks: [{ kind: "max_size", maximum: 2 }],
+    };
+    const fn = compileFastCheck(ir);
+    expect(fn?.(new Set(["a", "b"]))).toBe(true);
+    expect(fn?.(new Set(["a", "b", "c"]))).toBe(false);
+  });
+
+  it("validates nested objects in Set", () => {
+    const ir: SetIR = {
+      type: "set",
+      valueType: {
+        type: "object",
+        properties: { id: { type: "number", checks: [] } },
+      },
+    };
+    const fn = compileFastCheck(ir);
+    expect(fn?.(new Set([{ id: 1 }, { id: 2 }]))).toBe(true);
+    expect(fn?.(new Set([{ id: "bad" }]))).toBe(false);
+  });
+
+  it("returns null for ineligible element type", () => {
+    const ir: SetIR = {
+      type: "set",
+      valueType: { type: "default", inner: { type: "string", checks: [] }, defaultValue: "" },
+    };
+    expect(compileFastCheck(ir)).toBeNull();
+  });
+
+  it("skips helper for any-typed elements", () => {
+    const ir: SetIR = { type: "set", valueType: { type: "any" } };
+    const fn = compileFastCheck(ir);
+    expect(fn?.(new Set([1, "a", null]))).toBe(true);
   });
 });
