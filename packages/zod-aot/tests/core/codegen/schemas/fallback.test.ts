@@ -9,7 +9,12 @@ import { compileIR } from "../helpers.js";
 describe("slow-path — fallback", () => {
   it("generates __fb[N].safeParse call when fallbackIndex is present", () => {
     const ir: FallbackIR = { type: "fallback", reason: "transform", fallbackIndex: 0 };
-    const ctx: CodeGenContext = { preamble: [], counter: 0, fnName: "safeParse_test" };
+    const ctx: CodeGenContext = {
+      preamble: [],
+      counter: 0,
+      fnName: "safeParse_test",
+      regexCache: new Map(),
+    };
     const g = createSlowGen("input", "input", "[]", "__issues", ctx);
     const code = slowFallback(ir, g);
     expect(code).toContain("__fb[0].safeParse(input)");
@@ -18,7 +23,12 @@ describe("slow-path — fallback", () => {
 
   it("generates error push when fallbackIndex is absent", () => {
     const ir: FallbackIR = { type: "fallback", reason: "transform" };
-    const ctx: CodeGenContext = { preamble: [], counter: 0, fnName: "safeParse_test" };
+    const ctx: CodeGenContext = {
+      preamble: [],
+      counter: 0,
+      fnName: "safeParse_test",
+      regexCache: new Map(),
+    };
     const g = createSlowGen("input", "input", "[]", "__issues", ctx);
     const code = slowFallback(ir, g);
     expect(code).toContain("Fallback schema: transform");
@@ -27,7 +37,12 @@ describe("slow-path — fallback", () => {
 
   it("uses correct variable names for different indices", () => {
     const ir: FallbackIR = { type: "fallback", reason: "refine", fallbackIndex: 3 };
-    const ctx: CodeGenContext = { preamble: [], counter: 0, fnName: "safeParse_test" };
+    const ctx: CodeGenContext = {
+      preamble: [],
+      counter: 0,
+      fnName: "safeParse_test",
+      regexCache: new Map(),
+    };
     const g = createSlowGen("v", "v", "p", "iss", ctx);
     const code = slowFallback(ir, g);
     expect(code).toContain("__fb[3].safeParse(v)");

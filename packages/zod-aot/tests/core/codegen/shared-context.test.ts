@@ -11,7 +11,12 @@ import type { StringIR } from "#src/core/types.js";
  */
 describe("shared CodeGenContext between fast-path and slow-path", () => {
   it("fast and slow paths share the same counter — no name collisions", () => {
-    const ctx: CodeGenContext = { preamble: [], counter: 0, fnName: "safeParse_test" };
+    const ctx: CodeGenContext = {
+      preamble: [],
+      counter: 0,
+      fnName: "safeParse_test",
+      regexCache: new Map(),
+    };
 
     // Fast-path runs first (matches orchestrator order)
     const fg = createFastGen("input", ctx);
@@ -30,7 +35,9 @@ describe("shared CodeGenContext between fast-path and slow-path", () => {
     generateSlow(ir, sg);
 
     const counterAfterSlow = ctx.counter;
-    expect(counterAfterSlow).toBeGreaterThan(counterAfterFast);
+    // With regex dedup, slow path reuses the fast path's email regex variable
+    // so counter may not increase if the only new operation was a deduped regex
+    expect(counterAfterSlow).toBeGreaterThanOrEqual(counterAfterFast);
 
     // All preamble variable names should be unique
     const varNames = ctx.preamble
@@ -44,7 +51,12 @@ describe("shared CodeGenContext between fast-path and slow-path", () => {
   });
 
   it("preamble entries from both paths are interleaved correctly", () => {
-    const ctx: CodeGenContext = { preamble: [], counter: 0, fnName: "safeParse_test" };
+    const ctx: CodeGenContext = {
+      preamble: [],
+      counter: 0,
+      fnName: "safeParse_test",
+      regexCache: new Map(),
+    };
 
     const fg = createFastGen("input", ctx);
     const sg = createSlowGen("__data", "__data", "[]", "__issues", ctx);
@@ -67,7 +79,12 @@ describe("shared CodeGenContext between fast-path and slow-path", () => {
   });
 
   it("temp() from FastGen and SlowGen never produce duplicate names", () => {
-    const ctx: CodeGenContext = { preamble: [], counter: 0, fnName: "safeParse_test" };
+    const ctx: CodeGenContext = {
+      preamble: [],
+      counter: 0,
+      fnName: "safeParse_test",
+      regexCache: new Map(),
+    };
     const fg = createFastGen("input", ctx);
     const sg = createSlowGen("__data", "__data", "[]", "__issues", ctx);
 

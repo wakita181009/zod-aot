@@ -19,7 +19,7 @@ export function generateValidator(
   options?: { fallbackCount?: number },
 ): CodeGenResult {
   const fnName = `safeParse_${name}`;
-  const ctx: CodeGenContext = { preamble: [], counter: 0, fnName };
+  const ctx: CodeGenContext = { preamble: [], counter: 0, fnName, regexCache: new Map() };
 
   // Fast Path: generate a boolean expression for eligible schemas
   const fg = createFastGen("input", ctx);

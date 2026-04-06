@@ -5,7 +5,13 @@ import type { SchemaIR, StringIR } from "#src/core/types.js";
 import { compileFastCheck } from "./helpers.js";
 
 function makeCtx(overrides?: Partial<CodeGenContext>): CodeGenContext {
-  return { preamble: [], counter: 0, fnName: "safeParse_test", ...overrides };
+  return {
+    preamble: [],
+    counter: 0,
+    fnName: "safeParse_test",
+    regexCache: new Map(),
+    ...overrides,
+  };
 }
 
 describe("createFastGen", () => {
