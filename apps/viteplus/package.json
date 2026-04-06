@@ -20,6 +20,6 @@
     "@types/node": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",
-    "vite-plus": "^0.1.14"
+    "vite-plus": "^0.1.15"
   }
 }
