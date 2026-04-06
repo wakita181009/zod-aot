@@ -1,11 +1,13 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import type { WatchDeps } from "#src/cli/commands/watch.js";
 import { debounce, isWatchTarget, resolveWatchDirs, runWatch } from "#src/cli/commands/watch.js";
 import { resolveOutputPath } from "#src/cli/emitter.js";
 
 const fixturesDir = path.resolve(import.meta.dirname, "../../fixtures");
+const tmpOutputDir = fs.mkdtempSync(path.join(os.tmpdir(), "zod-aot-watch-test-"));
 const outputFiles: string[] = [];
 
 afterEach(async () => {
@@ -13,6 +15,10 @@ afterEach(async () => {
     await fs.promises.unlink(f).catch(() => undefined);
   }
   outputFiles.length = 0;
+});
+
+afterAll(async () => {
+  await fs.promises.rm(tmpOutputDir, { recursive: true, force: true });
 });
 
 describe("isWatchTarget", () => {
@@ -210,9 +216,9 @@ describe("runWatch", () => {
   it("performs initial generation and starts watching", async () => {
     const { deps } = createMockDeps();
     const filePath = path.join(fixturesDir, "simple-schema.ts");
-    outputFiles.push(resolveOutputPath(filePath, undefined));
+    outputFiles.push(resolveOutputPath(filePath, `${tmpOutputDir}/`));
 
-    const watchPromise = runWatch({ inputs: [filePath], output: undefined }, deps);
+    const watchPromise = runWatch({ inputs: [filePath], output: `${tmpOutputDir}/` }, deps);
 
     try {
       await vi.waitFor(() => {
@@ -266,9 +272,9 @@ describe("runWatch", () => {
   it("handles SIGTERM for graceful shutdown", async () => {
     const { deps } = createMockDeps();
     const filePath = path.join(fixturesDir, "simple-schema.ts");
-    outputFiles.push(resolveOutputPath(filePath, undefined));
+    outputFiles.push(resolveOutputPath(filePath, `${tmpOutputDir}/`));
 
-    const watchPromise = runWatch({ inputs: [filePath], output: undefined }, deps);
+    const watchPromise = runWatch({ inputs: [filePath], output: `${tmpOutputDir}/` }, deps);
 
     try {
       await vi.waitFor(() => {
@@ -285,9 +291,9 @@ describe("runWatch", () => {
   it("ignores watcher callback with null filename", async () => {
     const { deps, callbacks } = createMockDeps();
     const filePath = path.join(fixturesDir, "simple-schema.ts");
-    outputFiles.push(resolveOutputPath(filePath, undefined));
+    outputFiles.push(resolveOutputPath(filePath, `${tmpOutputDir}/`));
 
-    const watchPromise = runWatch({ inputs: [filePath], output: undefined }, deps);
+    const watchPromise = runWatch({ inputs: [filePath], output: `${tmpOutputDir}/` }, deps);
 
     try {
       await vi.waitFor(() => {
@@ -310,9 +316,9 @@ describe("runWatch", () => {
   it("ignores watcher callback for non-target files", async () => {
     const { deps, callbacks } = createMockDeps();
     const filePath = path.join(fixturesDir, "simple-schema.ts");
-    outputFiles.push(resolveOutputPath(filePath, undefined));
+    outputFiles.push(resolveOutputPath(filePath, `${tmpOutputDir}/`));
 
-    const watchPromise = runWatch({ inputs: [filePath], output: undefined }, deps);
+    const watchPromise = runWatch({ inputs: [filePath], output: `${tmpOutputDir}/` }, deps);
 
     try {
       await vi.waitFor(() => {
@@ -338,9 +344,9 @@ describe("runWatch", () => {
       },
     };
     const filePath = path.join(fixturesDir, "simple-schema.ts");
-    outputFiles.push(resolveOutputPath(filePath, undefined));
+    outputFiles.push(resolveOutputPath(filePath, `${tmpOutputDir}/`));
 
-    await runWatch({ inputs: [filePath], output: undefined }, deps);
+    await runWatch({ inputs: [filePath], output: `${tmpOutputDir}/` }, deps);
 
     expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining("Failed to watch"));
     expect(mockLogger.error).toHaveBeenCalledWith("No directories could be watched.");
@@ -349,9 +355,9 @@ describe("runWatch", () => {
   it("regenerates on watcher callback", async () => {
     const { deps, callbacks } = createMockDeps();
     const filePath = path.join(fixturesDir, "simple-schema.ts");
-    outputFiles.push(resolveOutputPath(filePath, undefined));
+    outputFiles.push(resolveOutputPath(filePath, `${tmpOutputDir}/`));
 
-    const watchPromise = runWatch({ inputs: [filePath], output: undefined }, deps);
+    const watchPromise = runWatch({ inputs: [filePath], output: `${tmpOutputDir}/` }, deps);
 
     try {
       // Wait for initial generation to complete and watcher to start

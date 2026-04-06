@@ -1,6 +1,7 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import { ZodRealError, type z } from "zod";
 import {
   findSchemaFiles,
@@ -20,6 +21,7 @@ import type { SafeParseResult } from "#src/core/types.js";
 import { discoverSchemas } from "#src/discovery.js";
 
 const fixturesDir = path.resolve(import.meta.dirname, "../../fixtures");
+const tmpOutputDir = fs.mkdtempSync(path.join(os.tmpdir(), "zod-aot-generate-test-"));
 const outputFiles: string[] = [];
 
 afterEach(async () => {
@@ -27,6 +29,10 @@ afterEach(async () => {
     await fs.promises.unlink(f).catch(() => undefined);
   }
   outputFiles.length = 0;
+});
+
+afterAll(async () => {
+  await fs.promises.rm(tmpOutputDir, { recursive: true, force: true });
 });
 
 describe("isSchemaFile", () => {
@@ -103,7 +109,7 @@ describe("findSchemaFiles", () => {
 describe("generateFile", () => {
   it("generates compiled output for a schema file", async () => {
     const filePath = path.join(fixturesDir, "simple-schema.ts");
-    const result = await generateFile(filePath, undefined);
+    const result = await generateFile(filePath, `${tmpOutputDir}/`);
 
     expect(result).not.toBeNull();
     if (!result) return;
@@ -120,7 +126,7 @@ describe("generateFile", () => {
 
   it("generates compiled output for multi-schema file", async () => {
     const filePath = path.join(fixturesDir, "multi-schema.ts");
-    const result = await generateFile(filePath, undefined);
+    const result = await generateFile(filePath, `${tmpOutputDir}/`);
 
     expect(result).not.toBeNull();
     if (!result) return;
@@ -133,13 +139,13 @@ describe("generateFile", () => {
 
   it("returns null for file with no compile() calls", async () => {
     const filePath = path.join(fixturesDir, "no-compile.ts");
-    const result = await generateFile(filePath, undefined);
+    const result = await generateFile(filePath, `${tmpOutputDir}/`);
     expect(result).toBeNull();
   });
 
   it("respects custom output path", async () => {
     const filePath = path.join(fixturesDir, "simple-schema.ts");
-    const customOutput = path.join(fixturesDir, "custom-output.compiled.ts");
+    const customOutput = path.join(tmpOutputDir, "custom-output.compiled.ts");
     const result = await generateFile(filePath, customOutput);
 
     expect(result).not.toBeNull();
@@ -168,9 +174,9 @@ describe("runGenerate", () => {
 
     try {
       const filePath = path.join(fixturesDir, "simple-schema.ts");
-      await runGenerate({ inputs: [filePath], output: undefined });
+      await runGenerate({ inputs: [filePath], output: `${tmpOutputDir}/` });
 
-      const outputPath = resolveOutputPath(filePath, undefined);
+      const outputPath = resolveOutputPath(filePath, `${tmpOutputDir}/`);
       outputFiles.push(outputPath);
 
       expect(mockLogger.success).toHaveBeenCalled();
@@ -216,18 +222,20 @@ describe("runGenerate", () => {
           path.join(fixturesDir, "simple-schema.ts"),
           path.join(fixturesDir, "multi-schema.ts"),
         ],
-        output: undefined,
+        output: `${tmpOutputDir}/`,
       });
 
       for (const call of mockLogger.success.mock.calls) {
         const msg = call[0] as string;
         if (msg.includes("simple-schema")) {
           outputFiles.push(
-            resolveOutputPath(path.join(fixturesDir, "simple-schema.ts"), undefined),
+            resolveOutputPath(path.join(fixturesDir, "simple-schema.ts"), `${tmpOutputDir}/`),
           );
         }
         if (msg.includes("multi-schema")) {
-          outputFiles.push(resolveOutputPath(path.join(fixturesDir, "multi-schema.ts"), undefined));
+          outputFiles.push(
+            resolveOutputPath(path.join(fixturesDir, "multi-schema.ts"), `${tmpOutputDir}/`),
+          );
         }
       }
 
@@ -278,11 +286,11 @@ describe("runGenerate — edge cases", () => {
     });
 
     // Create a temp file that will cause discoverSchemas to fail
-    const badFile = path.join(fixturesDir, "__bad_syntax_test__.ts");
+    const badFile = path.join(tmpOutputDir, "__bad_syntax_test__.ts");
     await fs.promises.writeFile(badFile, "export const x = {{{INVALID SYNTAX");
 
     try {
-      await expect(runGenerate({ inputs: [badFile], output: undefined })).rejects.toThrow(
+      await expect(runGenerate({ inputs: [badFile], output: `${tmpOutputDir}/` })).rejects.toThrow(
         "process.exit",
       );
       expect(mockLogger.error).toHaveBeenCalled();
@@ -318,7 +326,7 @@ describe("generate E2E", () => {
       return { exportName: s.exportName, codegenResult: result, fallbackEntries: [] };
     });
 
-    const outputPath = resolveOutputPath(filePath, undefined);
+    const outputPath = resolveOutputPath(filePath, `${tmpOutputDir}/`);
     outputFiles.push(outputPath);
 
     const content = generateCompiledFileContent(codegenResults, "./simple-schema.ts");
@@ -364,7 +372,7 @@ describe("generate E2E", () => {
       return { exportName: s.exportName, codegenResult: result, fallbackEntries: [] };
     });
 
-    const outputPath = resolveOutputPath(filePath, undefined);
+    const outputPath = resolveOutputPath(filePath, `${tmpOutputDir}/`);
     outputFiles.push(outputPath);
 
     const content = generateCompiledFileContent(codegenResults, "./multi-schema.ts");
