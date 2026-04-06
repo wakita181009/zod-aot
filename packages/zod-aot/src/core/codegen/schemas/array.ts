@@ -73,12 +73,16 @@ export function fastArray(ir: ArrayIR, g: FastGen): string | null {
     }
   }
 
-  // Element validation via .every()
-  const elemVar = g.temp("fe");
+  // Element validation via preamble helper (avoids .every() closure allocation)
+  const elemVar = g.temp("ae");
   const elemCheck = g.visit(ir.element, { input: elemVar });
   if (elemCheck === null) return null;
   if (elemCheck !== "true") {
-    parts.push(`${x}.every(${elemVar}=>${elemCheck})`);
+    const helperName = g.temp("af");
+    g.ctx.preamble.push(
+      `function ${helperName}(a){for(var ${elemVar},i=0;i<a.length;i++){${elemVar}=a[i];if(!(${elemCheck})){return false;}}return true;}`,
+    );
+    parts.push(`${helperName}(${x})`);
   }
 
   // Refine effect checks (appended last — run after cheap checks short-circuit)

@@ -71,7 +71,7 @@ export function fastTuple(ir: TupleIR, g: FastGen): string | null {
     if (restCheck !== "true") {
       const helperName = g.temp("te");
       g.ctx.preamble.push(
-        `function ${helperName}(a,s){for(var __i=s;__i<a.length;__i++){var ${rv}=a[__i];if(!(${restCheck}))return false;}return true;}`,
+        `function ${helperName}(a,s){for(var ${rv},i=s;i<a.length;i++){${rv}=a[i];if(!(${restCheck})){return false;}}return true;}`,
       );
       parts.push(`${helperName}(${x},${ir.items.length})`);
     }
