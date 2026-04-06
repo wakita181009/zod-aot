@@ -88,7 +88,7 @@
   },
   "dependencies": {
     "acorn": "^8.16.0",
-    "get-tsconfig": "^4.13.0",
+    "get-tsconfig": "^4.13.7",
     "jiti": "^2.6.1",
     "picomatch": "^4.0.4",
     "unplugin": "^3.0.0"
