@@ -100,8 +100,11 @@ export function createFastGen(inputExpr: string, ctx: CodeGenContext): FastGen {
       return `__${prefix}_${ctx.counter++}`;
     },
     regex(prefix, pattern) {
+      const cached = ctx.regexCache.get(pattern);
+      if (cached) return cached;
       const name = `__re_${prefix}_${ctx.counter++}`;
       ctx.preamble.push(`var ${name}=new RegExp(${escapeString(pattern)});`);
+      ctx.regexCache.set(pattern, name);
       return name;
     },
   };

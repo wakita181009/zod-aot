@@ -104,12 +104,20 @@ export function fastNumber(ir: NumberIR, g: FastGen): string | null {
   if (ir.checks.some((c) => c.kind === "refine_effect")) return null;
 
   const x = g.input;
-  const parts: string[] = [
-    `typeof ${x}==="number"`,
-    `!Number.isNaN(${x})`,
-    `Number.isFinite(${x})`,
-  ];
+  const parts: string[] = [`typeof ${x}==="number"`];
   const checks = ir.checks.filter((c): c is CheckIR => c.kind !== "refine_effect");
+
+  // isSafeInteger, (x|0)===x, and (x>>>0)===x all return false for NaN and Infinity,
+  // making explicit isNaN/isFinite guards redundant for integer formats.
+  // Note: Math.fround(Infinity)===Infinity is true, so float32 still needs isFinite.
+  const hasIntFormat = checks.some(
+    (c) =>
+      c.kind === "number_format" &&
+      (c.format === "safeint" || c.format === "int32" || c.format === "uint32"),
+  );
+  if (!hasIntFormat) {
+    parts.push(`!Number.isNaN(${x})`, `Number.isFinite(${x})`);
+  }
 
   for (const check of checks.sort(checkPriority)) {
     switch (check.kind) {

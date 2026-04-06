@@ -12,6 +12,8 @@ export interface CodeGenContext {
   preamble: string[];
   counter: number;
   fnName: string;
+  /** Deduplicates regex patterns: same pattern string → same preamble variable name. */
+  regexCache: Map<string, string>;
 }
 
 // ─── Slow Path context ────────────────────────────────────────────────────────

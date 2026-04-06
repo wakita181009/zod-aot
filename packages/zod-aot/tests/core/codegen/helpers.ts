@@ -35,7 +35,7 @@ export function compileIR(
  * Returns null if the schema is not eligible for fast-check.
  */
 export function compileFastCheck(ir: SchemaIR): ((input: unknown) => boolean) | null {
-  const ctx: CodeGenContext = { preamble: [], counter: 0, fnName: "test" };
+  const ctx: CodeGenContext = { preamble: [], counter: 0, fnName: "test", regexCache: new Map() };
   const g = createFastGen("input", ctx);
   const expr = generateFast(ir, g);
   if (expr === null) return null;

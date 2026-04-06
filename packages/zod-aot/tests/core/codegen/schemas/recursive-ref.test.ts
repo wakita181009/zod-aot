@@ -7,7 +7,12 @@ import { compileIR } from "../helpers.js";
 
 describe("slow-path — recursiveRef", () => {
   it("generates self-call with correct function name", () => {
-    const ctx: CodeGenContext = { preamble: [], counter: 0, fnName: "safeParse_tree" };
+    const ctx: CodeGenContext = {
+      preamble: [],
+      counter: 0,
+      fnName: "safeParse_tree",
+      regexCache: new Map(),
+    };
     const ir: RecursiveRefIR = { type: "recursiveRef" };
     const g = createSlowGen("input", "input", "[]", "__issues", ctx);
     const code = slowRecursiveRef(ir, g);
@@ -16,7 +21,12 @@ describe("slow-path — recursiveRef", () => {
   });
 
   it("increments counter for unique variable names", () => {
-    const ctx: CodeGenContext = { preamble: [], counter: 5, fnName: "safeParse_node" };
+    const ctx: CodeGenContext = {
+      preamble: [],
+      counter: 5,
+      fnName: "safeParse_node",
+      regexCache: new Map(),
+    };
     const ir: RecursiveRefIR = { type: "recursiveRef" };
     const g = createSlowGen("v", "v", "p", "iss", ctx);
     const code = slowRecursiveRef(ir, g);
@@ -27,7 +37,12 @@ describe("slow-path — recursiveRef", () => {
   });
 
   it("merges error issues with path on failure", () => {
-    const ctx: CodeGenContext = { preamble: [], counter: 0, fnName: "safeParse_test" };
+    const ctx: CodeGenContext = {
+      preamble: [],
+      counter: 0,
+      fnName: "safeParse_test",
+      regexCache: new Map(),
+    };
     const ir: RecursiveRefIR = { type: "recursiveRef" };
     const g = createSlowGen("input", "input", '["children",0]', "__issues", ctx);
     const code = slowRecursiveRef(ir, g);
@@ -36,7 +51,12 @@ describe("slow-path — recursiveRef", () => {
   });
 
   it("writes back data on success", () => {
-    const ctx: CodeGenContext = { preamble: [], counter: 0, fnName: "safeParse_test" };
+    const ctx: CodeGenContext = {
+      preamble: [],
+      counter: 0,
+      fnName: "safeParse_test",
+      regexCache: new Map(),
+    };
     const ir: RecursiveRefIR = { type: "recursiveRef" };
     const g = createSlowGen("input", "input", "[]", "__issues", ctx);
     const code = slowRecursiveRef(ir, g);
