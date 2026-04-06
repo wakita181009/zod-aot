@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.0](https://github.com/wakita181009/zod-aot/compare/v0.17.3...v0.18.0) (2026-04-06)
+
+
+### Features
+
+* expand Fast Path eligibility to date, set, map, and refine_effect ([#120](https://github.com/wakita181009/zod-aot/issues/120)) ([dc14190](https://github.com/wakita181009/zod-aot/commit/dc14190698a1a2da7a10d994a4beff5aafdb077f))
+
 ## [0.17.3](https://github.com/wakita181009/zod-aot/compare/v0.17.2...v0.17.3) (2026-04-06)
 
 
