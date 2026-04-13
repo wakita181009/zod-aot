@@ -17,7 +17,7 @@
     "zod-aot": "workspace:*"
   },
   "devDependencies": {
-    "@types/bun": "^1.2.0",
+    "@types/bun": "^1.3.12",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }
