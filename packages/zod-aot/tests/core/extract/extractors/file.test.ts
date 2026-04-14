@@ -47,4 +47,18 @@ describe("extractSchema — file", () => {
     const ir = extractSchema(z.file());
     expect(ir).not.toHaveProperty("checks");
   });
+
+  it("falls back when file has refine check", () => {
+    const schema = z.file().refine((f) => f.name.endsWith(".pdf"), "Must be PDF");
+    const ir = extractSchema(schema);
+    expect(ir.type).toBe("fallback");
+  });
+
+  it("falls back when file has superRefine check", () => {
+    const schema = z.file().superRefine((f, ctx) => {
+      if (f.size === 0) ctx.addIssue({ code: "custom", message: "Empty file" });
+    });
+    const ir = extractSchema(schema);
+    expect(ir.type).toBe("fallback");
+  });
 });

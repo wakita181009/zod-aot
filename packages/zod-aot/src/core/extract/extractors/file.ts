@@ -1,7 +1,7 @@
 import type { FileCheckIR, SchemaIR } from "../../types.js";
 import type { ExtractorContext, ZodDef } from "../types.js";
 
-export function extractFile(def: ZodDef, _ctx: ExtractorContext): SchemaIR {
+export function extractFile(def: ZodDef, ctx: ExtractorContext): SchemaIR {
   const fileChecks: FileCheckIR[] = [];
   if (def.checks) {
     for (const check of def.checks) {
@@ -13,6 +13,8 @@ export function extractFile(def: ZodDef, _ctx: ExtractorContext): SchemaIR {
         fileChecks.push({ kind: "max_size", maximum: checkDef.maximum });
       } else if (checkDef.check === "mime_type") {
         fileChecks.push({ kind: "mime_type", mime: [...checkDef.mime] });
+      } else {
+        return ctx.fallback("refine");
       }
     }
   }
