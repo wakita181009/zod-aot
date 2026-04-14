@@ -101,8 +101,8 @@ describe("extractNumber — branch coverage", () => {
   it("falls back for number with non-compilable refine", () => {
     const captured = "external";
     const schema = z.number().refine((v) => String(v) === captured);
-    const fallbacks: { schema: unknown; accessPath: string }[] = [];
-    const ir = extractSchema(schema, fallbacks);
+    const refs: { schema: unknown; accessPath: string }[] = [];
+    const ir = extractSchema(schema, refs);
     expect(ir.type).toBe("fallback");
     expect((ir as FallbackIR).reason).toBe("refine");
   });

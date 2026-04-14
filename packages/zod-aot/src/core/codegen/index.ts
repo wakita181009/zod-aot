@@ -16,7 +16,7 @@ export type { CodeGenResult } from "./context.js";
 export function generateValidator(
   ir: SchemaIR,
   name: string,
-  options?: { fallbackCount?: number },
+  options?: { refCount?: number },
 ): CodeGenResult {
   const fnName = `safeParse_${name}`;
   const ctx: CodeGenContext = { preamble: [], counter: 0, fnName, regexCache: new Map() };
@@ -42,7 +42,7 @@ export function generateValidator(
     return {
       code,
       functionDef: functionDefParts.join("\n"),
-      fallbackCount: options?.fallbackCount ?? 0,
+      refCount: options?.refCount ?? 0,
     };
   }
 
@@ -63,5 +63,5 @@ export function generateValidator(
 
   const functionDef = functionDefParts.join("\n");
 
-  return { code, functionDef, fallbackCount: options?.fallbackCount ?? 0 };
+  return { code, functionDef, refCount: options?.refCount ?? 0 };
 }

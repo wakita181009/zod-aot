@@ -109,7 +109,7 @@ describe("extractSchema — discriminatedUnion", () => {
       {
         schema: {},
         path: "test",
-        fallbacks: undefined,
+        refs: undefined,
         visiting: new Set(),
         visit: ((opt: unknown) => {
           const o = opt as { _zod: { def: { type: string } } };

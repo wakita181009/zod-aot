@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import type { FallbackEntry } from "#src/core/extract/index.js";
+import type { RefEntry } from "#src/core/extract/index.js";
 import { extractSchema } from "#src/core/extract/index.js";
 import type {
   ArrayIR,
@@ -50,13 +50,13 @@ describe("extractSchema — lazy (non-recursive)", () => {
   });
 
   it("does not produce fallback entries for non-recursive lazy", () => {
-    const fallbacks: FallbackEntry[] = [];
+    const refs: RefEntry[] = [];
     const ir = extractSchema(
       z.lazy(() => z.string()),
-      fallbacks,
+      refs,
     );
     expect(ir.type).toBe("string");
-    expect(fallbacks).toHaveLength(0);
+    expect(refs).toHaveLength(0);
   });
 });
 
@@ -83,9 +83,9 @@ describe("extractSchema — lazy (recursive / cycle detection)", () => {
       value: z.string(),
       children: z.array(z.lazy(() => TreeNode)),
     });
-    const fallbacks: FallbackEntry[] = [];
-    extractSchema(TreeNode, fallbacks);
-    expect(fallbacks).toHaveLength(0);
+    const refs: RefEntry[] = [];
+    extractSchema(TreeNode, refs);
+    expect(refs).toHaveLength(0);
   });
 
   it("handles mutual recursion (A → lazy(B), B → lazy(A))", () => {
@@ -130,11 +130,11 @@ describe("extractSchema — lazy (recursive / cycle detection)", () => {
         z.lazy(() => JsonValue),
       ),
     ]);
-    const fallbacks: FallbackEntry[] = [];
-    const ir = extractSchema(JsonValue, fallbacks);
+    const refs: RefEntry[] = [];
+    const ir = extractSchema(JsonValue, refs);
     expect(ir.type).toBe("union");
     // Recursive references become recursiveRef IR, no fallbacks needed
-    expect(fallbacks).toHaveLength(0);
+    expect(refs).toHaveLength(0);
   });
 
   it("emits recursiveRef inside nullable (linked list pattern)", () => {

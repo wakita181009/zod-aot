@@ -38,13 +38,14 @@ describe("fastPathEligible", () => {
     expect(diagnoseSchema(ir).fastPathBlocker).toBeUndefined();
   });
 
-  it("ineligible for catch node", () => {
+  it("eligible for catch node (valid inner input uses fast path)", () => {
     const ir: SchemaIR = {
       type: "catch",
       inner: { type: "string", checks: [] },
       defaultValue: "",
     };
-    expect(diagnoseSchema(ir).fastPathBlocker).toBe("catch");
+    expect(diagnoseSchema(ir).fastPathEligible).toBe(true);
+    expect(diagnoseSchema(ir).fastPathBlocker).toBeUndefined();
   });
 
   it("eligible for date node (non-coerce)", () => {
@@ -449,13 +450,13 @@ describe("diagnoseSchema", () => {
     const ir: SchemaIR = {
       type: "object",
       properties: {
-        value: { type: "catch", inner: { type: "string", checks: [] }, defaultValue: "" },
+        value: { type: "fallback", reason: "transform" },
       },
     };
     const result = diagnoseSchema(ir);
 
     expect(result.fastPathEligible).toBe(false);
-    expect(result.fastPathBlocker).toBe("catch");
+    expect(result.fastPathBlocker).toBe("fallback (transform)");
   });
 
   it("fastPathBlocker is undefined when eligible", () => {

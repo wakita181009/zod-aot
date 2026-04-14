@@ -124,7 +124,7 @@ describe("createFastGen", () => {
       const ctx = makeCtx();
       const g = createFastGen("v", ctx);
 
-      const ineligible: SchemaIR["type"][] = ["catch", "fallback", "effect"];
+      const ineligible: SchemaIR["type"][] = ["fallback", "effect"];
 
       for (const type of ineligible) {
         // Construct minimal IR for each type
@@ -239,10 +239,15 @@ describe("fast-path — dispatcher", () => {
     expect(fn?.(42)).toBe(false);
   });
 
-  it("catch → null", () => {
-    expect(
-      compileFastCheck({ type: "catch", inner: { type: "string", checks: [] }, defaultValue: "" }),
-    ).toBeNull();
+  it("catch → eligible (valid input passes, invalid falls to slow path)", () => {
+    const fn = compileFastCheck({
+      type: "catch",
+      inner: { type: "string", checks: [] },
+      defaultValue: "",
+    });
+    expect(fn).not.toBeNull();
+    expect(fn?.("hello")).toBe(true);
+    expect(fn?.(42)).toBe(false);
   });
 
   it("date (non-coerce) → instanceof + getTime checks", () => {

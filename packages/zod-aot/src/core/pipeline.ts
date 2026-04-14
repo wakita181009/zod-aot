@@ -1,6 +1,6 @@
 import type { CodeGenResult } from "./codegen/context.js";
 import { generateValidator } from "./codegen/index.js";
-import type { FallbackEntry } from "./extract/index.js";
+import type { RefEntry } from "./extract/index.js";
 import { extractSchema } from "./extract/index.js";
 import type { DiscoveredSchema } from "./types.js";
 
@@ -8,7 +8,7 @@ import type { DiscoveredSchema } from "./types.js";
 export interface CompiledSchemaInfo {
   exportName: string;
   codegenResult: CodeGenResult;
-  fallbackEntries: FallbackEntry[];
+  refEntries: RefEntry[];
 }
 
 export interface CompileSchemasOptions {
@@ -32,12 +32,12 @@ export function compileSchemas(
 
   for (const s of schemas) {
     try {
-      const fallbackEntries: FallbackEntry[] = [];
-      const ir = extractSchema(s.schema, fallbackEntries);
+      const refEntries: RefEntry[] = [];
+      const ir = extractSchema(s.schema, refEntries);
       const codegenResult = generateValidator(ir, s.exportName, {
-        fallbackCount: fallbackEntries.length,
+        refCount: refEntries.length,
       });
-      results.push({ exportName: s.exportName, codegenResult, fallbackEntries });
+      results.push({ exportName: s.exportName, codegenResult, refEntries });
     } catch (err) {
       if (options?.onError) {
         options.onError(s.exportName, err instanceof Error ? err : new Error(String(err)));

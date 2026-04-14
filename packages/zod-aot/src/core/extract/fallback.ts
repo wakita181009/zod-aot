@@ -1,16 +1,16 @@
 import type { FallbackIR } from "../types.js";
-import type { FallbackEntry } from "./types.js";
+import type { RefEntry } from "./types.js";
 
 export function makeFallback(
   reason: FallbackIR["reason"],
   zodSchema: unknown,
-  fallbacks?: FallbackEntry[],
+  refs?: RefEntry[],
   accessPath?: string,
 ): FallbackIR {
-  if (fallbacks && accessPath !== undefined) {
-    const index = fallbacks.length;
-    fallbacks.push({ schema: zodSchema, accessPath });
-    return { type: "fallback", reason, refIndex: index };
+  if (refs && accessPath !== undefined) {
+    const refIndex = refs.length;
+    refs.push({ schema: zodSchema, accessPath });
+    return { type: "fallback", reason, refIndex };
   }
   return { type: "fallback", reason };
 }

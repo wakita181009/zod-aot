@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { extractSchema } from "#src/core/extract/index.js";
-import type { FallbackEntry } from "#src/core/extract/types.js";
+import type { RefEntry } from "#src/core/extract/types.js";
 import type { DefaultIR, FallbackIR } from "#src/core/types.js";
 
 describe("extractSchema — default (no fallback tracking)", () => {
@@ -14,55 +14,55 @@ describe("extractSchema — default (no fallback tracking)", () => {
 
 describe("extractSchema — default (with fallback tracking)", () => {
   it("uses runtime reference for static default", () => {
-    const fallbacks: FallbackEntry[] = [];
-    const ir = extractSchema(z.string().default("hello"), fallbacks) as DefaultIR;
+    const refs: RefEntry[] = [];
+    const ir = extractSchema(z.string().default("hello"), refs) as DefaultIR;
     expect(ir.type).toBe("default");
     expect(ir.refIndex).toBe(0);
-    expect(fallbacks).toHaveLength(1);
+    expect(refs).toHaveLength(1);
   });
 
   it("uses runtime reference for factory default", () => {
-    const fallbacks: FallbackEntry[] = [];
+    const refs: RefEntry[] = [];
     const ir = extractSchema(
       z.string().default(() => "dynamic"),
-      fallbacks,
+      refs,
     ) as DefaultIR;
     expect(ir.type).toBe("default");
     expect(ir.refIndex).toBe(0);
-    expect(fallbacks).toHaveLength(1);
+    expect(refs).toHaveLength(1);
   });
 
   it("uses runtime reference for Date factory default (not a fallback)", () => {
-    const fallbacks: FallbackEntry[] = [];
+    const refs: RefEntry[] = [];
     const ir = extractSchema(
       z.date().default(() => new Date()),
-      fallbacks,
+      refs,
     ) as DefaultIR;
     expect(ir.type).toBe("default");
     expect(ir.refIndex).toBe(0);
-    expect(fallbacks).toHaveLength(1);
+    expect(refs).toHaveLength(1);
   });
 
   it("uses runtime reference for dynamic object factory default", () => {
     let counter = 0;
-    const fallbacks: FallbackEntry[] = [];
+    const refs: RefEntry[] = [];
     const ir = extractSchema(
       z.object({ id: z.number() }).default(() => ({ id: counter++ })),
-      fallbacks,
+      refs,
     ) as DefaultIR;
     expect(ir.type).toBe("default");
     expect(ir.refIndex).toBe(0);
-    expect(fallbacks).toHaveLength(1);
+    expect(refs).toHaveLength(1);
   });
 
   it("assigns incrementing fallback indices", () => {
-    const fallbacks: FallbackEntry[] = [];
+    const refs: RefEntry[] = [];
     const schema = z.object({
       a: z.string().default("x"),
       b: z.number().default(() => Date.now()),
     });
-    const ir = extractSchema(schema, fallbacks);
+    const ir = extractSchema(schema, refs);
     expect(ir.type).toBe("object");
-    expect(fallbacks.length).toBeGreaterThanOrEqual(2);
+    expect(refs.length).toBeGreaterThanOrEqual(2);
   });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CatchIR } from "#src/core/types.js";
-import { compileIR } from "../helpers.js";
+import { compileFastCheck, compileIR } from "../helpers.js";
 
 describe("slow-path — catch", () => {
   it("returns data when inner validation passes", () => {
@@ -133,5 +133,78 @@ describe("slow-path — catch", () => {
     const result = safeParse({ name: 42, age: "abc" });
     expect(result.success).toBe(true);
     expect(result.data).toEqual({ name: "anonymous", age: 0 });
+  });
+});
+
+describe("fast-path — catch", () => {
+  it("accepts valid input via fast path", () => {
+    const fn = compileFastCheck({
+      type: "catch",
+      inner: { type: "string", checks: [] },
+      defaultValue: "default",
+    });
+    expect(fn).not.toBeNull();
+    expect(fn?.("hello")).toBe(true);
+  });
+
+  it("rejects invalid input (delegates to slow path for catch default)", () => {
+    const fn = compileFastCheck({
+      type: "catch",
+      inner: { type: "string", checks: [] },
+      defaultValue: "default",
+    });
+    expect(fn).not.toBeNull();
+    expect(fn?.(42)).toBe(false);
+  });
+
+  it("validates inner checks", () => {
+    const fn = compileFastCheck({
+      type: "catch",
+      inner: { type: "string", checks: [{ kind: "min_length", minimum: 3 }] },
+      defaultValue: "short",
+    });
+    expect(fn).not.toBeNull();
+    expect(fn?.("abc")).toBe(true);
+    expect(fn?.("ab")).toBe(false);
+  });
+
+  it("ineligible inner → returns null", () => {
+    expect(
+      compileFastCheck({
+        type: "catch",
+        inner: { type: "fallback", reason: "transform" },
+        defaultValue: "",
+      }),
+    ).toBeNull();
+  });
+
+  it("nested catch inside object — object gains fast path", () => {
+    const fn = compileFastCheck({
+      type: "object",
+      properties: {
+        name: {
+          type: "catch",
+          inner: { type: "string", checks: [] },
+          defaultValue: "anon",
+        },
+      },
+    });
+    expect(fn).not.toBeNull();
+    expect(fn?.({ name: "hello" })).toBe(true);
+  });
+
+  it("end-to-end: fast path + slow path produce correct results", () => {
+    const ir: CatchIR = {
+      type: "catch",
+      inner: { type: "string", checks: [] },
+      defaultValue: "fallback",
+    };
+    const safeParse = compileIR(ir);
+
+    // Valid input: fast path → success with input value
+    expect(safeParse("hello")).toEqual({ success: true, data: "hello" });
+
+    // Invalid input: slow path applies catch default
+    expect(safeParse(42)).toEqual({ success: true, data: "fallback" });
   });
 });

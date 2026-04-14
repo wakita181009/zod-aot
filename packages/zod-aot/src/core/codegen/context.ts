@@ -11,7 +11,7 @@ export interface CodeGenResult {
   code: string;
   functionDef: string;
   /** Number of fallback schemas referenced by __rf[N] in the generated code. 0 = no fallbacks. */
-  fallbackCount: number;
+  refCount: number;
 }
 
 /** Shared mutable state for code generation. Fast and slow paths share the same instance. */

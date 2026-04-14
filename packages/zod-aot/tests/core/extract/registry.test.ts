@@ -37,13 +37,13 @@ describe("dispatch", () => {
     expect((ir as FallbackIR).reason).toBe("unsupported");
   });
 
-  it("collects fallback entries when fallbacks array is provided", () => {
+  it("collects fallback entries when refs array is provided", () => {
     const fakeSchema = { _zod: { def: { type: "not_a_real_type" } } };
-    const fallbacks: { schema: unknown; accessPath: string }[] = [];
-    const ir = dispatch(fakeSchema, ".root", fallbacks, new Set());
+    const refs: { schema: unknown; accessPath: string }[] = [];
+    const ir = dispatch(fakeSchema, ".root", refs, new Set());
     expect(ir.type).toBe("fallback");
-    expect(fallbacks).toHaveLength(1);
-    expect(fallbacks[0]?.accessPath).toBe(".root");
+    expect(refs).toHaveLength(1);
+    expect(refs[0]?.accessPath).toBe(".root");
   });
 
   it("manages visiting set for cycle detection", () => {

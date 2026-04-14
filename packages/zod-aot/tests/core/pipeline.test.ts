@@ -17,7 +17,7 @@ describe("compileSchemas", () => {
     expect(results[1]?.codegenResult.functionDef).toContain("safeParse_validatePost");
   });
 
-  it("collects fallbackEntries independently per schema", () => {
+  it("collects refEntries independently per schema", () => {
     // Use captured-variable transforms to ensure fallback (zero-capture transforms are now compiled)
     const external = "prefix_";
     const schemas = [
@@ -35,10 +35,10 @@ describe("compileSchemas", () => {
     ];
     const results = compileSchemas(schemas);
 
-    expect(results[0]?.fallbackEntries.length).toBeGreaterThan(0);
-    expect(results[0]?.codegenResult.fallbackCount).toBe(results[0]?.fallbackEntries.length);
-    expect(results[1]?.fallbackEntries).toHaveLength(0);
-    expect(results[1]?.codegenResult.fallbackCount).toBe(0);
+    expect(results[0]?.refEntries.length).toBeGreaterThan(0);
+    expect(results[0]?.codegenResult.refCount).toBe(results[0]?.refEntries.length);
+    expect(results[1]?.refEntries).toHaveLength(0);
+    expect(results[1]?.codegenResult.refCount).toBe(0);
   });
 
   it("zero-capture transform/refine produce no fallback entries", () => {
@@ -50,11 +50,11 @@ describe("compileSchemas", () => {
     const results = compileSchemas([{ exportName: "test", schema }]);
 
     // Zero-capture transform and refine are now compiled (no fallback)
-    expect(results[0]?.fallbackEntries.length).toBe(0);
-    expect(results[0]?.codegenResult.fallbackCount).toBe(0);
+    expect(results[0]?.refEntries.length).toBe(0);
+    expect(results[0]?.codegenResult.refCount).toBe(0);
   });
 
-  it("propagates fallbackCount to codegenResult for captured-variable transforms", () => {
+  it("propagates refCount to codegenResult for captured-variable transforms", () => {
     const external1 = "a";
     const external2 = "b";
     const schema = z.object({
@@ -64,9 +64,9 @@ describe("compileSchemas", () => {
     });
     const results = compileSchemas([{ exportName: "test", schema }]);
 
-    expect(results[0]?.codegenResult.fallbackCount).toBe(results[0]?.fallbackEntries.length);
+    expect(results[0]?.codegenResult.refCount).toBe(results[0]?.refEntries.length);
     // a (captured transform) + c (captured transform)
-    expect(results[0]?.fallbackEntries.length).toBe(2);
+    expect(results[0]?.refEntries.length).toBe(2);
   });
 
   it("continues on error when onError is provided", () => {
@@ -118,7 +118,7 @@ describe("compileSchemas", () => {
     const info = results[0];
     expect(info).toBeDefined();
 
-    const fbArr = info?.fallbackEntries.map((e) => e.schema) ?? [];
+    const fbArr = info?.refEntries.map((e) => e.schema) ?? [];
     const fn = new Function(
       "__ZodError",
       "__rf",
@@ -139,7 +139,7 @@ describe("compileSchemas", () => {
     const info = results[0];
     expect(info).toBeDefined();
 
-    const fbArr = info?.fallbackEntries.map((e) => e.schema) ?? [];
+    const fbArr = info?.refEntries.map((e) => e.schema) ?? [];
     const fn = new Function(
       "__ZodError",
       "__rf",
@@ -163,7 +163,7 @@ describe("compileSchemas", () => {
     const info = results[0];
     expect(info).toBeDefined();
 
-    const fbArr = info?.fallbackEntries.map((e) => e.schema) ?? [];
+    const fbArr = info?.refEntries.map((e) => e.schema) ?? [];
     const fn = new Function(
       "__ZodError",
       "__rf",
@@ -181,7 +181,7 @@ describe("compileSchemas", () => {
     const info = results[0];
     expect(info).toBeDefined();
 
-    const fbArr = info?.fallbackEntries.map((e) => e.schema) ?? [];
+    const fbArr = info?.refEntries.map((e) => e.schema) ?? [];
     const fn = new Function(
       "__ZodError",
       "__rf",
@@ -216,7 +216,7 @@ describe("compileSchemas", () => {
     const info = results[0];
     expect(info).toBeDefined();
 
-    const fbArr = info?.fallbackEntries.map((e) => e.schema) ?? [];
+    const fbArr = info?.refEntries.map((e) => e.schema) ?? [];
     const fn = new Function(
       "__ZodError",
       "__rf",
@@ -245,9 +245,9 @@ describe("compileSchemas", () => {
     const results = compileSchemas([{ exportName: "nestedDefault", schema }]);
     const info = results[0];
     expect(info).toBeDefined();
-    expect(info?.fallbackEntries.length).toBeGreaterThanOrEqual(2);
+    expect(info?.refEntries.length).toBeGreaterThanOrEqual(2);
 
-    const fbArr = info?.fallbackEntries.map((e) => e.schema) ?? [];
+    const fbArr = info?.refEntries.map((e) => e.schema) ?? [];
     const fn = new Function(
       "__ZodError",
       "__rf",

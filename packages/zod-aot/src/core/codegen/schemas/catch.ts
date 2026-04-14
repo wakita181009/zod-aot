@@ -1,5 +1,5 @@
-import type { SchemaIR } from "../../types.js";
-import type { SlowGen } from "../context.js";
+import type { CatchIR, SchemaIR } from "../../types.js";
+import type { FastGen, SlowGen } from "../context.js";
 
 export function slowCatch(ir: SchemaIR & { type: "catch" }, g: SlowGen): string {
   const defaultStr = ir.defaultValue === undefined ? "undefined" : JSON.stringify(ir.defaultValue);
@@ -10,4 +10,8 @@ export function slowCatch(ir: SchemaIR & { type: "catch" }, g: SlowGen): string 
     `if(${tempIssues}.length>0){${g.output}=${defaultStr};}`,
     "",
   ].join("\n");
+}
+
+export function fastCatch(ir: CatchIR, g: FastGen): string | null {
+  return g.visit(ir.inner);
 }

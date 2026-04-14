@@ -28,8 +28,8 @@ describe("extractObject", () => {
   it("falls back for object with non-compilable refine", () => {
     const captured = "external";
     const schema = z.object({ x: z.string() }).refine((v) => v.x === captured);
-    const fallbacks: { schema: unknown; accessPath: string }[] = [];
-    const ir = extractSchema(schema, fallbacks);
+    const refs: { schema: unknown; accessPath: string }[] = [];
+    const ir = extractSchema(schema, refs);
     expect(ir.type).toBe("fallback");
     expect((ir as FallbackIR).reason).toBe("refine");
   });
@@ -39,7 +39,7 @@ describe("extractObject", () => {
     const mockCtx = {
       schema: {},
       path: "",
-      fallbacks: undefined,
+      refs: undefined,
       visiting: new Set(),
       visit: () => ({ type: "string" as const, checks: [] }),
       fallback: (reason: string) => ({ type: "fallback" as const, reason }),

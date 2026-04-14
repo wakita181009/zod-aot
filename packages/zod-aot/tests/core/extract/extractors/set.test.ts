@@ -61,7 +61,7 @@ describe("extractSchema — set", () => {
       {
         schema: {},
         path: "test",
-        fallbacks: undefined,
+        refs: undefined,
         visiting: new Set(),
         visit: () => ({ type: "string", checks: [] }),
         fallback: (reason) => ({ type: "fallback", reason }),

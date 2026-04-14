@@ -211,9 +211,9 @@ describe("codegen — partial fallback", () => {
         slug: { type: "fallback", reason: "transform", refIndex: 0 } satisfies FallbackIR,
       },
     };
-    const result = generateValidator(ir, "test", { fallbackCount: 1 });
+    const result = generateValidator(ir, "test", { refCount: 1 });
     expect(result.functionDef).toContain("__rf[0].safeParse");
-    expect(result.fallbackCount).toBe(1);
+    expect(result.refCount).toBe(1);
   });
 
   it("generates old-style error push for fallback without index", () => {

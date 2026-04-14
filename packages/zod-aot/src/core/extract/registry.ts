@@ -34,7 +34,7 @@ import { makeFallback } from "./fallback.js";
 import type {
   Extractor,
   ExtractorContext,
-  FallbackEntry,
+  RefEntry,
   SupportedZodDefType,
   ZodSchema,
 } from "./types.js";
@@ -91,20 +91,20 @@ export const extractRegistry = {
 function createExtractorContext(
   schema: unknown,
   path: string,
-  fallbacks: FallbackEntry[] | undefined,
+  refs: RefEntry[] | undefined,
   visiting: Set<unknown>,
 ): ExtractorContext {
   return {
     schema,
     path,
-    fallbacks,
+    refs,
     visiting,
     visit(childSchema: unknown, pathSuffix?: string): SchemaIR {
       const childPath = pathSuffix ? `${path}${pathSuffix}` : path;
-      return dispatch(childSchema, childPath, fallbacks, visiting);
+      return dispatch(childSchema, childPath, refs, visiting);
     },
     fallback(reason: FallbackIR["reason"]) {
-      return makeFallback(reason, schema, fallbacks, path);
+      return makeFallback(reason, schema, refs, path);
     },
   };
 }
@@ -118,7 +118,7 @@ function createExtractorContext(
 export function dispatch(
   zodSchema: unknown,
   path: string,
-  fallbacks: FallbackEntry[] | undefined,
+  refs: RefEntry[] | undefined,
   visiting: Set<unknown>,
 ): SchemaIR {
   const schema = zodSchema as ZodSchema;
@@ -127,10 +127,8 @@ export function dispatch(
   visiting.add(zodSchema);
   try {
     const extractor = extractRegistry[def.type as SupportedZodDefType];
-    const ctx = createExtractorContext(zodSchema, path, fallbacks, visiting);
-    return extractor
-      ? extractor(def, ctx)
-      : makeFallback("unsupported", zodSchema, fallbacks, path);
+    const ctx = createExtractorContext(zodSchema, path, refs, visiting);
+    return extractor ? extractor(def, ctx) : makeFallback("unsupported", zodSchema, refs, path);
   } finally {
     visiting.delete(zodSchema);
   }

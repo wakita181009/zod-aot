@@ -62,7 +62,7 @@ export interface ZodSchema {
 }
 
 /** Entry collected during extraction for each fallback sub-schema. */
-export interface FallbackEntry {
+export interface RefEntry {
   /** Runtime reference to the Zod sub-schema. */
   schema: unknown;
   /** Navigation path from root schema, e.g. '.shape["slug"]' */
@@ -114,7 +114,7 @@ export interface ExtractorContext {
   /** Navigation path from root, e.g. '._zod.def.innerType' */
   readonly path: string;
   /** Fallback entries collector (undefined if partial fallback disabled). */
-  readonly fallbacks: FallbackEntry[] | undefined;
+  readonly refs: RefEntry[] | undefined;
   /** Cycle detection set for lazy resolution. */
   readonly visiting: Set<unknown>;
 
