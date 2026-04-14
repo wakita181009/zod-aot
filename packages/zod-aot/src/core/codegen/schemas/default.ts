@@ -5,7 +5,7 @@ import { emit } from "../emit.js";
 export function slowDefault(ir: DefaultIR, g: SlowGen): string {
   return emit`
     if(${g.input}===undefined){
-      ${g.output}=__fb[${ir.fallbackIndex}]._zod.def.defaultValue;
+      ${g.output}=__rf[${ir.refIndex}]._zod.def.defaultValue;
     }else{
       ${g.visit(ir.inner, { input: g.output, output: g.output })}
     }

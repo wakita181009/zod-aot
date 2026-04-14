@@ -203,16 +203,16 @@ describe("codegen — readonly", () => {
 // ─── Partial Fallback CodeGen ────────────────────────────────────────────────
 
 describe("codegen — partial fallback", () => {
-  it("generates __fb[N].safeParse for fallback with index", () => {
+  it("generates __rf[N].safeParse for fallback with index", () => {
     const ir: ObjectIR = {
       type: "object",
       properties: {
         name: { type: "string", checks: [] },
-        slug: { type: "fallback", reason: "transform", fallbackIndex: 0 } satisfies FallbackIR,
+        slug: { type: "fallback", reason: "transform", refIndex: 0 } satisfies FallbackIR,
       },
     };
     const result = generateValidator(ir, "test", { fallbackCount: 1 });
-    expect(result.functionDef).toContain("__fb[0].safeParse");
+    expect(result.functionDef).toContain("__rf[0].safeParse");
     expect(result.fallbackCount).toBe(1);
   });
 
@@ -226,7 +226,7 @@ describe("codegen — partial fallback", () => {
     };
     const result = generateValidator(ir, "test");
     expect(result.functionDef).toContain("Fallback schema: transform");
-    expect(result.functionDef).not.toContain("__fb");
+    expect(result.functionDef).not.toContain("__rf");
   });
 
   it("delegates to Zod and validates correctly at runtime", () => {
@@ -236,7 +236,7 @@ describe("codegen — partial fallback", () => {
       type: "object",
       properties: {
         name: { type: "string", checks: [] },
-        slug: { type: "fallback", reason: "refine", fallbackIndex: 0 } satisfies FallbackIR,
+        slug: { type: "fallback", reason: "refine", refIndex: 0 } satisfies FallbackIR,
       },
     };
     const safeParse = compileIR(ir, "test", [slugSchema]);
@@ -254,7 +254,7 @@ describe("codegen — partial fallback", () => {
       type: "object",
       properties: {
         name: { type: "string", checks: [] },
-        slug: { type: "fallback", reason: "transform", fallbackIndex: 0 } satisfies FallbackIR,
+        slug: { type: "fallback", reason: "transform", refIndex: 0 } satisfies FallbackIR,
       },
     };
     const safeParse = compileIR(ir, "test", [transformSchema]);

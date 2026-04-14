@@ -111,7 +111,7 @@ describe("compileSchemas", () => {
     expect(() => new Function(`${code}\nreturn ${fnName};`)).not.toThrow();
   });
 
-  it("factory default produces correct runtime values via __fb[]", () => {
+  it("factory default produces correct runtime values via __rf[]", () => {
     let counter = 0;
     const schema = z.object({ id: z.number() }).default(() => ({ id: counter++ }));
     const results = compileSchemas([{ exportName: "factoryDefault", schema }]);
@@ -121,7 +121,7 @@ describe("compileSchemas", () => {
     const fbArr = info?.fallbackEntries.map((e) => e.schema) ?? [];
     const fn = new Function(
       "__ZodError",
-      "__fb",
+      "__rf",
       `${info?.codegenResult.code}\nreturn ${info?.codegenResult.functionDef};`,
     )(ZodRealError, fbArr);
 
@@ -133,7 +133,7 @@ describe("compileSchemas", () => {
     expect(r1.data.id).not.toBe(r2.data.id);
   });
 
-  it("factory Date default works at runtime via __fb[]", () => {
+  it("factory Date default works at runtime via __rf[]", () => {
     const schema = z.date().default(() => new Date());
     const results = compileSchemas([{ exportName: "dateFactory", schema }]);
     const info = results[0];
@@ -142,7 +142,7 @@ describe("compileSchemas", () => {
     const fbArr = info?.fallbackEntries.map((e) => e.schema) ?? [];
     const fn = new Function(
       "__ZodError",
-      "__fb",
+      "__rf",
       `${info?.codegenResult.code}\nreturn ${info?.codegenResult.functionDef};`,
     )(ZodRealError, fbArr);
 
@@ -157,7 +157,7 @@ describe("compileSchemas", () => {
     expect(r2.data).toEqual(d);
   });
 
-  it("static default still works via __fb[] runtime reference", () => {
+  it("static default still works via __rf[] runtime reference", () => {
     const schema = z.string().default("hello");
     const results = compileSchemas([{ exportName: "staticDefault", schema }]);
     const info = results[0];
@@ -166,7 +166,7 @@ describe("compileSchemas", () => {
     const fbArr = info?.fallbackEntries.map((e) => e.schema) ?? [];
     const fn = new Function(
       "__ZodError",
-      "__fb",
+      "__rf",
       `${info?.codegenResult.code}\nreturn ${info?.codegenResult.functionDef};`,
     )(ZodRealError, fbArr);
 
@@ -184,7 +184,7 @@ describe("compileSchemas", () => {
     const fbArr = info?.fallbackEntries.map((e) => e.schema) ?? [];
     const fn = new Function(
       "__ZodError",
-      "__fb",
+      "__rf",
       `${info?.codegenResult.code}\nreturn ${info?.codegenResult.functionDef};`,
     )(ZodRealError, fbArr);
 
@@ -219,7 +219,7 @@ describe("compileSchemas", () => {
     const fbArr = info?.fallbackEntries.map((e) => e.schema) ?? [];
     const fn = new Function(
       "__ZodError",
-      "__fb",
+      "__rf",
       `${info?.codegenResult.code}\nreturn ${info?.codegenResult.functionDef};`,
     )(ZodRealError, fbArr);
 
@@ -235,7 +235,7 @@ describe("compileSchemas", () => {
     expect(fn(42)).toEqual({ success: true, data: 42 });
   });
 
-  it("nested default inside object uses correct sub-schema via __fb[]", () => {
+  it("nested default inside object uses correct sub-schema via __rf[]", () => {
     let counter = 0;
     const schema = z.object({
       name: z.string(),
@@ -250,7 +250,7 @@ describe("compileSchemas", () => {
     const fbArr = info?.fallbackEntries.map((e) => e.schema) ?? [];
     const fn = new Function(
       "__ZodError",
-      "__fb",
+      "__rf",
       `${info?.codegenResult.code}\nreturn ${info?.codegenResult.functionDef};`,
     )(ZodRealError, fbArr);
 

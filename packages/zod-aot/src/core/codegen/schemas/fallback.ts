@@ -3,13 +3,13 @@ import type { SlowGen } from "../context.js";
 import { emit } from "../emit.js";
 
 export function slowFallback(ir: FallbackIR, g: SlowGen): string {
-  if (ir.fallbackIndex !== undefined) {
-    const idx = ir.fallbackIndex;
-    const rVar = `__fb_r${idx}`;
-    const iVar = `__fb_i${idx}`;
-    const jVar = `__fb_j${idx}`;
+  if (ir.refIndex !== undefined) {
+    const idx = ir.refIndex;
+    const rVar = `__rf_r${idx}`;
+    const iVar = `__rf_i${idx}`;
+    const jVar = `__rf_j${idx}`;
     return `${emit`
-      var ${rVar}=__fb[${idx}].safeParse(${g.input});
+      var ${rVar}=__rf[${idx}].safeParse(${g.input});
       if(!${rVar}.success){
         var ${iVar}=${rVar}.error.issues;
         for(var ${jVar}=0;${jVar}<${iVar}.length;${jVar}++){

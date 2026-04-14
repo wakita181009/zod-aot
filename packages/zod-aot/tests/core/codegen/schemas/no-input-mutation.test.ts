@@ -59,7 +59,7 @@ describe("slow-path — no input mutation", () => {
           name: {
             type: "default",
             inner: { type: "string", checks: [] },
-            fallbackIndex: 0,
+            refIndex: 0,
           },
         },
       };

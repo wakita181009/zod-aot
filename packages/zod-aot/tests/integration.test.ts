@@ -1109,7 +1109,7 @@ function compileWithFallbacks(schema: z.ZodType, name = "test") {
   const result = generateValidator(ir, name, { fallbackCount: fallbackEntries.length });
   const fallbackSchemas = fallbackEntries.map((e) => e.schema);
   return fallbackSchemas.length > 0
-    ? (new Function("__ZodError", "__fb", `${result.code}\nreturn ${result.functionDef};`)(
+    ? (new Function("__ZodError", "__rf", `${result.code}\nreturn ${result.functionDef};`)(
         ZodRealError,
         fallbackSchemas,
       ) as (input: unknown) => SafeParseResult<unknown>)
