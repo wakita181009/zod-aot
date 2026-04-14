@@ -148,6 +148,15 @@ export interface CheckMaxSize {
 
 export type SetCheckIR = CheckMinSize | CheckMaxSize;
 
+// ─── File Check IR ────────────────────────────────────────────────────────
+
+export interface CheckMimeType {
+  kind: "mime_type";
+  mime: string[];
+}
+
+export type FileCheckIR = CheckMinSize | CheckMaxSize | CheckMimeType;
+
 // ─── Schema IR: Primitives ─────────────────────────────────────────────────
 
 export interface StringIR {
@@ -258,6 +267,11 @@ export interface MapIR {
   type: "map";
   keyType: SchemaIR;
   valueType: SchemaIR;
+}
+
+export interface FileIR {
+  type: "file";
+  checks?: FileCheckIR[];
 }
 
 // ─── Schema IR: Unions & Intersections ─────────────────────────────────────
@@ -377,6 +391,7 @@ export type SchemaIR =
   | RecordIR
   | SetIR
   | MapIR
+  | FileIR
   // Unions & Intersections
   | UnionIR
   | DiscriminatedUnionIR

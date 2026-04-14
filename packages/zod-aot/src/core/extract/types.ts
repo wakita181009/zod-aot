@@ -13,6 +13,7 @@ export interface ZodCheckDef {
   prefix: string;
   suffix: string;
   fn: unknown;
+  mime: string[];
   error?: (...args: unknown[]) => unknown;
 }
 
@@ -105,7 +106,8 @@ export type SupportedZodDefType =
   | "pipe"
   | "lazy"
   | "catch"
-  | "template_literal";
+  | "template_literal"
+  | "file";
 
 // ─── Extractor context ──────────────────────────────────────────────────────
 

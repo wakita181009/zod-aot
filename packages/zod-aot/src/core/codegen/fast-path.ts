@@ -19,6 +19,7 @@ import { fastDate } from "./schemas/date.js";
 import { fastDefault } from "./schemas/default.js";
 import { fastDiscriminatedUnion } from "./schemas/discriminated-union.js";
 import { fastEnum } from "./schemas/enum.js";
+import { fastFile } from "./schemas/file.js";
 import { fastIntersection } from "./schemas/intersection.js";
 import { fastLiteral } from "./schemas/literal.js";
 import { fastMap } from "./schemas/map.js";
@@ -72,6 +73,7 @@ const fastRegistry = {
   record: fastRecord,
   set: fastSet,
   map: fastMap,
+  file: fastFile,
   // Unions & Intersections
   union: fastUnion,
   discriminatedUnion: fastDiscriminatedUnion,

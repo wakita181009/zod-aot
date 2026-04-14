@@ -12,6 +12,7 @@ import { slowDiscriminatedUnion } from "./schemas/discriminated-union.js";
 import { slowEffect } from "./schemas/effect.js";
 import { slowEnum } from "./schemas/enum.js";
 import { slowFallback } from "./schemas/fallback.js";
+import { slowFile } from "./schemas/file.js";
 import { slowIntersection } from "./schemas/intersection.js";
 import { slowLiteral } from "./schemas/literal.js";
 import { slowMap } from "./schemas/map.js";
@@ -66,6 +67,7 @@ const slowRegistry = {
   record: slowRecord,
   set: slowSet,
   map: slowMap,
+  file: slowFile,
   // Unions & Intersections
   union: slowUnion,
   discriminatedUnion: slowDiscriminatedUnion,

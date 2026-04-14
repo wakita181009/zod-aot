@@ -1700,6 +1700,57 @@ describe("integration — stringBool schema matches Zod", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// File Type
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("integration — file schema matches Zod", () => {
+  it("z.file() accepts File instances", () => {
+    const schema = z.file();
+    const file = new File(["hello"], "test.txt", { type: "text/plain" });
+    assertSameResult(schema, file, "file");
+  });
+
+  it("z.file() rejects non-File values", () => {
+    const schema = z.file();
+    for (const input of ["hello", 42, null, undefined, {}, []]) {
+      assertSameResult(schema, input, "fileReject");
+    }
+  });
+
+  it("z.file().min() validates minimum size", () => {
+    const schema = z.file().min(10);
+    const small = new File(["hi"], "small.txt");
+    const large = new File(["a".repeat(20)], "large.txt");
+    assertSameResult(schema, small, "fileMin");
+    assertSameResult(schema, large, "fileMin");
+  });
+
+  it("z.file().max() validates maximum size", () => {
+    const schema = z.file().max(5);
+    const small = new File(["hi"], "small.txt");
+    const large = new File(["a".repeat(20)], "large.txt");
+    assertSameResult(schema, small, "fileMax");
+    assertSameResult(schema, large, "fileMax");
+  });
+
+  it("z.file().mime() validates MIME type", () => {
+    const schema = z.file().mime(["image/png", "image/jpeg"]);
+    const png = new File(["data"], "img.png", { type: "image/png" });
+    const txt = new File(["data"], "doc.txt", { type: "text/plain" });
+    assertSameResult(schema, png, "fileMime");
+    assertSameResult(schema, txt, "fileMime");
+  });
+
+  it("z.file() with combined checks", () => {
+    const schema = z.file().min(1).max(10000).mime("text/plain");
+    const valid = new File(["hello"], "test.txt", { type: "text/plain" });
+    const wrongType = new File(["hello"], "img.png", { type: "image/png" });
+    assertSameResult(schema, valid, "fileCombined");
+    assertSameResult(schema, wrongType, "fileCombined");
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // TemplateLiteral Type
 // ═══════════════════════════════════════════════════════════════════════════════
 

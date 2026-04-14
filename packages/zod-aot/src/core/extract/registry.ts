@@ -7,6 +7,7 @@ import { extractCatch } from "./extractors/catch.js";
 import { extractDate } from "./extractors/date.js";
 import { extractDefault } from "./extractors/default.js";
 import { extractEnum } from "./extractors/enum.js";
+import { extractFile } from "./extractors/file.js";
 import { extractIntersection } from "./extractors/intersection.js";
 import { extractLazy } from "./extractors/lazy.js";
 import { extractLiteral } from "./extractors/literal.js";
@@ -82,6 +83,7 @@ export const extractRegistry = {
   lazy: extractLazy,
   catch: extractCatch,
   template_literal: extractTemplateLiteral,
+  file: extractFile,
 } satisfies Record<SupportedZodDefType, Extractor>;
 
 // ─── Factory ────────────────────────────────────────────────────────────────
