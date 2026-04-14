@@ -164,6 +164,8 @@ export function hasMutation(ir: SchemaIR): boolean {
       return hasMutation(ir.valueType);
     case "map":
       return hasMutation(ir.keyType) || hasMutation(ir.valueType);
+    case "file":
+      return false;
     default:
       return false;
   }

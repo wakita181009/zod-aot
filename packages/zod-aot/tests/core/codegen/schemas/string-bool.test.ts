@@ -72,15 +72,28 @@ describe("slow-path — stringBool", () => {
     expect(result.code).toContain("Set");
   });
 
-  it("generates inline checks for small value sets", () => {
+  it("generates inline checks for small value sets (per-side threshold)", () => {
+    // truthy=["1","yes","on"] (3) and falsy=["0"] (1): both ≤ threshold → inline
     const ir: StringBoolIR = {
       type: "stringBool",
-      truthy: ["1"],
+      truthy: ["1", "yes", "on"],
       falsy: ["0"],
       caseSensitive: true,
     };
     const result = generateValidator(ir, "sbSmall");
     expect(result.functionDef).not.toContain("Set");
+  });
+
+  it("generates Set for large per-side value sets", () => {
+    // truthy has 4 values (> ENUM_INLINE_THRESHOLD=3) → uses Set
+    const ir: StringBoolIR = {
+      type: "stringBool",
+      truthy: ["true", "1", "yes", "on"],
+      falsy: ["false", "0"],
+      caseSensitive: false,
+    };
+    const result = generateValidator(ir, "sbLarge");
+    expect(result.code).toContain("Set");
   });
 });
 

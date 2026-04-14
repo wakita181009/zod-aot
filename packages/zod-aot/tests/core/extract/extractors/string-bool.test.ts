@@ -68,4 +68,21 @@ describe("extractSchema — stringBool", () => {
     // falsy is empty (no probe hit) → fallback
     expect(ir.type).toBe("fallback");
   });
+
+  // [P1] Partial compilation: falls back when probe discovers only a subset
+  it("falls back when custom values are partially outside probe set", () => {
+    // "1" is in probe set but "ja" is not → partial discovery → must fall back
+    const ir = extractSchema(z.stringbool({ truthy: ["1", "ja"], falsy: ["0", "no"] }));
+    expect(ir.type).toBe("fallback");
+  });
+
+  // [P2] Case sensitivity must check falsy values too
+  it("detects case-sensitive mode from falsy tokens when truthy has no case variant", () => {
+    // truthy=["1"] has no case variant, but falsy=["false"] does
+    const ir = extractSchema(
+      z.stringbool({ truthy: ["1"], falsy: ["false"], case: "sensitive" }),
+    ) as StringBoolIR;
+    expect(ir.type).toBe("stringBool");
+    expect(ir.caseSensitive).toBe(true);
+  });
 });

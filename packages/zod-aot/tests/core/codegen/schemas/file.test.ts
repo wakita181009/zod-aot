@@ -103,7 +103,7 @@ describe("fast-path — file", () => {
     expect(fn?.(ok)).toBe(true);
   });
 
-  it("file with mime check", () => {
+  it("file with single mime check", () => {
     const fn = compileFastCheck({
       type: "file",
       checks: [{ kind: "mime_type", mime: ["image/png"] }],
@@ -112,6 +112,20 @@ describe("fast-path — file", () => {
     const png = new File(["data"], "img.png", { type: "image/png" });
     const txt = new File(["data"], "doc.txt", { type: "text/plain" });
     expect(fn?.(png)).toBe(true);
+    expect(fn?.(txt)).toBe(false);
+  });
+
+  it("file with multiple mime types (Set path)", () => {
+    const fn = compileFastCheck({
+      type: "file",
+      checks: [{ kind: "mime_type", mime: ["image/png", "image/jpeg", "image/webp"] }],
+    });
+    expect(fn).not.toBeNull();
+    const png = new File(["data"], "img.png", { type: "image/png" });
+    const jpg = new File(["data"], "img.jpg", { type: "image/jpeg" });
+    const txt = new File(["data"], "doc.txt", { type: "text/plain" });
+    expect(fn?.(png)).toBe(true);
+    expect(fn?.(jpg)).toBe(true);
     expect(fn?.(txt)).toBe(false);
   });
 });

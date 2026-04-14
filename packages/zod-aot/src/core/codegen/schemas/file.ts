@@ -25,9 +25,10 @@ export function slowFile(ir: FileIR, g: SlowGen): string {
             }`;
           break;
         case "mime_type": {
+          if (check.mime.length === 0) break;
           if (check.mime.length === 1) {
             code += emit`
-              if(${g.input}.type!==${escapeString(check.mime[0] ?? "")}){
+              if(${g.input}.type!==${escapeString(check.mime[0] as string)}){
                 ${g.issues}.push({code:"invalid_value",values:${JSON.stringify(check.mime)},input:${g.input},path:${g.path}});
               }`;
           } else {
@@ -61,8 +62,9 @@ export function fastFile(ir: FileIR, g: FastGen): string | null {
           parts.push(`${x}.size<=${check.maximum}`);
           break;
         case "mime_type":
+          if (check.mime.length === 0) break;
           if (check.mime.length === 1) {
-            parts.push(`${x}.type===${escapeString(check.mime[0] ?? "")}`);
+            parts.push(`${x}.type===${escapeString(check.mime[0] as string)}`);
           } else {
             const setVar = g.temp("mimeSet");
             g.ctx.preamble.push(`var ${setVar}=new Set(${JSON.stringify(check.mime)});`);

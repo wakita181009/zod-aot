@@ -33,7 +33,7 @@ export function isStringBoolCodec(def: ZodDef): boolean {
 
 /**
  * Extract a StringBoolIR by probing the live schema with known test values.
- * Falls back if no truthy/falsy values are discovered.
+ * Falls back if the discovered values don't fully cover the schema's accepted set.
  */
 export function extractStringBool(_def: ZodDef, ctx: ExtractorContext): StringBoolIR | null {
   const schema = ctx.schema as {
@@ -56,16 +56,35 @@ export function extractStringBool(_def: ZodDef, ctx: ExtractorContext): StringBo
   }
 
   // Both sets must be non-empty to generate correct code.
-  // If either is empty (e.g. custom values outside probe set), fall back to Zod.
   if (truthy.length === 0 || falsy.length === 0) {
     return null;
   }
 
-  // Detect case sensitivity: find a probed value with case variation and test
-  // its opposite-case variant. Values like "1" have no case variation, so we
-  // iterate until we find one that does.
+  // [P1] Verify completeness: trigger a validation error to extract the full list
+  // of accepted values from Zod's error response. If the schema accepts values
+  // we didn't discover via probing, fall back to avoid partial compilation.
+  try {
+    const probe = schema.safeParse("__zod_aot_probe__");
+    if (!probe.success) {
+      const issues = (probe as { error?: { issues?: Array<{ code: string; values?: string[] }> } })
+        .error?.issues;
+      const valueIssue = issues?.find((i) => i.code === "invalid_value");
+      if (valueIssue?.values) {
+        const expectedSet = new Set(valueIssue.values);
+        const discoveredSet = new Set([...truthy, ...falsy]);
+        for (const v of expectedSet) {
+          if (!discoveredSet.has(v)) return null;
+        }
+      }
+    }
+  } catch {
+    return null;
+  }
+
+  // [P2] Detect case sensitivity: search BOTH truthy and falsy for a value with
+  // case variation, then test its opposite-case variant.
   let caseSensitive = false;
-  for (const val of truthy) {
+  for (const val of [...truthy, ...falsy]) {
     const upper = val.toUpperCase();
     if (upper !== val) {
       try {
