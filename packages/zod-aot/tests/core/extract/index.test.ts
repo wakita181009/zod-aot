@@ -791,7 +791,7 @@ describe("extractSchema — zero-capture transform produces EffectIR (no fallbac
     expect(fallbacks).toHaveLength(0);
   });
 
-  it("default object with zero-capture transform produces EffectIR, no fallback entries", () => {
+  it("default object with zero-capture transform produces EffectIR, default uses runtime ref", () => {
     const schema = z
       .object({
         name: z.string(),
@@ -805,7 +805,9 @@ describe("extractSchema — zero-capture transform produces EffectIR (no fallbac
     expect(ir.inner.type).toBe("object");
     const objIR = ir.inner as ObjectIR;
     expect(objIR.properties["slug"]?.type).toBe("effect");
-    expect(fallbacks).toHaveLength(0);
+    // default always stores a runtime reference for the default value
+    expect(fallbacks).toHaveLength(1);
+    expect(ir.fallbackIndex).toBe(0);
   });
 
   it("deep nested zero-capture transform produces EffectIR, no fallback entries", () => {

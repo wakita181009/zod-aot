@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DefaultIR } from "#src/core/types.js";
-import { compileIR } from "../helpers.js";
+import { compileFastCheck, compileIR } from "../helpers.js";
 
 describe("slow-path — default", () => {
   it("uses default value when input is undefined", () => {
@@ -79,5 +79,93 @@ describe("slow-path — default", () => {
     const result = safeParse(undefined);
     expect(result.success).toBe(true);
     expect(result.data).toEqual({ name: "default" });
+  });
+});
+
+describe("fast-path — default", () => {
+  it("accepts valid non-undefined input via fast path", () => {
+    const fn = compileFastCheck({
+      type: "default",
+      inner: { type: "string", checks: [] },
+      defaultValue: "hello",
+    });
+    expect(fn).not.toBeNull();
+    expect(fn?.("world")).toBe(true);
+  });
+
+  it("rejects undefined (delegates to slow path for default application)", () => {
+    const fn = compileFastCheck({
+      type: "default",
+      inner: { type: "string", checks: [] },
+      defaultValue: "hello",
+    });
+    expect(fn).not.toBeNull();
+    expect(fn?.(undefined)).toBe(false);
+  });
+
+  it("rejects invalid non-undefined input", () => {
+    const fn = compileFastCheck({
+      type: "default",
+      inner: { type: "string", checks: [] },
+      defaultValue: "hello",
+    });
+    expect(fn).not.toBeNull();
+    expect(fn?.(42)).toBe(false);
+  });
+
+  it("validates inner checks for non-undefined input", () => {
+    const fn = compileFastCheck({
+      type: "default",
+      inner: { type: "string", checks: [{ kind: "min_length", minimum: 3 }] },
+      defaultValue: "hello",
+    });
+    expect(fn).not.toBeNull();
+    expect(fn?.("abc")).toBe(true);
+    expect(fn?.("ab")).toBe(false);
+    expect(fn?.(undefined)).toBe(false);
+  });
+
+  it("ineligible inner → returns null", () => {
+    expect(
+      compileFastCheck({
+        type: "default",
+        inner: { type: "fallback", reason: "transform" },
+        defaultValue: "",
+      }),
+    ).toBeNull();
+  });
+
+  it("nested default inside object — object gains fast path", () => {
+    const fn = compileFastCheck({
+      type: "object",
+      properties: {
+        name: {
+          type: "default",
+          inner: { type: "string", checks: [] },
+          defaultValue: "anon",
+        },
+      },
+    });
+    // Object with non-undefined property should pass fast path
+    expect(fn).not.toBeNull();
+    expect(fn?.({ name: "hello" })).toBe(true);
+  });
+
+  it("end-to-end: fast path + slow path produce correct results", () => {
+    const ir: DefaultIR = {
+      type: "default",
+      inner: { type: "string", checks: [] },
+      defaultValue: "hello",
+    };
+    const safeParse = compileIR(ir);
+
+    // Valid input: should use fast path, return input as-is
+    expect(safeParse("world")).toEqual({ success: true, data: "world" });
+
+    // undefined: slow path applies default
+    expect(safeParse(undefined)).toEqual({ success: true, data: "hello" });
+
+    // Invalid: slow path collects errors
+    expect(safeParse(42).success).toBe(false);
   });
 });

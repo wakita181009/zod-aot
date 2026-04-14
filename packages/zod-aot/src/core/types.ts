@@ -297,11 +297,9 @@ export interface ReadonlyIR {
   inner: SchemaIR;
 }
 
-export interface DefaultIR {
-  type: "default";
-  inner: SchemaIR;
-  defaultValue: unknown;
-}
+export type DefaultIR =
+  | { type: "default"; inner: SchemaIR; fallbackIndex: number }
+  | { type: "default"; inner: SchemaIR; defaultValue: unknown };
 
 export interface PipeIR {
   type: "pipe";
@@ -406,6 +404,7 @@ export interface ZodIssueLike {
   code: string;
   path: (string | number)[];
   message: string;
+
   [key: string]: unknown;
 }
 

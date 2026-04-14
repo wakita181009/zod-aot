@@ -15,6 +15,7 @@ import { fastArray } from "./schemas/array.js";
 import { fastBigInt } from "./schemas/bigint.js";
 import { fastBoolean } from "./schemas/boolean.js";
 import { fastDate } from "./schemas/date.js";
+import { fastDefault } from "./schemas/default.js";
 import { fastDiscriminatedUnion } from "./schemas/discriminated-union.js";
 import { fastEnum } from "./schemas/enum.js";
 import { fastIntersection } from "./schemas/intersection.js";
@@ -77,7 +78,7 @@ const fastRegistry = {
   optional: fastOptional,
   nullable: fastNullable,
   readonly: fastReadonly,
-  default: null, // statically ineligible
+  default: fastDefault,
   pipe: fastPipe,
   // Effects
   effect: null, // statically ineligible
