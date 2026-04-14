@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.2](https://github.com/wakita181009/zod-aot/compare/v0.18.1...v0.18.2) (2026-04-14)
+
+
+### Bug Fixes
+
+* correct default schema validation and pipeline test fbArr construction ([#131](https://github.com/wakita181009/zod-aot/issues/131)) ([033e46f](https://github.com/wakita181009/zod-aot/commit/033e46f90ace9d3bdb87a3dc557b17a3002367d3))
+
 ## [0.18.1](https://github.com/wakita181009/zod-aot/compare/v0.18.0...v0.18.1) (2026-04-14)
 
 
