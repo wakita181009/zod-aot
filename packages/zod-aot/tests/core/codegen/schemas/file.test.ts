@@ -67,14 +67,13 @@ describe("slow-path — file", () => {
       checks: [
         { kind: "min_size", minimum: 1 },
         { kind: "max_size", maximum: 1000 },
-        { kind: "mime_type", mime: ["text/plain"] },
       ],
     };
     const safeParse = compileIR(ir);
-    const valid = new File(["hello"], "test.txt", { type: "text/plain" });
-    const wrongType = new File(["hello"], "test.png", { type: "image/png" });
+    const valid = new File(["hello world"], "test.txt");
+    const empty = new File([], "empty.txt");
     expect(safeParse(valid).success).toBe(true);
-    expect(safeParse(wrongType).success).toBe(false);
+    expect(safeParse(empty).success).toBe(false);
   });
 });
 

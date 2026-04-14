@@ -1,9 +1,20 @@
+// biome-ignore lint/correctness/noNodejsModules: need createRequire to read zod/package.json for version detection
+import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
 import { ZodRealError, z } from "zod";
 import { generateValidator } from "#src/core/codegen/index.js";
 import type { RefEntry } from "#src/core/extract/index.js";
 import { extractSchema } from "#src/core/extract/index.js";
 import type { SafeParseResult, SchemaIR } from "#src/core/types.js";
+
+const require = createRequire(import.meta.url);
+const zodVersion: string = (require("zod/package.json") as { version: string }).version;
+
+function zodAtLeast(minVersion: string): boolean {
+  const [majA = 0, minA = 0] = zodVersion.split(".").map(Number);
+  const [majB = 0, minB = 0] = minVersion.split(".").map(Number);
+  return majA > majB || (majA === majB && minA >= minB);
+}
 
 /**
  * End-to-end helper: Zod schema → extract IR → generate code → compile → safeParse.
@@ -1655,7 +1666,8 @@ describe("integration — coerce schemas match Zod", () => {
 // StringBool Type
 // ═══════════════════════════════════════════════════════════════════════════════
 
-describe("integration — stringBool schema matches Zod", () => {
+// stringBool codec pattern (reverseTransform) requires Zod >= 4.1
+describe.skipIf(!zodAtLeast("4.1"))("integration — stringBool schema matches Zod", () => {
   it("z.stringbool() with default truthy values", () => {
     const schema = z.stringbool();
     for (const input of ["true", "1", "yes", "on", "y", "enabled"]) {
