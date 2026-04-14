@@ -7,11 +7,13 @@ export function slowDefault(ir: DefaultIR, g: SlowGen): string {
     "fallbackIndex" in ir
       ? `__fb[${ir.fallbackIndex}]._zod.def.defaultValue`
       : JSON.stringify(ir.defaultValue);
-  return `${emit`
+  return emit`
     if(${g.input}===undefined){
       ${g.output}=${defaultExpr};
+    }else{
+      ${g.visit(ir.inner, { input: g.output, output: g.output })}
     }
-  `}\n${g.visit(ir.inner, { input: g.output, output: g.output })}`;
+  `;
 }
 
 export function fastDefault(ir: DefaultIR, g: FastGen): string | null {

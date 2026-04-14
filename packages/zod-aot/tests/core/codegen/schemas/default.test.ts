@@ -47,8 +47,10 @@ describe("slow-path — default", () => {
     expect(safeParse(null).success).toBe(false);
   });
 
-  // M5: Default value with Date object loses type via JSON.stringify
-  it("Date default value is serialized as string, not Date (documents limitation)", () => {
+  // M5: Default value with Date object — JSON.stringify produces a string,
+  // but inner validation is now skipped for defaults (matching Zod behavior),
+  // so the serialized string is returned as-is.
+  it("Date default value is returned as-is (inner validation skipped)", () => {
     const dateValue = new Date("2024-01-01T00:00:00.000Z");
     const ir: DefaultIR = {
       type: "default",
@@ -56,12 +58,39 @@ describe("slow-path — default", () => {
       defaultValue: dateValue,
     };
     const safeParse = compileIR(ir);
-    // When input is undefined, the default value is applied.
-    // But JSON.stringify(Date) produces a string, not a Date object.
     const result = safeParse(undefined);
-    // BUG: The default value is inserted as a JSON string "2024-01-01T00:00:00.000Z"
-    // which then fails the `instanceof Date` check in the date validator
-    expect(result.success).toBe(false);
+    // Default value is trusted — inner validation is skipped.
+    // Note: JSON.stringify(Date) produces a string, so data is a string not Date.
+    // In production, fallbackIndex path uses runtime defaultValue (real Date object).
+    expect(result.success).toBe(true);
+    expect(result.data).toBe("2024-01-01T00:00:00.000Z");
+  });
+
+  it("default value skips inner validation (matches Zod behavior)", () => {
+    const ir: DefaultIR = {
+      type: "default",
+      inner: { type: "string", checks: [{ kind: "min_length", minimum: 10 }] },
+      defaultValue: "x",
+    };
+    const safeParse = compileIR(ir);
+    // Zod: z.string().min(10).default("x").safeParse(undefined) → { success: true, data: "x" }
+    // Default value is trusted and inner validation is skipped
+    const result = safeParse(undefined);
+    expect(result.success).toBe(true);
+    expect(result.data).toBe("x");
+  });
+
+  it("non-undefined input still validates against inner schema", () => {
+    const ir: DefaultIR = {
+      type: "default",
+      inner: { type: "string", checks: [{ kind: "min_length", minimum: 10 }] },
+      defaultValue: "x",
+    };
+    const safeParse = compileIR(ir);
+    // "short" does not meet min(10)
+    expect(safeParse("short").success).toBe(false);
+    // "longstringhere" meets min(10)
+    expect(safeParse("longstringhere").success).toBe(true);
   });
 
   it("object default value works correctly", () => {
