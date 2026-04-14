@@ -118,7 +118,7 @@ describe("compileSchemas", () => {
     const info = results[0];
     expect(info).toBeDefined();
 
-    const fbArr = info?.fallbackEntries.map(() => schema) ?? [];
+    const fbArr = info?.fallbackEntries.map((e) => e.schema) ?? [];
     const fn = new Function(
       "__ZodError",
       "__fb",
@@ -139,7 +139,7 @@ describe("compileSchemas", () => {
     const info = results[0];
     expect(info).toBeDefined();
 
-    const fbArr = info?.fallbackEntries.map(() => schema) ?? [];
+    const fbArr = info?.fallbackEntries.map((e) => e.schema) ?? [];
     const fn = new Function(
       "__ZodError",
       "__fb",
@@ -163,7 +163,7 @@ describe("compileSchemas", () => {
     const info = results[0];
     expect(info).toBeDefined();
 
-    const fbArr = info?.fallbackEntries.map(() => schema) ?? [];
+    const fbArr = info?.fallbackEntries.map((e) => e.schema) ?? [];
     const fn = new Function(
       "__ZodError",
       "__fb",
@@ -181,7 +181,7 @@ describe("compileSchemas", () => {
     const info = results[0];
     expect(info).toBeDefined();
 
-    const fbArr = info?.fallbackEntries.map(() => schema) ?? [];
+    const fbArr = info?.fallbackEntries.map((e) => e.schema) ?? [];
     const fn = new Function(
       "__ZodError",
       "__fb",
@@ -216,7 +216,7 @@ describe("compileSchemas", () => {
     const info = results[0];
     expect(info).toBeDefined();
 
-    const fbArr = info?.fallbackEntries.map(() => schema) ?? [];
+    const fbArr = info?.fallbackEntries.map((e) => e.schema) ?? [];
     const fn = new Function(
       "__ZodError",
       "__fb",
@@ -233,5 +233,49 @@ describe("compileSchemas", () => {
 
     // Explicit number input bypasses default
     expect(fn(42)).toEqual({ success: true, data: 42 });
+  });
+
+  it("nested default inside object uses correct sub-schema via __fb[]", () => {
+    let counter = 0;
+    const schema = z.object({
+      name: z.string(),
+      role: z.string().default("user"),
+      seq: z.number().default(() => counter++),
+    });
+    const results = compileSchemas([{ exportName: "nestedDefault", schema }]);
+    const info = results[0];
+    expect(info).toBeDefined();
+    expect(info?.fallbackEntries.length).toBeGreaterThanOrEqual(2);
+
+    const fbArr = info?.fallbackEntries.map((e) => e.schema) ?? [];
+    const fn = new Function(
+      "__ZodError",
+      "__fb",
+      `${info?.codegenResult.code}\nreturn ${info?.codegenResult.functionDef};`,
+    )(ZodRealError, fbArr);
+
+    // Omitted fields get defaults
+    const r1 = fn({ name: "alice" });
+    expect(r1.success).toBe(true);
+    expect(r1.data.role).toBe("user");
+    expect(typeof r1.data.seq).toBe("number");
+
+    // Factory default produces different values
+    const r2 = fn({ name: "bob" });
+    expect(r2.success).toBe(true);
+    expect(r2.data.seq).not.toBe(r1.data.seq);
+
+    // Explicit values bypass defaults
+    const r3 = fn({ name: "carol", role: "admin", seq: 999 });
+    expect(r3.success).toBe(true);
+    expect(r3.data.role).toBe("admin");
+    expect(r3.data.seq).toBe(999);
+
+    // Matches Zod behavior
+    const zodResult = schema.safeParse({ name: "dave" });
+    expect(zodResult.success).toBe(true);
+    if (zodResult.success) {
+      expect(zodResult.data.role).toBe("user");
+    }
   });
 });
