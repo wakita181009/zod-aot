@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.0](https://github.com/wakita181009/zod-aot/compare/v0.18.3...v0.19.0) (2026-04-14)
+
+
+### Features
+
+* add z.stringBool() and z.file() schema support ([#137](https://github.com/wakita181009/zod-aot/issues/137)) ([4f46059](https://github.com/wakita181009/zod-aot/commit/4f46059af62a8a237c57b668e3adc4e6489f3403))
+
 ## [0.18.3](https://github.com/wakita181009/zod-aot/compare/v0.18.2...v0.18.3) (2026-04-14)
 
 
