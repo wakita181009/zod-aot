@@ -41,7 +41,7 @@ export function generateIIFE(
   return [
     "/* @__PURE__ */ (() => {",
     ...(fallbackEntries.length > 0
-      ? [`var __fb=[${fallbackEntries.map((fb) => `${schemaExpr}${fb.accessPath}`).join(",")}];`]
+      ? [`var __rf=[${fallbackEntries.map((fb) => `${schemaExpr}${fb.accessPath}`).join(",")}];`]
       : []),
     ...codegenResult.code
       .split("\n")

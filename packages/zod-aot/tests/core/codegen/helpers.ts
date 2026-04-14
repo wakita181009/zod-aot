@@ -17,7 +17,7 @@ export function compileIR(
   });
   const fn =
     fallbackSchemas && fallbackSchemas.length > 0
-      ? new Function("__ZodError", "__fb", `${result.code}\nreturn ${result.functionDef};`)
+      ? new Function("__ZodError", "__rf", `${result.code}\nreturn ${result.functionDef};`)
       : new Function("__ZodError", `${result.code}\nreturn ${result.functionDef};`);
   return (
     fallbackSchemas && fallbackSchemas.length > 0

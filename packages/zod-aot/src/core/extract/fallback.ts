@@ -10,7 +10,7 @@ export function makeFallback(
   if (fallbacks && accessPath !== undefined) {
     const index = fallbacks.length;
     fallbacks.push({ schema: zodSchema, accessPath });
-    return { type: "fallback", reason, fallbackIndex: index };
+    return { type: "fallback", reason, refIndex: index };
   }
   return { type: "fallback", reason };
 }

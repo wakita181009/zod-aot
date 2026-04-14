@@ -7,8 +7,8 @@ import type { FallbackIR } from "#src/core/types.js";
 import { compileIR } from "../helpers.js";
 
 describe("slow-path — fallback", () => {
-  it("generates __fb[N].safeParse call when fallbackIndex is present", () => {
-    const ir: FallbackIR = { type: "fallback", reason: "transform", fallbackIndex: 0 };
+  it("generates __rf[N].safeParse call when refIndex is present", () => {
+    const ir: FallbackIR = { type: "fallback", reason: "transform", refIndex: 0 };
     const ctx: CodeGenContext = {
       preamble: [],
       counter: 0,
@@ -17,11 +17,11 @@ describe("slow-path — fallback", () => {
     };
     const g = createSlowGen("input", "input", "[]", "__issues", ctx);
     const code = slowFallback(ir, g);
-    expect(code).toContain("__fb[0].safeParse(input)");
-    expect(code).toContain("__fb_r0");
+    expect(code).toContain("__rf[0].safeParse(input)");
+    expect(code).toContain("__rf_r0");
   });
 
-  it("generates error push when fallbackIndex is absent", () => {
+  it("generates error push when refIndex is absent", () => {
     const ir: FallbackIR = { type: "fallback", reason: "transform" };
     const ctx: CodeGenContext = {
       preamble: [],
@@ -32,11 +32,11 @@ describe("slow-path — fallback", () => {
     const g = createSlowGen("input", "input", "[]", "__issues", ctx);
     const code = slowFallback(ir, g);
     expect(code).toContain("Fallback schema: transform");
-    expect(code).not.toContain("__fb");
+    expect(code).not.toContain("__rf");
   });
 
   it("uses correct variable names for different indices", () => {
-    const ir: FallbackIR = { type: "fallback", reason: "refine", fallbackIndex: 3 };
+    const ir: FallbackIR = { type: "fallback", reason: "refine", refIndex: 3 };
     const ctx: CodeGenContext = {
       preamble: [],
       counter: 0,
@@ -45,15 +45,15 @@ describe("slow-path — fallback", () => {
     };
     const g = createSlowGen("v", "v", "p", "iss", ctx);
     const code = slowFallback(ir, g);
-    expect(code).toContain("__fb[3].safeParse(v)");
-    expect(code).toContain("__fb_r3");
-    expect(code).toContain("__fb_i3");
-    expect(code).toContain("__fb_j3");
+    expect(code).toContain("__rf[3].safeParse(v)");
+    expect(code).toContain("__rf_r3");
+    expect(code).toContain("__rf_i3");
+    expect(code).toContain("__rf_j3");
   });
 
   it("delegates to Zod and validates correctly at runtime", () => {
     const schema = z.string().min(1);
-    const ir: FallbackIR = { type: "fallback", reason: "refine", fallbackIndex: 0 };
+    const ir: FallbackIR = { type: "fallback", reason: "refine", refIndex: 0 };
     const safeParse = compileIR(ir, "test", [schema]);
 
     expect(safeParse("hello").success).toBe(true);
@@ -62,7 +62,7 @@ describe("slow-path — fallback", () => {
 
   it("writes back transformed data on success", () => {
     const schema = z.string().transform((v: string) => v.toUpperCase());
-    const ir: FallbackIR = { type: "fallback", reason: "transform", fallbackIndex: 0 };
+    const ir: FallbackIR = { type: "fallback", reason: "transform", refIndex: 0 };
     const safeParse = compileIR(ir, "test", [schema]);
 
     const result = safeParse("hello");

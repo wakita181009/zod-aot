@@ -807,7 +807,7 @@ describe("extractSchema — zero-capture transform produces EffectIR (no fallbac
     expect(objIR.properties["slug"]?.type).toBe("effect");
     // default always stores a runtime reference for the default value
     expect(fallbacks).toHaveLength(1);
-    expect(ir.fallbackIndex).toBe(0);
+    expect(ir.refIndex).toBe(0);
   });
 
   it("deep nested zero-capture transform produces EffectIR, no fallback entries", () => {
@@ -855,7 +855,7 @@ describe("extractSchema — partial fallback (FallbackEntry collection with exte
     expect(ir.type).toBe("object");
     expect(ir.properties["name"]?.type).toBe("string");
     expect(ir.properties["slug"]?.type).toBe("fallback");
-    expect((ir.properties["slug"] as FallbackIR).fallbackIndex).toBe(0);
+    expect((ir.properties["slug"] as FallbackIR).refIndex).toBe(0);
     expect(fallbacks).toHaveLength(1);
     expect(fallbacks[0]?.accessPath).toBe('.shape["slug"]');
   });

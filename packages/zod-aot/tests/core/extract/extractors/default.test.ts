@@ -17,7 +17,7 @@ describe("extractSchema — default (with fallback tracking)", () => {
     const fallbacks: FallbackEntry[] = [];
     const ir = extractSchema(z.string().default("hello"), fallbacks) as DefaultIR;
     expect(ir.type).toBe("default");
-    expect(ir.fallbackIndex).toBe(0);
+    expect(ir.refIndex).toBe(0);
     expect(fallbacks).toHaveLength(1);
   });
 
@@ -28,7 +28,7 @@ describe("extractSchema — default (with fallback tracking)", () => {
       fallbacks,
     ) as DefaultIR;
     expect(ir.type).toBe("default");
-    expect(ir.fallbackIndex).toBe(0);
+    expect(ir.refIndex).toBe(0);
     expect(fallbacks).toHaveLength(1);
   });
 
@@ -39,7 +39,7 @@ describe("extractSchema — default (with fallback tracking)", () => {
       fallbacks,
     ) as DefaultIR;
     expect(ir.type).toBe("default");
-    expect(ir.fallbackIndex).toBe(0);
+    expect(ir.refIndex).toBe(0);
     expect(fallbacks).toHaveLength(1);
   });
 
@@ -51,7 +51,7 @@ describe("extractSchema — default (with fallback tracking)", () => {
       fallbacks,
     ) as DefaultIR;
     expect(ir.type).toBe("default");
-    expect(ir.fallbackIndex).toBe(0);
+    expect(ir.refIndex).toBe(0);
     expect(fallbacks).toHaveLength(1);
   });
 

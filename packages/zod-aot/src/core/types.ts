@@ -300,7 +300,7 @@ export interface ReadonlyIR {
 export interface DefaultIR {
   type: "default";
   inner: SchemaIR;
-  fallbackIndex: number;
+  refIndex: number;
 }
 
 export interface PipeIR {
@@ -325,8 +325,8 @@ export interface TransformEffectIR {
 export interface FallbackIR {
   type: "fallback";
   reason: "transform" | "refine" | "superRefine" | "custom" | "lazy" | "unsupported";
-  /** Index into the __fb[] fallback schemas array. Present when partial fallback is used. */
-  fallbackIndex?: number;
+  /** Index into the __rf[] fallback schemas array. Present when partial fallback is used. */
+  refIndex?: number;
 }
 
 export interface TemplateLiteralIR {

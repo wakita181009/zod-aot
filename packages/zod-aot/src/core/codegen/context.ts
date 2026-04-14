@@ -10,7 +10,7 @@ import type {
 export interface CodeGenResult {
   code: string;
   functionDef: string;
-  /** Number of fallback schemas referenced by __fb[N] in the generated code. 0 = no fallbacks. */
+  /** Number of fallback schemas referenced by __rf[N] in the generated code. 0 = no fallbacks. */
   fallbackCount: number;
 }
 

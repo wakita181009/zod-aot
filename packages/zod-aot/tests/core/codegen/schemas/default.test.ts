@@ -15,7 +15,7 @@ describe("slow-path — default", () => {
     const ir: DefaultIR = {
       type: "default",
       inner: { type: "string", checks: [] },
-      fallbackIndex: 0,
+      refIndex: 0,
     };
     const safeParse = compileIR(ir, "test", [mockFb("hello")]);
     const result = safeParse(undefined);
@@ -27,7 +27,7 @@ describe("slow-path — default", () => {
     const ir: DefaultIR = {
       type: "default",
       inner: { type: "string", checks: [] },
-      fallbackIndex: 0,
+      refIndex: 0,
     };
     const safeParse = compileIR(ir, "test", [mockFb("hello")]);
     const result = safeParse("world");
@@ -39,7 +39,7 @@ describe("slow-path — default", () => {
     const ir: DefaultIR = {
       type: "default",
       inner: { type: "string", checks: [] },
-      fallbackIndex: 0,
+      refIndex: 0,
     };
     const safeParse = compileIR(ir, "test", [mockFb("hello")]);
     expect(safeParse(42).success).toBe(false);
@@ -49,7 +49,7 @@ describe("slow-path — default", () => {
     const ir: DefaultIR = {
       type: "default",
       inner: { type: "string", checks: [] },
-      fallbackIndex: 0,
+      refIndex: 0,
     };
     const safeParse = compileIR(ir, "test", [mockFb("hello")]);
     expect(safeParse(null).success).toBe(false);
@@ -59,7 +59,7 @@ describe("slow-path — default", () => {
     const ir: DefaultIR = {
       type: "default",
       inner: { type: "string", checks: [{ kind: "min_length", minimum: 10 }] },
-      fallbackIndex: 0,
+      refIndex: 0,
     };
     const safeParse = compileIR(ir, "test", [mockFb("x")]);
     // Zod: z.string().min(10).default("x").safeParse(undefined) → { success: true, data: "x" }
@@ -73,7 +73,7 @@ describe("slow-path — default", () => {
     const ir: DefaultIR = {
       type: "default",
       inner: { type: "string", checks: [{ kind: "min_length", minimum: 10 }] },
-      fallbackIndex: 0,
+      refIndex: 0,
     };
     const safeParse = compileIR(ir, "test", [mockFb("x")]);
     // "short" does not meet min(10)
@@ -92,7 +92,7 @@ describe("slow-path — default", () => {
           name: { type: "string", checks: [] },
         },
       },
-      fallbackIndex: 0,
+      refIndex: 0,
     };
     const safeParse = compileIR(ir, "test", [mockFb(defaultObj)]);
     const result = safeParse(undefined);
@@ -106,7 +106,7 @@ describe("fast-path — default", () => {
     const fn = compileFastCheck({
       type: "default",
       inner: { type: "string", checks: [] },
-      fallbackIndex: 0,
+      refIndex: 0,
     });
     expect(fn).not.toBeNull();
     expect(fn?.("world")).toBe(true);
@@ -116,7 +116,7 @@ describe("fast-path — default", () => {
     const fn = compileFastCheck({
       type: "default",
       inner: { type: "string", checks: [] },
-      fallbackIndex: 0,
+      refIndex: 0,
     });
     expect(fn).not.toBeNull();
     expect(fn?.(undefined)).toBe(false);
@@ -126,7 +126,7 @@ describe("fast-path — default", () => {
     const fn = compileFastCheck({
       type: "default",
       inner: { type: "string", checks: [] },
-      fallbackIndex: 0,
+      refIndex: 0,
     });
     expect(fn).not.toBeNull();
     expect(fn?.(42)).toBe(false);
@@ -136,7 +136,7 @@ describe("fast-path — default", () => {
     const fn = compileFastCheck({
       type: "default",
       inner: { type: "string", checks: [{ kind: "min_length", minimum: 3 }] },
-      fallbackIndex: 0,
+      refIndex: 0,
     });
     expect(fn).not.toBeNull();
     expect(fn?.("abc")).toBe(true);
@@ -149,7 +149,7 @@ describe("fast-path — default", () => {
       compileFastCheck({
         type: "default",
         inner: { type: "fallback", reason: "transform" },
-        fallbackIndex: 0,
+        refIndex: 0,
       }),
     ).toBeNull();
   });
@@ -161,7 +161,7 @@ describe("fast-path — default", () => {
         name: {
           type: "default",
           inner: { type: "string", checks: [] },
-          fallbackIndex: 0,
+          refIndex: 0,
         },
       },
     });
@@ -174,7 +174,7 @@ describe("fast-path — default", () => {
     const ir: DefaultIR = {
       type: "default",
       inner: { type: "string", checks: [] },
-      fallbackIndex: 0,
+      refIndex: 0,
     };
     const safeParse = compileIR(ir, "test", [mockFb("hello")]);
 

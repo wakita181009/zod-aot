@@ -148,7 +148,7 @@ function makeIneligibleIR(type: string): SchemaIR {
         valueType: { type: "string", checks: [] },
       };
     case "default":
-      return { type: "default", inner: { type: "string", checks: [] }, fallbackIndex: 0 };
+      return { type: "default", inner: { type: "string", checks: [] }, refIndex: 0 };
     case "catch":
       return { type: "catch", inner: { type: "string", checks: [] }, defaultValue: "" };
     case "fallback":
@@ -231,7 +231,7 @@ describe("fast-path — dispatcher", () => {
     const fn = compileFastCheck({
       type: "default",
       inner: { type: "string", checks: [] },
-      fallbackIndex: 0,
+      refIndex: 0,
     });
     expect(fn).not.toBeNull();
     expect(fn?.("hello")).toBe(true);

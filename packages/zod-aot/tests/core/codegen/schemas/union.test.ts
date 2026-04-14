@@ -83,7 +83,7 @@ describe("slow-path — union", () => {
         {
           type: "default",
           inner: { type: "string", checks: [{ kind: "min_length", minimum: 5 }] },
-          fallbackIndex: 0,
+          refIndex: 0,
         },
         { type: "undefined" },
       ],

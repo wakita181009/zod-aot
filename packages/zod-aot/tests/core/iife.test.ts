@@ -42,7 +42,7 @@ describe("generateIIFE()", () => {
     expect(iife).toContain("throw r.error");
   });
 
-  it("includes __fb when schema has fallbacks (captured-variable transform)", () => {
+  it("includes __rf when schema has fallbacks (captured-variable transform)", () => {
     // Use a captured variable to ensure fallback (zero-capture transforms are now compiled)
     const prefix = "prefix_";
     const schema = z.object({
@@ -52,11 +52,11 @@ describe("generateIIFE()", () => {
     const info = makeInfoWithFallback("validateUser", schema);
     const iife = generateIIFE("UserSchema", info);
 
-    expect(iife).toContain("var __fb=");
+    expect(iife).toContain("var __rf=");
     expect(iife).toContain('UserSchema.shape["slug"]');
   });
 
-  it("has no __fb when schema has zero-capture transform (compiled as effect)", () => {
+  it("has no __rf when schema has zero-capture transform (compiled as effect)", () => {
     const schema = z.object({
       name: z.string(),
       slug: z.string().transform((v) => v.toLowerCase()),
@@ -65,14 +65,14 @@ describe("generateIIFE()", () => {
     const iife = generateIIFE("UserSchema", info);
 
     // Zero-capture transforms are compiled, so no fallback needed
-    expect(iife).not.toContain("__fb");
+    expect(iife).not.toContain("__rf");
   });
 
-  it("has no __fb when schema has no fallbacks", () => {
+  it("has no __rf when schema has no fallbacks", () => {
     const info = makeInfo("validateUser", z.object({ name: z.string() }));
     const iife = generateIIFE("UserSchema", info);
 
-    expect(iife).not.toContain("__fb");
+    expect(iife).not.toContain("__rf");
   });
 
   it("includes safeParseAsync and parseAsync", () => {
