@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.3](https://github.com/wakita181009/zod-aot/compare/v0.18.2...v0.18.3) (2026-04-14)
+
+
+### Bug Fixes
+
+* add Fast Path support for catch schemas ([#135](https://github.com/wakita181009/zod-aot/issues/135)) ([0fe12c9](https://github.com/wakita181009/zod-aot/commit/0fe12c98f991a578cc2ece2241d397def49d499e))
+
 ## [0.18.2](https://github.com/wakita181009/zod-aot/compare/v0.18.1...v0.18.2) (2026-04-14)
 
 
