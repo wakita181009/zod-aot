@@ -10,6 +10,15 @@ describe("slow-path — file", () => {
     expect(safeParse(file).success).toBe(true);
   });
 
+  it("returns data as the input File", () => {
+    const ir: FileIR = { type: "file" };
+    const safeParse = compileIR(ir);
+    const file = new File(["hello"], "test.txt");
+    const result = safeParse(file);
+    expect(result.success).toBe(true);
+    expect(result.data).toBe(file);
+  });
+
   it("rejects non-File values", () => {
     const ir: FileIR = { type: "file" };
     const safeParse = compileIR(ir);
@@ -18,6 +27,16 @@ describe("slow-path — file", () => {
     expect(safeParse(null).success).toBe(false);
     expect(safeParse(undefined).success).toBe(false);
     expect(safeParse({}).success).toBe(false);
+    expect(safeParse([]).success).toBe(false);
+    expect(safeParse(true).success).toBe(false);
+  });
+
+  it("produces invalid_type issue for non-File input", () => {
+    const ir: FileIR = { type: "file" };
+    const safeParse = compileIR(ir);
+    const result = safeParse("not a file");
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]).toMatchObject({ code: "invalid_type", expected: "file" });
   });
 
   it("validates min size", () => {
@@ -29,6 +48,18 @@ describe("slow-path — file", () => {
     expect(safeParse(large).success).toBe(true);
   });
 
+  it("produces too_small issue for undersized file", () => {
+    const ir: FileIR = { type: "file", checks: [{ kind: "min_size", minimum: 100 }] };
+    const safeParse = compileIR(ir);
+    const result = safeParse(new File(["hi"], "small.txt"));
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]).toMatchObject({
+      code: "too_small",
+      minimum: 100,
+      origin: "file",
+    });
+  });
+
   it("validates max size", () => {
     const ir: FileIR = { type: "file", checks: [{ kind: "max_size", maximum: 5 }] };
     const safeParse = compileIR(ir);
@@ -38,6 +69,14 @@ describe("slow-path — file", () => {
     expect(safeParse(large).success).toBe(false);
   });
 
+  it("produces too_big issue for oversized file", () => {
+    const ir: FileIR = { type: "file", checks: [{ kind: "max_size", maximum: 5 }] };
+    const safeParse = compileIR(ir);
+    const result = safeParse(new File(["a".repeat(20)], "big.txt"));
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]).toMatchObject({ code: "too_big", maximum: 5, origin: "file" });
+  });
+
   it("validates mime type", () => {
     const ir: FileIR = { type: "file", checks: [{ kind: "mime_type", mime: ["image/png"] }] };
     const safeParse = compileIR(ir);
@@ -45,6 +84,14 @@ describe("slow-path — file", () => {
     const txt = new File(["data"], "doc.txt", { type: "text/plain" });
     expect(safeParse(png).success).toBe(true);
     expect(safeParse(txt).success).toBe(false);
+  });
+
+  it("produces invalid_value issue for wrong mime type", () => {
+    const ir: FileIR = { type: "file", checks: [{ kind: "mime_type", mime: ["image/png"] }] };
+    const safeParse = compileIR(ir);
+    const result = safeParse(new File(["data"], "doc.txt", { type: "text/plain" }));
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]).toMatchObject({ code: "invalid_value" });
   });
 
   it("validates multiple mime types", () => {
@@ -61,7 +108,14 @@ describe("slow-path — file", () => {
     expect(safeParse(txt).success).toBe(false);
   });
 
-  it("validates combined checks", () => {
+  it("skips empty mime array (no check applied)", () => {
+    const ir: FileIR = { type: "file", checks: [{ kind: "mime_type", mime: [] }] };
+    const safeParse = compileIR(ir);
+    const file = new File(["data"], "any.bin", { type: "application/octet-stream" });
+    expect(safeParse(file).success).toBe(true);
+  });
+
+  it("validates combined size checks", () => {
     const ir: FileIR = {
       type: "file",
       checks: [
@@ -74,6 +128,27 @@ describe("slow-path — file", () => {
     const empty = new File([], "empty.txt");
     expect(safeParse(valid).success).toBe(true);
     expect(safeParse(empty).success).toBe(false);
+  });
+
+  it("collects multiple issues from different checks", () => {
+    const ir: FileIR = {
+      type: "file",
+      checks: [
+        { kind: "min_size", minimum: 100 },
+        { kind: "mime_type", mime: ["image/png"] },
+      ],
+    };
+    const safeParse = compileIR(ir);
+    const result = safeParse(new File(["hi"], "small.txt", { type: "text/plain" }));
+    expect(result.success).toBe(false);
+    expect(result.error?.issues).toHaveLength(2);
+  });
+
+  it("file with no checks property accepts any File", () => {
+    const ir: FileIR = { type: "file" };
+    const safeParse = compileIR(ir);
+    const huge = new File(["x".repeat(10000)], "huge.bin", { type: "application/octet-stream" });
+    expect(safeParse(huge).success).toBe(true);
   });
 });
 

@@ -1,8 +1,62 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
+import { isStringBoolCodec } from "#src/core/extract/extractors/string-bool.js";
 import { extractSchema } from "#src/core/extract/index.js";
 import type { StringBoolIR } from "#src/core/types.js";
 import { zodAtLeast } from "../../../zod-version.js";
+
+describe("isStringBoolCodec", () => {
+  it("returns false for empty def", () => {
+    expect(isStringBoolCodec({} as never)).toBe(false);
+  });
+
+  it("returns false when transform is missing", () => {
+    expect(
+      isStringBoolCodec({
+        reverseTransform: () => undefined,
+        in: { _zod: { def: { type: "string" } } },
+        out: { _zod: { def: { type: "boolean" } } },
+      } as never),
+    ).toBe(false);
+  });
+
+  it("returns false when reverseTransform is missing", () => {
+    expect(
+      isStringBoolCodec({
+        transform: () => undefined,
+        in: { _zod: { def: { type: "string" } } },
+        out: { _zod: { def: { type: "boolean" } } },
+      } as never),
+    ).toBe(false);
+  });
+
+  it("returns false when in type is not string", () => {
+    expect(
+      isStringBoolCodec({
+        transform: () => undefined,
+        reverseTransform: () => undefined,
+        in: { _zod: { def: { type: "number" } } },
+        out: { _zod: { def: { type: "boolean" } } },
+      } as never),
+    ).toBe(false);
+  });
+
+  it("returns false when out type is not boolean", () => {
+    expect(
+      isStringBoolCodec({
+        transform: () => undefined,
+        reverseTransform: () => undefined,
+        in: { _zod: { def: { type: "string" } } },
+        out: { _zod: { def: { type: "number" } } },
+      } as never),
+    ).toBe(false);
+  });
+
+  it.skipIf(!zodAtLeast("4.1"))("returns true for z.stringbool() def", () => {
+    const def = z.stringbool()._zod.def;
+    expect(isStringBoolCodec(def as never)).toBe(true);
+  });
+});
 
 // stringBool codec pattern (reverseTransform) requires Zod >= 4.1
 describe.skipIf(!zodAtLeast("4.1"))("extractSchema — stringBool", () => {
