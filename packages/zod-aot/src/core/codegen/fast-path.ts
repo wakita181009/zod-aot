@@ -35,6 +35,7 @@ import { fastRecord } from "./schemas/record.js";
 import { fastRecursiveRef } from "./schemas/recursive-ref.js";
 import { fastSet } from "./schemas/set.js";
 import { fastString } from "./schemas/string.js";
+import { fastStringBool } from "./schemas/string-bool.js";
 import { fastSymbol } from "./schemas/symbol.js";
 import { fastTemplateLiteral } from "./schemas/template-literal.js";
 import { fastTuple } from "./schemas/tuple.js";
@@ -88,6 +89,7 @@ const fastRegistry = {
   catch: fastCatch,
   fallback: null, // statically ineligible
   recursiveRef: fastRecursiveRef,
+  stringBool: fastStringBool,
 } satisfies {
   [K in SchemaIR["type"]]: FastGenerator<Extract<SchemaIR, { type: K }>> | null;
 };

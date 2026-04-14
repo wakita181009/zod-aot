@@ -1,0 +1,71 @@
+import { describe, expect, it } from "vitest";
+import { z } from "zod";
+import { extractSchema } from "#src/core/extract/index.js";
+import type { StringBoolIR } from "#src/core/types.js";
+
+describe("extractSchema — stringBool", () => {
+  it("extracts default stringbool", () => {
+    const ir = extractSchema(z.stringbool()) as StringBoolIR;
+    expect(ir.type).toBe("stringBool");
+    expect(ir.caseSensitive).toBe(false);
+    expect(ir.truthy).toContain("true");
+    expect(ir.truthy).toContain("1");
+    expect(ir.truthy).toContain("yes");
+    expect(ir.falsy).toContain("false");
+    expect(ir.falsy).toContain("0");
+    expect(ir.falsy).toContain("no");
+  });
+
+  it("extracts all default truthy values", () => {
+    const ir = extractSchema(z.stringbool()) as StringBoolIR;
+    expect(ir.truthy).toEqual(expect.arrayContaining(["true", "1", "yes", "on", "y", "enabled"]));
+  });
+
+  it("extracts all default falsy values", () => {
+    const ir = extractSchema(z.stringbool()) as StringBoolIR;
+    expect(ir.falsy).toEqual(expect.arrayContaining(["false", "0", "no", "off", "n", "disabled"]));
+  });
+
+  it("detects case-sensitive mode", () => {
+    const ir = extractSchema(z.stringbool({ case: "sensitive" })) as StringBoolIR;
+    expect(ir.type).toBe("stringBool");
+    expect(ir.caseSensitive).toBe(true);
+  });
+
+  it("detects case-insensitive mode (default)", () => {
+    const ir = extractSchema(z.stringbool()) as StringBoolIR;
+    expect(ir.caseSensitive).toBe(false);
+  });
+
+  it("extracts custom truthy/falsy values when within probe set", () => {
+    // Custom values that overlap with our probe set
+    const ir = extractSchema(
+      z.stringbool({ truthy: ["1", "yes"], falsy: ["0", "no"] }),
+    ) as StringBoolIR;
+    expect(ir.type).toBe("stringBool");
+    expect(ir.truthy).toContain("1");
+    expect(ir.truthy).toContain("yes");
+    expect(ir.truthy).not.toContain("true");
+    expect(ir.falsy).toContain("0");
+    expect(ir.falsy).toContain("no");
+    expect(ir.falsy).not.toContain("false");
+  });
+
+  it("falls back when custom truthy values are outside probe set", () => {
+    const ir = extractSchema(z.stringbool({ truthy: ["ja", "oui"], falsy: ["nein", "non"] }));
+    // All custom values are outside probe set → both sets empty → fallback
+    expect(ir.type).toBe("fallback");
+  });
+
+  it("falls back when only truthy values are outside probe set", () => {
+    const ir = extractSchema(z.stringbool({ truthy: ["ja"], falsy: ["0", "no"] }));
+    // truthy is empty (no probe hit) → fallback to prevent broken codegen
+    expect(ir.type).toBe("fallback");
+  });
+
+  it("falls back when only falsy values are outside probe set", () => {
+    const ir = extractSchema(z.stringbool({ truthy: ["1", "yes"], falsy: ["nein"] }));
+    // falsy is empty (no probe hit) → fallback
+    expect(ir.type).toBe("fallback");
+  });
+});

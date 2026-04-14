@@ -48,6 +48,8 @@ export interface ZodDef {
   catchValue?: (ctx: unknown) => unknown;
   /** Transform function reference (present when type is "transform"). */
   transform?: unknown;
+  /** Reverse transform (present on Codec schemas like stringbool). */
+  reverseTransform?: unknown;
 }
 
 export interface ZodSchema {

@@ -139,6 +139,7 @@ export function hasMutation(ir: SchemaIR): boolean {
     case "catch":
     case "effect":
     case "fallback":
+    case "stringBool":
       return true;
     case "object":
       return Object.values(ir.properties).some(hasMutation);

@@ -1652,6 +1652,54 @@ describe("integration — coerce schemas match Zod", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// StringBool Type
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("integration — stringBool schema matches Zod", () => {
+  it("z.stringbool() with default truthy values", () => {
+    const schema = z.stringbool();
+    for (const input of ["true", "1", "yes", "on", "y", "enabled"]) {
+      assertSameResult(schema, input, "stringBool");
+    }
+  });
+
+  it("z.stringbool() with default falsy values", () => {
+    const schema = z.stringbool();
+    for (const input of ["false", "0", "no", "off", "n", "disabled"]) {
+      assertSameResult(schema, input, "stringBoolFalsy");
+    }
+  });
+
+  it("z.stringbool() case-insensitive", () => {
+    const schema = z.stringbool();
+    for (const input of ["TRUE", "True", "FALSE", "Yes", "NO"]) {
+      assertSameResult(schema, input, "stringBoolCase");
+    }
+  });
+
+  it("z.stringbool() rejects invalid values", () => {
+    const schema = z.stringbool();
+    for (const input of ["maybe", "", "2", 42, true, null, undefined]) {
+      assertSameResult(schema, input, "stringBoolInvalid");
+    }
+  });
+
+  it("z.stringbool() with case-sensitive mode", () => {
+    const schema = z.stringbool({ case: "sensitive" });
+    for (const input of ["true", "TRUE", "false", "FALSE", "yes", "YES"]) {
+      assertSameResult(schema, input, "stringBoolSensitive");
+    }
+  });
+
+  it("z.stringbool() with custom truthy/falsy", () => {
+    const schema = z.stringbool({ truthy: ["1", "yes"], falsy: ["0", "no"] });
+    for (const input of ["1", "yes", "0", "no", "true", "false", "on"]) {
+      assertSameResult(schema, input, "stringBoolCustom");
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // TemplateLiteral Type
 // ═══════════════════════════════════════════════════════════════════════════════
 

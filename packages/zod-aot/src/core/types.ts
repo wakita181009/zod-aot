@@ -344,6 +344,13 @@ export interface RecursiveRefIR {
   type: "recursiveRef";
 }
 
+export interface StringBoolIR {
+  type: "stringBool";
+  truthy: string[];
+  falsy: string[];
+  caseSensitive: boolean;
+}
+
 // ─── Schema IR Union ───────────────────────────────────────────────────────
 
 export type SchemaIR =
@@ -386,7 +393,8 @@ export type SchemaIR =
   | TemplateLiteralIR
   | CatchIR
   | FallbackIR
-  | RecursiveRefIR;
+  | RecursiveRefIR
+  | StringBoolIR;
 
 // ─── Compiled Schema Interface ──────────────────────────────────────────────
 

@@ -28,6 +28,7 @@ import { slowRecord } from "./schemas/record.js";
 import { slowRecursiveRef } from "./schemas/recursive-ref.js";
 import { slowSet } from "./schemas/set.js";
 import { slowString } from "./schemas/string.js";
+import { slowStringBool } from "./schemas/string-bool.js";
 import { slowSymbol } from "./schemas/symbol.js";
 import { slowTemplateLiteral } from "./schemas/template-literal.js";
 import { slowTuple } from "./schemas/tuple.js";
@@ -82,6 +83,7 @@ const slowRegistry = {
   catch: slowCatch,
   fallback: slowFallback,
   recursiveRef: slowRecursiveRef,
+  stringBool: slowStringBool,
 } satisfies {
   [K in SchemaIR["type"]]: SlowGenerator<Extract<SchemaIR, { type: K }>>;
 };
