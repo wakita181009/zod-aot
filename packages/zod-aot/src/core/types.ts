@@ -148,6 +148,15 @@ export interface CheckMaxSize {
 
 export type SetCheckIR = CheckMinSize | CheckMaxSize;
 
+// ─── File Check IR ────────────────────────────────────────────────────────
+
+export interface CheckMimeType {
+  kind: "mime_type";
+  mime: string[];
+}
+
+export type FileCheckIR = CheckMinSize | CheckMaxSize | CheckMimeType;
+
 // ─── Schema IR: Primitives ─────────────────────────────────────────────────
 
 export interface StringIR {
@@ -260,6 +269,11 @@ export interface MapIR {
   valueType: SchemaIR;
 }
 
+export interface FileIR {
+  type: "file";
+  checks?: FileCheckIR[];
+}
+
 // ─── Schema IR: Unions & Intersections ─────────────────────────────────────
 
 export interface UnionIR {
@@ -344,6 +358,13 @@ export interface RecursiveRefIR {
   type: "recursiveRef";
 }
 
+export interface StringBoolIR {
+  type: "stringBool";
+  truthy: string[];
+  falsy: string[];
+  caseSensitive: boolean;
+}
+
 // ─── Schema IR Union ───────────────────────────────────────────────────────
 
 export type SchemaIR =
@@ -370,6 +391,7 @@ export type SchemaIR =
   | RecordIR
   | SetIR
   | MapIR
+  | FileIR
   // Unions & Intersections
   | UnionIR
   | DiscriminatedUnionIR
@@ -386,7 +408,8 @@ export type SchemaIR =
   | TemplateLiteralIR
   | CatchIR
   | FallbackIR
-  | RecursiveRefIR;
+  | RecursiveRefIR
+  | StringBoolIR;
 
 // ─── Compiled Schema Interface ──────────────────────────────────────────────
 

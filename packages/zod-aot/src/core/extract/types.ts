@@ -13,6 +13,7 @@ export interface ZodCheckDef {
   prefix: string;
   suffix: string;
   fn: unknown;
+  mime: string[];
   error?: (...args: unknown[]) => unknown;
 }
 
@@ -48,6 +49,8 @@ export interface ZodDef {
   catchValue?: (ctx: unknown) => unknown;
   /** Transform function reference (present when type is "transform"). */
   transform?: unknown;
+  /** Reverse transform (present on Codec schemas like stringbool). */
+  reverseTransform?: unknown;
 }
 
 export interface ZodSchema {
@@ -103,7 +106,8 @@ export type SupportedZodDefType =
   | "pipe"
   | "lazy"
   | "catch"
-  | "template_literal";
+  | "template_literal"
+  | "file";
 
 // ─── Extractor context ──────────────────────────────────────────────────────
 

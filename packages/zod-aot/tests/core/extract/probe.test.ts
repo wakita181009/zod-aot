@@ -40,6 +40,7 @@ describe("extractRegistry — Zod def.type coverage", () => {
     z.lazy(() => z.string()),
     z.string().catch(""),
     z.templateLiteral([z.literal("hello")]),
+    z.file(),
   ];
 
   const zodDefTypes = new Set(

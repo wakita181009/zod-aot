@@ -4,6 +4,7 @@ import { generateValidator } from "#src/core/codegen/index.js";
 import type { RefEntry } from "#src/core/extract/index.js";
 import { extractSchema } from "#src/core/extract/index.js";
 import type { SafeParseResult, SchemaIR } from "#src/core/types.js";
+import { zodAtLeast } from "./zod-version.js";
 
 /**
  * End-to-end helper: Zod schema → extract IR → generate code → compile → safeParse.
@@ -1648,6 +1649,106 @@ describe("integration — coerce schemas match Zod", () => {
     ]) {
       assertSameResult(schema, input, "coerceNested");
     }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// StringBool Type
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// stringBool codec pattern (reverseTransform) requires Zod >= 4.1
+describe.skipIf(!zodAtLeast("4.1"))("integration — stringBool schema matches Zod", () => {
+  it("z.stringbool() with default truthy values", () => {
+    const schema = z.stringbool();
+    for (const input of ["true", "1", "yes", "on", "y", "enabled"]) {
+      assertSameResult(schema, input, "stringBool");
+    }
+  });
+
+  it("z.stringbool() with default falsy values", () => {
+    const schema = z.stringbool();
+    for (const input of ["false", "0", "no", "off", "n", "disabled"]) {
+      assertSameResult(schema, input, "stringBoolFalsy");
+    }
+  });
+
+  it("z.stringbool() case-insensitive", () => {
+    const schema = z.stringbool();
+    for (const input of ["TRUE", "True", "FALSE", "Yes", "NO"]) {
+      assertSameResult(schema, input, "stringBoolCase");
+    }
+  });
+
+  it("z.stringbool() rejects invalid values", () => {
+    const schema = z.stringbool();
+    for (const input of ["maybe", "", "2", 42, true, null, undefined]) {
+      assertSameResult(schema, input, "stringBoolInvalid");
+    }
+  });
+
+  it("z.stringbool() with case-sensitive mode", () => {
+    const schema = z.stringbool({ case: "sensitive" });
+    for (const input of ["true", "TRUE", "false", "FALSE", "yes", "YES"]) {
+      assertSameResult(schema, input, "stringBoolSensitive");
+    }
+  });
+
+  it("z.stringbool() with custom truthy/falsy", () => {
+    const schema = z.stringbool({ truthy: ["1", "yes"], falsy: ["0", "no"] });
+    for (const input of ["1", "yes", "0", "no", "true", "false", "on"]) {
+      assertSameResult(schema, input, "stringBoolCustom");
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// File Type
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("integration — file schema matches Zod", () => {
+  it("z.file() accepts File instances", () => {
+    const schema = z.file();
+    const file = new File(["hello"], "test.txt", { type: "text/plain" });
+    assertSameResult(schema, file, "file");
+  });
+
+  it("z.file() rejects non-File values", () => {
+    const schema = z.file();
+    for (const input of ["hello", 42, null, undefined, {}, []]) {
+      assertSameResult(schema, input, "fileReject");
+    }
+  });
+
+  it("z.file().min() validates minimum size", () => {
+    const schema = z.file().min(10);
+    const small = new File(["hi"], "small.txt");
+    const large = new File(["a".repeat(20)], "large.txt");
+    assertSameResult(schema, small, "fileMin");
+    assertSameResult(schema, large, "fileMin");
+  });
+
+  it("z.file().max() validates maximum size", () => {
+    const schema = z.file().max(5);
+    const small = new File(["hi"], "small.txt");
+    const large = new File(["a".repeat(20)], "large.txt");
+    assertSameResult(schema, small, "fileMax");
+    assertSameResult(schema, large, "fileMax");
+  });
+
+  it("z.file().mime() validates MIME type", () => {
+    const schema = z.file().mime(["image/png", "image/jpeg"]);
+    const png = new File(["data"], "img.png", { type: "image/png" });
+    const txt = new File(["data"], "doc.txt", { type: "text/plain" });
+    assertSameResult(schema, png, "fileMime");
+    assertSameResult(schema, txt, "fileMime");
+  });
+
+  it("z.file() with combined checks", () => {
+    const schema = z.file().min(1).max(10000).mime("text/plain");
+    const valid = new File(["hello"], "test.txt", { type: "text/plain" });
+    const wrongType = new File(["hello"], "img.png", { type: "image/png" });
+    assertSameResult(schema, valid, "fileCombined");
+    assertSameResult(schema, wrongType, "fileCombined");
   });
 });
 

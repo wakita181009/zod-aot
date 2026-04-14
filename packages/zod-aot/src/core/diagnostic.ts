@@ -44,7 +44,7 @@ export interface DiagnosticResult {
 // ─── Fast Path Eligibility ──────────────────────────────────────────────────
 
 /** Schema types that block Fast Path eligibility. */
-const FAST_PATH_BLOCKERS = new Set<string>(["fallback", "effect", "recursiveRef"]);
+const FAST_PATH_BLOCKERS = new Set<string>(["fallback", "effect", "recursiveRef", "stringBool"]);
 
 /** Check if a single node blocks Fast Path (without recursing). */
 function detectFastPathBlocker(ir: SchemaIR): string | null {
