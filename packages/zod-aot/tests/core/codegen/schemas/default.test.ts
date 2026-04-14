@@ -2,14 +2,22 @@ import { describe, expect, it } from "vitest";
 import type { DefaultIR } from "#src/core/types.js";
 import { compileFastCheck, compileIR } from "../helpers.js";
 
+/** Create a mock fallback schema with the given default value. */
+function mockFb(defaultValue: unknown) {
+  return {
+    _zod: { def: { defaultValue } },
+    safeParse: () => ({ success: true, data: defaultValue }),
+  };
+}
+
 describe("slow-path — default", () => {
   it("uses default value when input is undefined", () => {
     const ir: DefaultIR = {
       type: "default",
       inner: { type: "string", checks: [] },
-      defaultValue: "hello",
+      fallbackIndex: 0,
     };
-    const safeParse = compileIR(ir);
+    const safeParse = compileIR(ir, "test", [mockFb("hello")]);
     const result = safeParse(undefined);
     expect(result.success).toBe(true);
     expect(result.data).toBe("hello");
@@ -19,9 +27,9 @@ describe("slow-path — default", () => {
     const ir: DefaultIR = {
       type: "default",
       inner: { type: "string", checks: [] },
-      defaultValue: "hello",
+      fallbackIndex: 0,
     };
-    const safeParse = compileIR(ir);
+    const safeParse = compileIR(ir, "test", [mockFb("hello")]);
     const result = safeParse("world");
     expect(result.success).toBe(true);
     expect(result.data).toBe("world");
@@ -31,9 +39,9 @@ describe("slow-path — default", () => {
     const ir: DefaultIR = {
       type: "default",
       inner: { type: "string", checks: [] },
-      defaultValue: "hello",
+      fallbackIndex: 0,
     };
-    const safeParse = compileIR(ir);
+    const safeParse = compileIR(ir, "test", [mockFb("hello")]);
     expect(safeParse(42).success).toBe(false);
   });
 
@@ -41,38 +49,19 @@ describe("slow-path — default", () => {
     const ir: DefaultIR = {
       type: "default",
       inner: { type: "string", checks: [] },
-      defaultValue: "hello",
+      fallbackIndex: 0,
     };
-    const safeParse = compileIR(ir);
+    const safeParse = compileIR(ir, "test", [mockFb("hello")]);
     expect(safeParse(null).success).toBe(false);
-  });
-
-  // M5: Default value with Date object — JSON.stringify produces a string,
-  // but inner validation is now skipped for defaults (matching Zod behavior),
-  // so the serialized string is returned as-is.
-  it("Date default value is returned as-is (inner validation skipped)", () => {
-    const dateValue = new Date("2024-01-01T00:00:00.000Z");
-    const ir: DefaultIR = {
-      type: "default",
-      inner: { type: "date", checks: [] },
-      defaultValue: dateValue,
-    };
-    const safeParse = compileIR(ir);
-    const result = safeParse(undefined);
-    // Default value is trusted — inner validation is skipped.
-    // Note: JSON.stringify(Date) produces a string, so data is a string not Date.
-    // In production, fallbackIndex path uses runtime defaultValue (real Date object).
-    expect(result.success).toBe(true);
-    expect(result.data).toBe("2024-01-01T00:00:00.000Z");
   });
 
   it("default value skips inner validation (matches Zod behavior)", () => {
     const ir: DefaultIR = {
       type: "default",
       inner: { type: "string", checks: [{ kind: "min_length", minimum: 10 }] },
-      defaultValue: "x",
+      fallbackIndex: 0,
     };
-    const safeParse = compileIR(ir);
+    const safeParse = compileIR(ir, "test", [mockFb("x")]);
     // Zod: z.string().min(10).default("x").safeParse(undefined) → { success: true, data: "x" }
     // Default value is trusted and inner validation is skipped
     const result = safeParse(undefined);
@@ -84,9 +73,9 @@ describe("slow-path — default", () => {
     const ir: DefaultIR = {
       type: "default",
       inner: { type: "string", checks: [{ kind: "min_length", minimum: 10 }] },
-      defaultValue: "x",
+      fallbackIndex: 0,
     };
-    const safeParse = compileIR(ir);
+    const safeParse = compileIR(ir, "test", [mockFb("x")]);
     // "short" does not meet min(10)
     expect(safeParse("short").success).toBe(false);
     // "longstringhere" meets min(10)
@@ -94,6 +83,7 @@ describe("slow-path — default", () => {
   });
 
   it("object default value works correctly", () => {
+    const defaultObj = { name: "default" };
     const ir: DefaultIR = {
       type: "default",
       inner: {
@@ -102,9 +92,9 @@ describe("slow-path — default", () => {
           name: { type: "string", checks: [] },
         },
       },
-      defaultValue: { name: "default" },
+      fallbackIndex: 0,
     };
-    const safeParse = compileIR(ir);
+    const safeParse = compileIR(ir, "test", [mockFb(defaultObj)]);
     const result = safeParse(undefined);
     expect(result.success).toBe(true);
     expect(result.data).toEqual({ name: "default" });
@@ -116,7 +106,7 @@ describe("fast-path — default", () => {
     const fn = compileFastCheck({
       type: "default",
       inner: { type: "string", checks: [] },
-      defaultValue: "hello",
+      fallbackIndex: 0,
     });
     expect(fn).not.toBeNull();
     expect(fn?.("world")).toBe(true);
@@ -126,7 +116,7 @@ describe("fast-path — default", () => {
     const fn = compileFastCheck({
       type: "default",
       inner: { type: "string", checks: [] },
-      defaultValue: "hello",
+      fallbackIndex: 0,
     });
     expect(fn).not.toBeNull();
     expect(fn?.(undefined)).toBe(false);
@@ -136,7 +126,7 @@ describe("fast-path — default", () => {
     const fn = compileFastCheck({
       type: "default",
       inner: { type: "string", checks: [] },
-      defaultValue: "hello",
+      fallbackIndex: 0,
     });
     expect(fn).not.toBeNull();
     expect(fn?.(42)).toBe(false);
@@ -146,7 +136,7 @@ describe("fast-path — default", () => {
     const fn = compileFastCheck({
       type: "default",
       inner: { type: "string", checks: [{ kind: "min_length", minimum: 3 }] },
-      defaultValue: "hello",
+      fallbackIndex: 0,
     });
     expect(fn).not.toBeNull();
     expect(fn?.("abc")).toBe(true);
@@ -159,7 +149,7 @@ describe("fast-path — default", () => {
       compileFastCheck({
         type: "default",
         inner: { type: "fallback", reason: "transform" },
-        defaultValue: "",
+        fallbackIndex: 0,
       }),
     ).toBeNull();
   });
@@ -171,7 +161,7 @@ describe("fast-path — default", () => {
         name: {
           type: "default",
           inner: { type: "string", checks: [] },
-          defaultValue: "anon",
+          fallbackIndex: 0,
         },
       },
     });
@@ -184,9 +174,9 @@ describe("fast-path — default", () => {
     const ir: DefaultIR = {
       type: "default",
       inner: { type: "string", checks: [] },
-      defaultValue: "hello",
+      fallbackIndex: 0,
     };
-    const safeParse = compileIR(ir);
+    const safeParse = compileIR(ir, "test", [mockFb("hello")]);
 
     // Valid input: should use fast path, return input as-is
     expect(safeParse("world")).toEqual({ success: true, data: "world" });

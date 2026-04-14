@@ -32,7 +32,7 @@ describe("fastPathEligible", () => {
     const ir: SchemaIR = {
       type: "default",
       inner: { type: "string", checks: [] },
-      defaultValue: "",
+      fallbackIndex: 0,
     };
     expect(diagnoseSchema(ir).fastPathEligible).toBe(true);
     expect(diagnoseSchema(ir).fastPathBlocker).toBeUndefined();
@@ -91,7 +91,7 @@ describe("fastPathEligible", () => {
       type: "object",
       properties: {
         name: { type: "string", checks: [] },
-        value: { type: "default", inner: { type: "string", checks: [] }, defaultValue: "" },
+        value: { type: "default", inner: { type: "string", checks: [] }, fallbackIndex: 0 },
       },
     };
     expect(diagnoseSchema(ir).fastPathEligible).toBe(true);
@@ -179,7 +179,7 @@ describe("fastPathEligible", () => {
     const ir: SchemaIR = {
       type: "tuple",
       items: [{ type: "string", checks: [] }],
-      rest: { type: "default", inner: { type: "string", checks: [] }, defaultValue: "" },
+      rest: { type: "default", inner: { type: "string", checks: [] }, fallbackIndex: 0 },
     };
     expect(diagnoseSchema(ir).fastPathEligible).toBe(true);
     expect(diagnoseSchema(ir).fastPathBlocker).toBeUndefined();
@@ -427,7 +427,7 @@ describe("diagnoseSchema", () => {
     const ir: SchemaIR = {
       type: "default",
       inner: { type: "fallback", reason: "transform" },
-      defaultValue: "",
+      fallbackIndex: 0,
     };
     const result = diagnoseSchema(ir);
 
