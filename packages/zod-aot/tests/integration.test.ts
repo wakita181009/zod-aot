@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ZodRealError, z } from "zod";
 import { generateValidator } from "#src/core/codegen/index.js";
-import type { FallbackEntry } from "#src/core/extract/index.js";
+import type { RefEntry } from "#src/core/extract/index.js";
 import { extractSchema } from "#src/core/extract/index.js";
 import type { SafeParseResult, SchemaIR } from "#src/core/types.js";
 
@@ -280,7 +280,7 @@ describe("integration — readonly match Zod", () => {
 describe("integration — default match Zod", () => {
   it("standalone default", () => {
     const schema = z.string().default("fallback");
-    const safeParse = compileWithFallbacks(schema, "defaultStr");
+    const safeParse = compileWithRefs(schema, "defaultStr");
     for (const input of [undefined, "hello", ""]) {
       const zodResult = schema.safeParse(input);
       const aotResult = safeParse(input);
@@ -296,7 +296,7 @@ describe("integration — default match Zod", () => {
       name: z.string(),
       role: z.string().default("user"),
     });
-    const safeParse = compileWithFallbacks(schema, "defaultObj");
+    const safeParse = compileWithRefs(schema, "defaultObj");
     for (const input of [
       { name: "Alice", role: "admin" },
       { name: "Bob" },
@@ -313,7 +313,7 @@ describe("integration — default match Zod", () => {
 
   it("factory default (string)", () => {
     const schema = z.string().default(() => "generated");
-    const safeParse = compileWithFallbacks(schema, "defaultFactory");
+    const safeParse = compileWithRefs(schema, "defaultFactory");
     for (const input of [undefined, "hello"]) {
       const zodResult = schema.safeParse(input);
       const aotResult = safeParse(input);
@@ -326,7 +326,7 @@ describe("integration — default match Zod", () => {
 
   it("factory default (Date)", () => {
     const schema = z.date().default(() => new Date("2024-01-01T00:00:00.000Z"));
-    const safeParse = compileWithFallbacks(schema, "defaultDateFactory");
+    const safeParse = compileWithRefs(schema, "defaultDateFactory");
     const zodResult = schema.safeParse(undefined);
     const aotResult = safeParse(undefined);
     expect(aotResult.success).toBe(zodResult.success);
@@ -342,7 +342,7 @@ describe("integration — default match Zod", () => {
 
   it("number default", () => {
     const schema = z.number().default(42);
-    const safeParse = compileWithFallbacks(schema, "defaultNum");
+    const safeParse = compileWithRefs(schema, "defaultNum");
     for (const input of [undefined, 0, 99, -1]) {
       const zodResult = schema.safeParse(input);
       const aotResult = safeParse(input);
@@ -355,7 +355,7 @@ describe("integration — default match Zod", () => {
 
   it("boolean default", () => {
     const schema = z.boolean().default(false);
-    const safeParse = compileWithFallbacks(schema, "defaultBool");
+    const safeParse = compileWithRefs(schema, "defaultBool");
     for (const input of [undefined, true, false]) {
       const zodResult = schema.safeParse(input);
       const aotResult = safeParse(input);
@@ -370,7 +370,7 @@ describe("integration — default match Zod", () => {
     const schema = z
       .object({ name: z.string(), age: z.number() })
       .default({ name: "anon", age: 0 });
-    const safeParse = compileWithFallbacks(schema, "defaultObjVal");
+    const safeParse = compileWithRefs(schema, "defaultObjVal");
     for (const input of [undefined, { name: "Alice", age: 30 }]) {
       const zodResult = schema.safeParse(input);
       const aotResult = safeParse(input);
@@ -388,7 +388,7 @@ describe("integration — default match Zod", () => {
         port: z.number().default(3000),
       }),
     });
-    const safeParse = compileWithFallbacks(schema, "defaultNested");
+    const safeParse = compileWithRefs(schema, "defaultNested");
     for (const input of [
       { config: {} },
       { config: { host: "example.com" } },
@@ -409,7 +409,7 @@ describe("integration — default match Zod", () => {
       .string()
       .default("hello")
       .refine((v) => v.length >= 3);
-    const safeParse = compileWithFallbacks(schema, "defaultRefine");
+    const safeParse = compileWithRefs(schema, "defaultRefine");
     for (const input of [undefined, "abc", "abcdef"]) {
       const zodResult = schema.safeParse(input);
       const aotResult = safeParse(input);
@@ -422,7 +422,7 @@ describe("integration — default match Zod", () => {
 
   it("default with invalid type produces same error as Zod", () => {
     const schema = z.string().default("fallback");
-    const safeParse = compileWithFallbacks(schema, "defaultInvalid");
+    const safeParse = compileWithRefs(schema, "defaultInvalid");
     for (const input of [42, true, null, { key: "val" }, [1, 2]]) {
       const zodResult = schema.safeParse(input);
       const aotResult = safeParse(input);
@@ -1103,15 +1103,15 @@ describe("integration — effect compilation and fallback for non-compilable sch
   });
 });
 
-function compileWithFallbacks(schema: z.ZodType, name = "test") {
-  const fallbackEntries: FallbackEntry[] = [];
-  const ir = extractSchema(schema, fallbackEntries);
-  const result = generateValidator(ir, name, { fallbackCount: fallbackEntries.length });
-  const fallbackSchemas = fallbackEntries.map((e) => e.schema);
-  return fallbackSchemas.length > 0
+function compileWithRefs(schema: z.ZodType, name = "test") {
+  const refEntries: RefEntry[] = [];
+  const ir = extractSchema(schema, refEntries);
+  const result = generateValidator(ir, name, { refCount: refEntries.length });
+  const refSchemas = refEntries.map((e) => e.schema);
+  return refSchemas.length > 0
     ? (new Function("__ZodError", "__rf", `${result.code}\nreturn ${result.functionDef};`)(
         ZodRealError,
-        fallbackSchemas,
+        refSchemas,
       ) as (input: unknown) => SafeParseResult<unknown>)
     : (new Function("__ZodError", `${result.code}\nreturn ${result.functionDef};`)(
         ZodRealError,
@@ -1126,7 +1126,7 @@ describe("integration — partial fallback (mixed compilable + non-compilable)",
       age: z.number().int().positive(),
     });
 
-    const safeParse = compileWithFallbacks(schema, "partial");
+    const safeParse = compileWithRefs(schema, "partial");
     const inputs = [
       { name: "Alice", slug: "Hello-World", age: 25 },
       { name: "Al", slug: "hello", age: 25 },
@@ -1149,7 +1149,7 @@ describe("integration — partial fallback (mixed compilable + non-compilable)",
       slug: z.string().transform((v) => v.toLowerCase()),
     });
 
-    const safeParse = compileWithFallbacks(schema, "transform");
+    const safeParse = compileWithRefs(schema, "transform");
     const result = safeParse({ name: "Alice", slug: "HELLO" });
     expect(result.success).toBe(true);
     if (result.success) {
@@ -1168,7 +1168,7 @@ describe("integration — partial fallback (mixed compilable + non-compilable)",
         }),
     });
 
-    const safeParse = compileWithFallbacks(schema, "refine");
+    const safeParse = compileWithRefs(schema, "refine");
     const inputs = [
       { email: "a@b.com", password: "SecurePass1" },
       { email: "a@b.com", password: "nouppercase" },
@@ -1189,7 +1189,7 @@ describe("integration — partial fallback (mixed compilable + non-compilable)",
     });
     const schema = z.array(itemSchema);
 
-    const safeParse = compileWithFallbacks(schema, "arrPartial");
+    const safeParse = compileWithRefs(schema, "arrPartial");
     const inputs = [
       [{ id: 1, label: " hello " }],
       [{ id: "not a number", label: "ok" }],
@@ -1211,7 +1211,7 @@ describe("integration — partial fallback (mixed compilable + non-compilable)",
       label: z.nullable(z.string().transform((v) => v.trim())),
     });
 
-    const safeParse = compileWithFallbacks(schema, "nullableTransform");
+    const safeParse = compileWithRefs(schema, "nullableTransform");
     const inputs = [
       { name: "Alice", label: " hello " },
       { name: "Alice", label: null },
@@ -1229,7 +1229,7 @@ describe("integration — partial fallback (mixed compilable + non-compilable)",
   it("tuple with transform item matches Zod", () => {
     const schema = z.tuple([z.string(), z.number().transform((v) => String(v))]);
 
-    const safeParse = compileWithFallbacks(schema, "tupleTransform");
+    const safeParse = compileWithRefs(schema, "tupleTransform");
     const inputs = [["hello", 42], ["hello", "not a number"], [42, 42], "not array"];
 
     for (const input of inputs) {
@@ -1245,7 +1245,7 @@ describe("integration — partial fallback (mixed compilable + non-compilable)",
       z.string().transform((v) => v.trim()),
     );
 
-    const safeParse = compileWithFallbacks(schema, "recordTransform");
+    const safeParse = compileWithRefs(schema, "recordTransform");
     const inputs = [{ a: " hello " }, { a: "hello", b: "world" }, { a: 42 }, {}, null];
 
     for (const input of inputs) {
@@ -1261,7 +1261,7 @@ describe("integration — partial fallback (mixed compilable + non-compilable)",
       z.object({ b: z.string().transform((v) => v.toLowerCase()) }),
     );
 
-    const safeParse = compileWithFallbacks(schema, "intersectTransform");
+    const safeParse = compileWithRefs(schema, "intersectTransform");
     const inputs = [{ a: "hello", b: "WORLD" }, { a: "hello" }, { b: "world" }, null];
 
     for (const input of inputs) {
@@ -1281,7 +1281,7 @@ describe("integration — partial fallback (mixed compilable + non-compilable)",
       ),
     });
 
-    const safeParse = compileWithFallbacks(schema, "deepNested");
+    const safeParse = compileWithRefs(schema, "deepNested");
     const inputs = [
       { items: [{ name: "Alice", score: 95.7 }] },
       { items: [{ name: "", score: 80 }] },
@@ -1302,7 +1302,7 @@ describe("integration — partial fallback (mixed compilable + non-compilable)",
       label: z.nullable(z.string().transform((v) => v.trim())),
     });
 
-    const safeParse = compileWithFallbacks(schema, "nullableWriteback");
+    const safeParse = compileWithRefs(schema, "nullableWriteback");
     const result = safeParse({ label: "  hello  " });
     expect(result.success).toBe(true);
     if (result.success) {
@@ -1316,7 +1316,7 @@ describe("integration — partial fallback (mixed compilable + non-compilable)",
       children: z.array(z.lazy(() => TreeNode)),
     });
 
-    const safeParse = compileWithFallbacks(TreeNode, "tree");
+    const safeParse = compileWithRefs(TreeNode, "tree");
     const inputs = [
       { value: "root", children: [] },
       { value: "root", children: [{ value: "child", children: [] }] },
@@ -1342,7 +1342,7 @@ describe("integration — partial fallback (mixed compilable + non-compilable)",
       children: z.array(z.lazy(() => TreeNode)),
     });
 
-    const safeParse = compileWithFallbacks(TreeNode, "treeChecks");
+    const safeParse = compileWithRefs(TreeNode, "treeChecks");
     const inputs = [
       { value: "root", children: [] },
       { value: "root", children: [{ value: "a", children: [] }] },
@@ -1365,7 +1365,7 @@ describe("integration — partial fallback (mixed compilable + non-compilable)",
       next: z.lazy(() => ListNode).nullable(),
     });
 
-    const safeParse = compileWithFallbacks(ListNode, "list");
+    const safeParse = compileWithRefs(ListNode, "list");
     const inputs = [
       { value: 1, next: null },
       { value: 1, next: { value: 2, next: null } },
@@ -1393,7 +1393,7 @@ describe("integration — partial fallback (mixed compilable + non-compilable)",
       right: z.lazy(() => BinaryTree).nullable(),
     });
 
-    const safeParse = compileWithFallbacks(BinaryTree, "btree");
+    const safeParse = compileWithRefs(BinaryTree, "btree");
     const inputs = [
       { value: 1, left: null, right: null },
       {
@@ -1429,7 +1429,7 @@ describe("integration — partial fallback (mixed compilable + non-compilable)",
       parent: z.lazy(() => Category).optional(),
     });
 
-    const safeParse = compileWithFallbacks(Category, "category");
+    const safeParse = compileWithRefs(Category, "category");
     const inputs = [
       { name: "root" },
       { name: "child", parent: { name: "root" } },
@@ -1457,7 +1457,7 @@ describe("integration — partial fallback (mixed compilable + non-compilable)",
       ),
     });
 
-    const safeParse = compileWithFallbacks(DirNode, "dir");
+    const safeParse = compileWithRefs(DirNode, "dir");
     const inputs = [
       { name: "root", children: {} },
       {
@@ -1496,7 +1496,7 @@ describe("integration — partial fallback (mixed compilable + non-compilable)",
       children: z.array(z.lazy(() => TreeNode)),
     });
 
-    const safeParse = compileWithFallbacks(TreeNode, "deepTree");
+    const safeParse = compileWithRefs(TreeNode, "deepTree");
     const deepTree = {
       value: "L0",
       children: [
@@ -1526,7 +1526,7 @@ describe("integration — partial fallback (mixed compilable + non-compilable)",
       children: z.array(z.lazy(() => TreeNode)),
     });
 
-    const safeParse = compileWithFallbacks(TreeNode, "treePaths");
+    const safeParse = compileWithRefs(TreeNode, "treePaths");
     const input = {
       value: "root",
       children: [
@@ -1550,7 +1550,7 @@ describe("integration — partial fallback (mixed compilable + non-compilable)",
       age: z.number(),
     });
 
-    const safeParse = compileWithFallbacks(schema, "lazySimple");
+    const safeParse = compileWithRefs(schema, "lazySimple");
     const inputs = [{ name: "Alice", age: 30 }, { name: "", age: 30 }, { name: 42, age: 30 }, null];
 
     for (const input of inputs) {
@@ -1566,7 +1566,7 @@ describe("integration — partial fallback (mixed compilable + non-compilable)",
       age: z.number().int().positive(),
     });
 
-    const safeParse = compileWithFallbacks(schema, "noFallback");
+    const safeParse = compileWithRefs(schema, "noFallback");
     const inputs = [
       { name: "Alice", age: 30 },
       { name: "", age: 30 },
@@ -2316,7 +2316,7 @@ describe("integration — edge cases match Zod", () => {
     const schema = z.object({
       value: z.string().nullable().optional().default("fallback"),
     });
-    const safeParse = compileWithFallbacks(schema, "optNullDef");
+    const safeParse = compileWithRefs(schema, "optNullDef");
     for (const input of [
       {},
       { value: undefined },
@@ -2561,7 +2561,7 @@ describe("integration — additional real-world schemas match Zod", () => {
 describe("integration — zero-capture transform (effect compilation)", () => {
   it("string.transform(v => v.toUpperCase()) matches Zod", () => {
     const schema = z.string().transform((v) => v.toUpperCase());
-    const safeParse = compileWithFallbacks(schema, "strUpper");
+    const safeParse = compileWithRefs(schema, "strUpper");
 
     for (const input of ["hello", "WORLD", "", 42, null]) {
       const zodResult = schema.safeParse(input);
@@ -2575,7 +2575,7 @@ describe("integration — zero-capture transform (effect compilation)", () => {
 
   it("string.transform(v => parseInt(v, 10)) matches Zod", () => {
     const schema = z.string().transform((v) => parseInt(v, 10));
-    const safeParse = compileWithFallbacks(schema, "strParse");
+    const safeParse = compileWithRefs(schema, "strParse");
 
     for (const input of ["42", "0", "abc", "", 123, null]) {
       const zodResult = schema.safeParse(input);
@@ -2589,7 +2589,7 @@ describe("integration — zero-capture transform (effect compilation)", () => {
 
   it("number.transform(v => Math.round(v)) matches Zod", () => {
     const schema = z.number().transform((v) => Math.round(v));
-    const safeParse = compileWithFallbacks(schema, "numRound");
+    const safeParse = compileWithRefs(schema, "numRound");
 
     for (const input of [3.7, 3.2, 0, -1.5, "not a number", null]) {
       const zodResult = schema.safeParse(input);
@@ -2606,7 +2606,7 @@ describe("integration — zero-capture transform (effect compilation)", () => {
       .string()
       .min(3)
       .transform((v) => v.toLowerCase());
-    const safeParse = compileWithFallbacks(schema, "minThenLower");
+    const safeParse = compileWithRefs(schema, "minThenLower");
 
     for (const input of ["HELLO", "Hi", "ABC", "", 42]) {
       const zodResult = schema.safeParse(input);
@@ -2625,7 +2625,7 @@ describe("integration — zero-capture transform (effect compilation)", () => {
       score: z.number().transform((v) => Math.round(v)),
     });
 
-    const safeParse = compileWithFallbacks(schema, "objTransform");
+    const safeParse = compileWithRefs(schema, "objTransform");
 
     for (const input of [
       { name: "Alice", slug: "HELLO-WORLD", score: 95.7 },
@@ -2645,7 +2645,7 @@ describe("integration — zero-capture transform (effect compilation)", () => {
 
   it("array of transform elements matches Zod", () => {
     const schema = z.array(z.string().transform((v) => v.trim()));
-    const safeParse = compileWithFallbacks(schema, "arrTrim");
+    const safeParse = compileWithRefs(schema, "arrTrim");
 
     for (const input of [[" hello ", " world "], [], ["no-trim"], [42], "not array"]) {
       const zodResult = schema.safeParse(input);
@@ -2661,7 +2661,7 @@ describe("integration — zero-capture transform (effect compilation)", () => {
     const schema = z.object({
       label: z.optional(z.string().transform((v) => v.toUpperCase())),
     });
-    const safeParse = compileWithFallbacks(schema, "optTransform");
+    const safeParse = compileWithRefs(schema, "optTransform");
 
     for (const input of [{ label: "hello" }, { label: undefined }, {}, { label: 42 }, null]) {
       const zodResult = schema.safeParse(input);
@@ -2677,7 +2677,7 @@ describe("integration — zero-capture transform (effect compilation)", () => {
     const schema = z.object({
       value: z.nullable(z.string().transform((v) => v.trim())),
     });
-    const safeParse = compileWithFallbacks(schema, "nullableTransformE2E");
+    const safeParse = compileWithRefs(schema, "nullableTransformE2E");
 
     for (const input of [{ value: " hello " }, { value: null }, { value: 42 }, null]) {
       const zodResult = schema.safeParse(input);
@@ -2693,7 +2693,7 @@ describe("integration — zero-capture transform (effect compilation)", () => {
 describe("integration — zero-capture refine (effect compilation)", () => {
   it("string.refine(v => v.includes('@')) matches Zod success/failure", () => {
     const schema = z.string().refine((v) => v.includes("@"));
-    const safeParse = compileWithFallbacks(schema, "strRefine");
+    const safeParse = compileWithRefs(schema, "strRefine");
 
     for (const input of ["a@b.com", "no-at", "", 42, null]) {
       const zodResult = schema.safeParse(input);
@@ -2704,7 +2704,7 @@ describe("integration — zero-capture refine (effect compilation)", () => {
 
   it("number.refine(v => v % 2 === 0) matches Zod", () => {
     const schema = z.number().refine((v) => v % 2 === 0);
-    const safeParse = compileWithFallbacks(schema, "numEven");
+    const safeParse = compileWithRefs(schema, "numEven");
 
     for (const input of [2, 4, 0, 3, 5, -2, "two", null]) {
       const zodResult = schema.safeParse(input);
@@ -2718,7 +2718,7 @@ describe("integration — zero-capture refine (effect compilation)", () => {
       .string()
       .min(3)
       .refine((v) => v.startsWith("a"));
-    const safeParse = compileWithFallbacks(schema, "minThenRefine");
+    const safeParse = compileWithRefs(schema, "minThenRefine");
 
     for (const input of ["abc", "ab", "bcd", "abcdef", "", 42]) {
       const zodResult = schema.safeParse(input);
@@ -2732,7 +2732,7 @@ describe("integration — zero-capture refine (effect compilation)", () => {
       email: z.string().refine((v) => v.includes("@")),
       age: z.number().refine((v) => v >= 18),
     });
-    const safeParse = compileWithFallbacks(schema, "objRefine");
+    const safeParse = compileWithRefs(schema, "objRefine");
 
     for (const input of [
       { email: "a@b.com", age: 25 },
@@ -2754,7 +2754,7 @@ describe("integration — zero-capture refine (effect compilation)", () => {
         confirm: z.string().min(1),
       })
       .refine((v) => v.password === v.confirm);
-    const safeParse = compileWithFallbacks(schema, "objLevelRefine");
+    const safeParse = compileWithRefs(schema, "objLevelRefine");
 
     for (const input of [
       { password: "abc", confirm: "abc" },
@@ -2777,7 +2777,7 @@ describe("integration — mixed effect + standard compilation", () => {
       active: z.boolean(),
       score: z.number().refine((v) => v >= 0),
     });
-    const safeParse = compileWithFallbacks(schema, "mixed");
+    const safeParse = compileWithRefs(schema, "mixed");
 
     for (const input of [
       { name: "Alice", slug: "HELLO", active: true, score: 95 },
@@ -2805,7 +2805,7 @@ describe("integration — mixed effect + standard compilation", () => {
         }),
       ),
     });
-    const safeParse = compileWithFallbacks(schema, "deepTransform");
+    const safeParse = compileWithRefs(schema, "deepTransform");
 
     for (const input of [
       {
@@ -2832,7 +2832,7 @@ describe("integration — mixed effect + standard compilation", () => {
       z.string().transform((v) => v.toUpperCase()),
       z.number().transform((v) => String(v)),
     ]);
-    const safeParse = compileWithFallbacks(schema, "unionTransform");
+    const safeParse = compileWithRefs(schema, "unionTransform");
 
     for (const input of ["hello", 42, true, null]) {
       const zodResult = schema.safeParse(input);
@@ -2848,7 +2848,7 @@ describe("integration — mixed effect + standard compilation", () => {
 describe("integration — refine custom message", () => {
   it("refine with string message preserves message in error", () => {
     const schema = z.string().refine((v) => v.includes("@"), "must contain @");
-    const safeParse = compileWithFallbacks(schema, "refineMsg");
+    const safeParse = compileWithRefs(schema, "refineMsg");
 
     const result = safeParse("no-at");
     expect(result.success).toBe(false);
@@ -2861,7 +2861,7 @@ describe("integration — refine custom message", () => {
 
   it("refine with object message preserves message in error", () => {
     const schema = z.string().refine((v) => v.length > 0, { message: "cannot be empty" });
-    const safeParse = compileWithFallbacks(schema, "refineObjMsg");
+    const safeParse = compileWithRefs(schema, "refineObjMsg");
 
     const result = safeParse("");
     expect(result.success).toBe(false);
@@ -2873,7 +2873,7 @@ describe("integration — refine custom message", () => {
 
   it("refine without message uses default 'Invalid'", () => {
     const schema = z.string().refine((v) => v.length > 0);
-    const safeParse = compileWithFallbacks(schema, "refineNoMsg");
+    const safeParse = compileWithRefs(schema, "refineNoMsg");
 
     const result = safeParse("");
     expect(result.success).toBe(false);
@@ -2890,7 +2890,7 @@ describe("integration — check ordering with refine_effect", () => {
       .string()
       .refine((v) => v.startsWith("x"), "must start with x")
       .min(10);
-    const safeParse = compileWithFallbacks(schema, "refineOrder");
+    const safeParse = compileWithRefs(schema, "refineOrder");
 
     // Input fails both: refine (doesn't start with x) and min (len 2 < 10)
     const zodResult = schema.safeParse("ab");
@@ -2913,7 +2913,7 @@ describe("integration — catch + transform combo", () => {
       .number()
       .catch(0)
       .transform((v) => v * 2);
-    const safeParse = compileWithFallbacks(schema, "catchTransform");
+    const safeParse = compileWithRefs(schema, "catchTransform");
 
     // Valid number: transformed
     const r1 = schema.safeParse(5);
@@ -2935,7 +2935,7 @@ describe("integration — default + transform combo", () => {
       .string()
       .default("hello")
       .transform((v) => v.toUpperCase());
-    const safeParse = compileWithFallbacks(schema, "defaultTransform");
+    const safeParse = compileWithRefs(schema, "defaultTransform");
 
     // Provided value: transformed
     const r1 = schema.safeParse("world");
@@ -2958,7 +2958,7 @@ describe("integration — ctx-aware effects fall back to Zod", () => {
         ctx.addIssue({ code: "custom", message: "too short" });
       }
     });
-    const safeParse = compileWithFallbacks(schema, "superRefineCtx");
+    const safeParse = compileWithRefs(schema, "superRefineCtx");
 
     for (const input of ["hello", "ab", "", 42, null]) {
       const zodResult = schema.safeParse(input);
@@ -2975,7 +2975,7 @@ describe("integration — ctx-aware effects fall back to Zod", () => {
       }
       return val.toUpperCase();
     });
-    const safeParse = compileWithFallbacks(schema, "transformCtx");
+    const safeParse = compileWithRefs(schema, "transformCtx");
 
     for (const input of ["hello", "", 42]) {
       const zodResult = schema.safeParse(input);

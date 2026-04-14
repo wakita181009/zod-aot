@@ -144,7 +144,7 @@ describe("rewriteSource()", () => {
   function makeCompiledInfo(exportName: string, schema: z.ZodType) {
     const ir = extractSchema(schema);
     const codegenResult = generateValidator(ir, exportName);
-    return { exportName, codegenResult, fallbackEntries: [] };
+    return { exportName, codegenResult, refEntries: [] };
   }
 
   it("replaces a single compile() call with IIFE using Object.create", () => {
@@ -459,13 +459,13 @@ describe("transformCode() E2E", () => {
     try {
       await transformCode(code, fixturePath, { verbose: true });
       const output = logSpy.mock.calls.map((c) => c[0]).join("\n");
-      expect(output).toContain("1 fallback)");
+      expect(output).toContain("1 ref)");
     } finally {
       logSpy.mockRestore();
     }
   });
 
-  it("verbose mode logs fallback count (plural)", async () => {
+  it("verbose mode logs ref count (plural)", async () => {
     const fixturePath = path.join(fixturesDir, "with-multi-fallback.ts");
     const code = readFixtureAsUserCode(fixturePath);
     const logSpy = vi.spyOn(console, "log").mockImplementation(vi.fn());
@@ -473,7 +473,7 @@ describe("transformCode() E2E", () => {
     try {
       await transformCode(code, fixturePath, { verbose: true });
       const output = logSpy.mock.calls.map((c) => c[0]).join("\n");
-      expect(output).toContain("fallbacks)");
+      expect(output).toContain("refs)");
     } finally {
       logSpy.mockRestore();
     }
@@ -524,7 +524,7 @@ describe("rewriteSourceAutoDiscover()", () => {
   function makeCompiledInfo(exportName: string, schema: z.ZodType) {
     const ir = extractSchema(schema);
     const codegenResult = generateValidator(ir, exportName);
-    return { exportName, codegenResult, fallbackEntries: [] };
+    return { exportName, codegenResult, refEntries: [] };
   }
 
   it("skips schema when export pattern does not match code", () => {
@@ -814,7 +814,7 @@ describe("rewriteSource() — zodCompat option", () => {
   function makeCompiledInfo(exportName: string, schema: z.ZodType) {
     const ir = extractSchema(schema);
     const codegenResult = generateValidator(ir, exportName);
-    return { exportName, codegenResult, fallbackEntries: [] };
+    return { exportName, codegenResult, refEntries: [] };
   }
 
   it("uses plain object when zodCompat is false", () => {

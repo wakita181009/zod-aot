@@ -8,11 +8,11 @@ describe("generateCompiledFileContent()", () => {
       code: "/* zod-aot */",
       functionDef:
         'function safeParse_test(input){\nvar __issues=[];\nif(typeof input!=="string"){__issues.push({code:"invalid_type",expected:"string",received:typeof input,path:[],message:"Expected string"});}\nif(__issues.length>0)return{success:false,error:{issues:__issues}};\nreturn{success:true,data:input};\n}',
-      fallbackCount: 0,
+      refCount: 0,
     };
 
     const content = generateCompiledFileContent(
-      [{ exportName: "validateTest", codegenResult: result, fallbackEntries: [] }],
+      [{ exportName: "validateTest", codegenResult: result, refEntries: [] }],
       "./test.ts",
     );
 
@@ -30,18 +30,18 @@ describe("generateCompiledFileContent()", () => {
     const result1: CodeGenResult = {
       code: "/* zod-aot */",
       functionDef: "function safeParse_a(input){\nreturn{success:true,data:input};\n}",
-      fallbackCount: 0,
+      refCount: 0,
     };
     const result2: CodeGenResult = {
       code: "/* zod-aot */",
       functionDef: "function safeParse_b(input){\nreturn{success:true,data:input};\n}",
-      fallbackCount: 0,
+      refCount: 0,
     };
 
     const content = generateCompiledFileContent(
       [
-        { exportName: "validateA", codegenResult: result1, fallbackEntries: [] },
-        { exportName: "validateB", codegenResult: result2, fallbackEntries: [] },
+        { exportName: "validateA", codegenResult: result1, refEntries: [] },
+        { exportName: "validateB", codegenResult: result2, refEntries: [] },
       ],
       "./multi.ts",
     );
@@ -56,11 +56,11 @@ describe("generateCompiledFileContent()", () => {
     const result: CodeGenResult = {
       code: "/* zod-aot */",
       functionDef: "function safeParse_test(input){\nreturn{success:true,data:input};\n}",
-      fallbackCount: 0,
+      refCount: 0,
     };
 
     const content = generateCompiledFileContent(
-      [{ exportName: "validateTest", codegenResult: result, fallbackEntries: [] }],
+      [{ exportName: "validateTest", codegenResult: result, refEntries: [] }],
       "./test.ts",
     );
 
@@ -75,11 +75,11 @@ describe("generateCompiledFileContent()", () => {
     const result: CodeGenResult = {
       code: "/* zod-aot */",
       functionDef: "function safeParse_test(input){\nreturn{success:true,data:input};\n}",
-      fallbackCount: 0,
+      refCount: 0,
     };
 
     const content = generateCompiledFileContent(
-      [{ exportName: "validateTest", codegenResult: result, fallbackEntries: [] }],
+      [{ exportName: "validateTest", codegenResult: result, refEntries: [] }],
       "./test.ts",
     );
 
@@ -93,11 +93,11 @@ describe("generateCompiledFileContent() — zodCompat: false", () => {
     const result: CodeGenResult = {
       code: "/* zod-aot */",
       functionDef: "function safeParse_test(input){\nreturn{success:true,data:input};\n}",
-      fallbackCount: 0,
+      refCount: 0,
     };
 
     const content = generateCompiledFileContent(
-      [{ exportName: "validateTest", codegenResult: result, fallbackEntries: [] }],
+      [{ exportName: "validateTest", codegenResult: result, refEntries: [] }],
       "./test.ts",
       { zodCompat: false },
     );
@@ -110,7 +110,7 @@ describe("generateCompiledFileContent() — zodCompat: false", () => {
       code: "/* zod-aot */",
       functionDef:
         "function safeParse_test(input){\nvar __issues=[];\nreturn{success:true,data:input};\n}",
-      fallbackCount: 1,
+      refCount: 1,
     };
 
     const content = generateCompiledFileContent(
@@ -118,7 +118,7 @@ describe("generateCompiledFileContent() — zodCompat: false", () => {
         {
           exportName: "validateUser",
           codegenResult: result,
-          fallbackEntries: [{ schema: {}, accessPath: '.shape["slug"]' }],
+          refEntries: [{ schema: {}, accessPath: '.shape["slug"]' }],
         },
       ],
       "./schemas.ts",

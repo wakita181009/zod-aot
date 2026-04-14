@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import type { FallbackEntry } from "#src/core/extract/index.js";
+import type { RefEntry } from "#src/core/extract/index.js";
 import { extractSchema } from "#src/core/extract/index.js";
 import type { FallbackIR, PipeIR, StringIR, TransformEffectIR } from "#src/core/types.js";
 
@@ -55,24 +55,24 @@ describe("extractSchema — pipe", () => {
   });
 
   it("does not produce fallback entries for non-transform pipe", () => {
-    const fallbacks: FallbackEntry[] = [];
+    const refs: RefEntry[] = [];
     const schema = z.string().pipe(z.string().min(3));
-    extractSchema(schema, fallbacks);
-    expect(fallbacks).toHaveLength(0);
+    extractSchema(schema, refs);
+    expect(refs).toHaveLength(0);
   });
 
   it("does not produce fallback entries for zero-capture transform in pipe", () => {
-    const fallbacks: FallbackEntry[] = [];
+    const refs: RefEntry[] = [];
     const schema = z.string().pipe(z.string().transform((v) => v.toUpperCase()));
-    extractSchema(schema, fallbacks);
-    expect(fallbacks).toHaveLength(0);
+    extractSchema(schema, refs);
+    expect(refs).toHaveLength(0);
   });
 
   it("produces fallback entry for captured-variable transform in pipe", () => {
-    const fallbacks: FallbackEntry[] = [];
+    const refs: RefEntry[] = [];
     const suffix = "_suffix";
     const schema = z.string().pipe(z.string().transform((v) => v + suffix));
-    extractSchema(schema, fallbacks);
-    expect(fallbacks).toHaveLength(1);
+    extractSchema(schema, refs);
+    expect(refs).toHaveLength(1);
   });
 });

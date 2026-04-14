@@ -1,8 +1,8 @@
 import type { SchemaIR } from "../types.js";
 import { dispatch } from "./registry.js";
-import type { FallbackEntry } from "./types.js";
+import type { RefEntry } from "./types.js";
 
-export type { FallbackEntry } from "./types.js";
+export type { RefEntry } from "./types.js";
 
 /**
  * Extract SchemaIR from a Zod schema by traversing its `_zod.def` and `_zod.bag`.
@@ -12,9 +12,9 @@ export type { FallbackEntry } from "./types.js";
  */
 export function extractSchema(
   zodSchema: unknown,
-  fallbacks?: FallbackEntry[],
+  refs?: RefEntry[],
   currentPath?: string,
   visiting?: Set<unknown>,
 ): SchemaIR {
-  return dispatch(zodSchema, currentPath ?? "", fallbacks, visiting ?? new Set<unknown>());
+  return dispatch(zodSchema, currentPath ?? "", refs, visiting ?? new Set<unknown>());
 }

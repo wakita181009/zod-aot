@@ -200,7 +200,7 @@ describe("runCheck --json", () => {
 
   it("JSON report includes fastPath blocker when ineligible", async () => {
     mockDiscoverSchemas.mockResolvedValueOnce([
-      { exportName: "testSchema", schema: z.object({ value: z.string().catch("") }) },
+      { exportName: "testSchema", schema: z.object({ value: z.string().transform((v) => v) }) },
     ]);
 
     const { runCheck } = await import("#src/cli/commands/check.js");

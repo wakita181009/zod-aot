@@ -33,15 +33,15 @@ export function generateIIFE(
   schema: CompiledSchemaInfo,
   options?: { zodCompat?: boolean | undefined },
 ): string {
-  const { codegenResult, fallbackEntries } = schema;
+  const { codegenResult, refEntries } = schema;
   const fnName = extractFunctionName(codegenResult.functionDef);
   const zodCompat = options?.zodCompat !== false;
   const init = zodCompat ? `Object.create(${schemaExpr})` : "{}";
 
   return [
     "/* @__PURE__ */ (() => {",
-    ...(fallbackEntries.length > 0
-      ? [`var __rf=[${fallbackEntries.map((fb) => `${schemaExpr}${fb.accessPath}`).join(",")}];`]
+    ...(refEntries.length > 0
+      ? [`var __rf=[${refEntries.map((fb) => `${schemaExpr}${fb.accessPath}`).join(",")}];`]
       : []),
     ...codegenResult.code
       .split("\n")

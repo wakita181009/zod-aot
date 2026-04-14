@@ -3,9 +3,9 @@ import type { ExtractorContext, ZodDef } from "../types.js";
 
 export function extractDefault(def: ZodDef, ctx: ExtractorContext): SchemaIR {
   const inner = ctx.visit(def.innerType, "._zod.def.innerType");
-  if (ctx.fallbacks) {
-    const refIndex = ctx.fallbacks.length;
-    ctx.fallbacks.push({ schema: ctx.schema, accessPath: ctx.path });
+  if (ctx.refs) {
+    const refIndex = ctx.refs.length;
+    ctx.refs.push({ schema: ctx.schema, accessPath: ctx.path });
     return { type: "default", inner, refIndex };
   }
 

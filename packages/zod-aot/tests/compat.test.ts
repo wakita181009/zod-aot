@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
 import { ZodError, ZodRealError, z } from "zod";
 import { generateValidator } from "#src/core/codegen/index.js";
-import type { FallbackEntry } from "#src/core/extract/index.js";
+import type { RefEntry } from "#src/core/extract/index.js";
 import { extractSchema } from "#src/core/extract/index.js";
 
 const require = createRequire(import.meta.url);
@@ -22,18 +22,18 @@ function zodAtLeast(minVersion: string): boolean {
  * that uses Zod's locale error map for message generation.
  */
 function compileForErrorTest(schema: z.ZodType, name = "test") {
-  const fallbackEntries: FallbackEntry[] = [];
-  const ir = extractSchema(schema, fallbackEntries);
-  const result = generateValidator(ir, name, { fallbackCount: fallbackEntries.length });
+  const refEntries: RefEntry[] = [];
+  const ir = extractSchema(schema, refEntries);
+  const result = generateValidator(ir, name, { refCount: refEntries.length });
   // biome-ignore lint/style/noNonNullAssertion: localeError is always set in Zod v4
   const __msg = z.config().localeError!;
-  const fallbackSchemas = fallbackEntries.map((e) => e.schema);
+  const refSchemas = refEntries.map((e) => e.schema);
   const fn =
-    fallbackSchemas.length > 0
+    refSchemas.length > 0
       ? new Function("__msg", "__ZodError", "__rf", `${result.code}\nreturn ${result.functionDef};`)
       : new Function("__msg", "__ZodError", `${result.code}\nreturn ${result.functionDef};`);
   return (
-    fallbackSchemas.length > 0 ? fn(__msg, ZodRealError, fallbackSchemas) : fn(__msg, ZodRealError)
+    refSchemas.length > 0 ? fn(__msg, ZodRealError, refSchemas) : fn(__msg, ZodRealError)
   ) as (input: unknown) => {
     success: boolean;
     data?: unknown;

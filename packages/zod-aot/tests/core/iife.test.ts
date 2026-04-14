@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ZodRealError, z } from "zod";
 import { generateValidator } from "#src/core/codegen/index.js";
-import type { FallbackEntry } from "#src/core/extract/index.js";
+import type { RefEntry } from "#src/core/extract/index.js";
 import { extractSchema } from "#src/core/extract/index.js";
 import { generateIIFE } from "#src/core/iife.js";
 import type { CompiledSchemaInfo } from "#src/core/pipeline.js";
@@ -9,16 +9,16 @@ import type { CompiledSchemaInfo } from "#src/core/pipeline.js";
 function makeInfo(exportName: string, schema: z.ZodType): CompiledSchemaInfo {
   const ir = extractSchema(schema);
   const codegenResult = generateValidator(ir, exportName);
-  return { exportName, codegenResult, fallbackEntries: [] };
+  return { exportName, codegenResult, refEntries: [] };
 }
 
 function makeInfoWithFallback(exportName: string, schema: z.ZodType): CompiledSchemaInfo {
-  const fallbackEntries: FallbackEntry[] = [];
-  const ir = extractSchema(schema, fallbackEntries);
+  const refEntries: RefEntry[] = [];
+  const ir = extractSchema(schema, refEntries);
   const codegenResult = generateValidator(ir, exportName, {
-    fallbackCount: fallbackEntries.length,
+    refCount: refEntries.length,
   });
-  return { exportName, codegenResult, fallbackEntries };
+  return { exportName, codegenResult, refEntries };
 }
 
 describe("generateIIFE()", () => {
@@ -112,9 +112,9 @@ describe("generateIIFE() — error handling", () => {
       codegenResult: {
         code: "/* zod-aot */",
         functionDef: "const x = 1;",
-        fallbackCount: 0,
+        refCount: 0,
       },
-      fallbackEntries: [],
+      refEntries: [],
     };
     expect(() => generateIIFE("Schema", info)).toThrow(
       "Cannot extract function name from generated code",
@@ -127,9 +127,9 @@ describe("generateIIFE() — error handling", () => {
       codegenResult: {
         code: "/* zod-aot */",
         functionDef: "",
-        fallbackCount: 0,
+        refCount: 0,
       },
-      fallbackEntries: [],
+      refEntries: [],
     };
     expect(() => generateIIFE("Schema", info)).toThrow(
       "Cannot extract function name from generated code",

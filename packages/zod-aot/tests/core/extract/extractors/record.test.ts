@@ -18,7 +18,7 @@ describe("extractRecord", () => {
       {
         schema: {},
         path: "",
-        fallbacks: undefined,
+        refs: undefined,
         visiting: new Set(),
         visit: () => ({ type: "string", checks: [] }),
         fallback: (reason: string) => ({ type: "fallback" as const, reason }),

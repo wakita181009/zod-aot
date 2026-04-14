@@ -97,9 +97,9 @@ export async function transformCode(
       );
     }
     for (const s of compiled) {
-      const fbCount = s.fallbackEntries.length;
-      const fbSuffix = fbCount > 0 ? ` (${fbCount} fallback${fbCount > 1 ? "s" : ""})` : "";
-      log(`  ✓ ${s.exportName}${fbSuffix}`);
+      const rfCount = s.refEntries.length;
+      const rfSuffix = rfCount > 0 ? ` (${rfCount} ref${rfCount > 1 ? "s" : ""})` : "";
+      log(`  ✓ ${s.exportName}${rfSuffix}`);
     }
     if (failedCount > 0) {
       log(`  ✗ ${failedCount} schema(s) failed`);

@@ -10,19 +10,17 @@ import type { SchemaIR } from "#src/core/types.js";
 export function compileIR(
   ir: SchemaIR,
   name = "test",
-  fallbackSchemas?: unknown[],
+  refSchemas?: unknown[],
 ): (input: unknown) => { success: boolean; data?: unknown; error?: { issues: unknown[] } } {
   const result = generateValidator(ir, name, {
-    fallbackCount: fallbackSchemas?.length ?? 0,
+    refCount: refSchemas?.length ?? 0,
   });
   const fn =
-    fallbackSchemas && fallbackSchemas.length > 0
+    refSchemas && refSchemas.length > 0
       ? new Function("__ZodError", "__rf", `${result.code}\nreturn ${result.functionDef};`)
       : new Function("__ZodError", `${result.code}\nreturn ${result.functionDef};`);
   return (
-    fallbackSchemas && fallbackSchemas.length > 0
-      ? fn(ZodRealError, fallbackSchemas)
-      : fn(ZodRealError)
+    refSchemas && refSchemas.length > 0 ? fn(ZodRealError, refSchemas) : fn(ZodRealError)
   ) as (input: unknown) => {
     success: boolean;
     data?: unknown;

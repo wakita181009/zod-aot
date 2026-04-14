@@ -323,7 +323,7 @@ describe("generate E2E", () => {
     const codegenResults = schemas.map((s) => {
       const ir = extractSchema(s.schema);
       const result = generateValidator(ir, s.exportName);
-      return { exportName: s.exportName, codegenResult: result, fallbackEntries: [] };
+      return { exportName: s.exportName, codegenResult: result, refEntries: [] };
     });
 
     const outputPath = resolveOutputPath(filePath, `${tmpOutputDir}/`);
@@ -369,7 +369,7 @@ describe("generate E2E", () => {
     const codegenResults = schemas.map((s) => {
       const ir = extractSchema(s.schema);
       const result = generateValidator(ir, s.exportName);
-      return { exportName: s.exportName, codegenResult: result, fallbackEntries: [] };
+      return { exportName: s.exportName, codegenResult: result, refEntries: [] };
     });
 
     const outputPath = resolveOutputPath(filePath, `${tmpOutputDir}/`);
