@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.18.1](https://github.com/wakita181009/zod-aot/compare/v0.18.0...v0.18.1) (2026-04-14)
+
+
+### Bug Fixes
+
+* add Fast Path support for default schemas with runtime default value evaluation ([#127](https://github.com/wakita181009/zod-aot/issues/127)) ([60e10a2](https://github.com/wakita181009/zod-aot/commit/60e10a2551d7a069a7dd2e2664e73420cbd936b3))
+* replace .every() closures with preamble for-loop helpers in Fast Path codegen ([#122](https://github.com/wakita181009/zod-aot/issues/122)) ([ac56fdf](https://github.com/wakita181009/zod-aot/commit/ac56fdf8ca8230f7615d0dc4d99fba086baa1b1c))
+
 ## [0.18.0](https://github.com/wakita181009/zod-aot/compare/v0.17.3...v0.18.0) (2026-04-06)
 
 
