@@ -10,9 +10,9 @@
     "test:e2e": "node --import tsx tests/e2e.ts"
   },
   "dependencies": {
-    "next": "^16.2.2",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
+    "next": "^16.2.3",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
     "zod": "catalog:",
     "zod-aot": "workspace:*"
   },
