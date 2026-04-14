@@ -310,6 +310,126 @@ describe("integration — default match Zod", () => {
       }
     }
   });
+
+  it("factory default (string)", () => {
+    const schema = z.string().default(() => "generated");
+    const safeParse = compileWithFallbacks(schema, "defaultFactory");
+    for (const input of [undefined, "hello"]) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+      if (zodResult.success && aotResult.success) {
+        expect(aotResult.data).toEqual(zodResult.data);
+      }
+    }
+  });
+
+  it("factory default (Date)", () => {
+    const schema = z.date().default(() => new Date("2024-01-01T00:00:00.000Z"));
+    const safeParse = compileWithFallbacks(schema, "defaultDateFactory");
+    const zodResult = schema.safeParse(undefined);
+    const aotResult = safeParse(undefined);
+    expect(aotResult.success).toBe(zodResult.success);
+    if (zodResult.success && aotResult.success) {
+      expect(aotResult.data).toEqual(zodResult.data);
+    }
+    // Non-undefined Date input
+    const dateInput = new Date("2025-06-01");
+    const zodResult2 = schema.safeParse(dateInput);
+    const aotResult2 = safeParse(dateInput);
+    expect(aotResult2.success).toBe(zodResult2.success);
+  });
+
+  it("number default", () => {
+    const schema = z.number().default(42);
+    const safeParse = compileWithFallbacks(schema, "defaultNum");
+    for (const input of [undefined, 0, 99, -1]) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+      if (zodResult.success && aotResult.success) {
+        expect(aotResult.data).toEqual(zodResult.data);
+      }
+    }
+  });
+
+  it("boolean default", () => {
+    const schema = z.boolean().default(false);
+    const safeParse = compileWithFallbacks(schema, "defaultBool");
+    for (const input of [undefined, true, false]) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+      if (zodResult.success && aotResult.success) {
+        expect(aotResult.data).toEqual(zodResult.data);
+      }
+    }
+  });
+
+  it("object default", () => {
+    const schema = z
+      .object({ name: z.string(), age: z.number() })
+      .default({ name: "anon", age: 0 });
+    const safeParse = compileWithFallbacks(schema, "defaultObjVal");
+    for (const input of [undefined, { name: "Alice", age: 30 }]) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+      if (zodResult.success && aotResult.success) {
+        expect(aotResult.data).toEqual(zodResult.data);
+      }
+    }
+  });
+
+  it("nested default in object", () => {
+    const schema = z.object({
+      config: z.object({
+        host: z.string().default("localhost"),
+        port: z.number().default(3000),
+      }),
+    });
+    const safeParse = compileWithFallbacks(schema, "defaultNested");
+    for (const input of [
+      { config: {} },
+      { config: { host: "example.com" } },
+      { config: { port: 8080 } },
+      { config: { host: "example.com", port: 8080 } },
+    ]) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+      if (zodResult.success && aotResult.success) {
+        expect(aotResult.data).toEqual(zodResult.data);
+      }
+    }
+  });
+
+  it("default + refine", () => {
+    const schema = z
+      .string()
+      .default("hello")
+      .refine((v) => v.length >= 3);
+    const safeParse = compileWithFallbacks(schema, "defaultRefine");
+    for (const input of [undefined, "abc", "abcdef"]) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+      if (zodResult.success && aotResult.success) {
+        expect(aotResult.data).toEqual(zodResult.data);
+      }
+    }
+  });
+
+  it("default with invalid type produces same error as Zod", () => {
+    const schema = z.string().default("fallback");
+    const safeParse = compileWithFallbacks(schema, "defaultInvalid");
+    for (const input of [42, true, null, { key: "val" }, [1, 2]]) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+      expect(aotResult.success).toBe(false);
+    }
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
