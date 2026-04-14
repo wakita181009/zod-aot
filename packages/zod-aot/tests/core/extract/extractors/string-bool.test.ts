@@ -1,18 +1,8 @@
-// biome-ignore lint/correctness/noNodejsModules: need createRequire to read zod/package.json for version detection
-import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { extractSchema } from "#src/core/extract/index.js";
 import type { StringBoolIR } from "#src/core/types.js";
-
-const require = createRequire(import.meta.url);
-const zodVersion: string = (require("zod/package.json") as { version: string }).version;
-
-function zodAtLeast(minVersion: string): boolean {
-  const [majA = 0, minA = 0] = zodVersion.split(".").map(Number);
-  const [majB = 0, minB = 0] = minVersion.split(".").map(Number);
-  return majA > majB || (majA === majB && minA >= minB);
-}
+import { zodAtLeast } from "../../../zod-version.js";
 
 // stringBool codec pattern (reverseTransform) requires Zod >= 4.1
 describe.skipIf(!zodAtLeast("4.1"))("extractSchema — stringBool", () => {
