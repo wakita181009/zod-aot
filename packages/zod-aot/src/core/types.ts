@@ -297,9 +297,11 @@ export interface ReadonlyIR {
   inner: SchemaIR;
 }
 
-export type DefaultIR =
-  | { type: "default"; inner: SchemaIR; fallbackIndex: number }
-  | { type: "default"; inner: SchemaIR; defaultValue: unknown };
+export interface DefaultIR {
+  type: "default";
+  inner: SchemaIR;
+  fallbackIndex: number;
+}
 
 export interface PipeIR {
   type: "pipe";

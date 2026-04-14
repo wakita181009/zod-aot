@@ -280,8 +280,14 @@ describe("integration — readonly match Zod", () => {
 describe("integration — default match Zod", () => {
   it("standalone default", () => {
     const schema = z.string().default("fallback");
+    const safeParse = compileWithFallbacks(schema, "defaultStr");
     for (const input of [undefined, "hello", ""]) {
-      assertSameResult(schema, input, "defaultStr");
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+      if (zodResult.success && aotResult.success) {
+        expect(aotResult.data).toEqual(zodResult.data);
+      }
     }
   });
 
@@ -290,12 +296,18 @@ describe("integration — default match Zod", () => {
       name: z.string(),
       role: z.string().default("user"),
     });
+    const safeParse = compileWithFallbacks(schema, "defaultObj");
     for (const input of [
       { name: "Alice", role: "admin" },
       { name: "Bob" },
       { name: "Carol", role: undefined },
     ]) {
-      assertSameResult(schema, input, "defaultObj");
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+      if (zodResult.success && aotResult.success) {
+        expect(aotResult.data).toEqual(zodResult.data);
+      }
     }
   });
 });
@@ -2184,6 +2196,7 @@ describe("integration — edge cases match Zod", () => {
     const schema = z.object({
       value: z.string().nullable().optional().default("fallback"),
     });
+    const safeParse = compileWithFallbacks(schema, "optNullDef");
     for (const input of [
       {},
       { value: undefined },
@@ -2191,7 +2204,12 @@ describe("integration — edge cases match Zod", () => {
       { value: "hello" },
       { value: 42 },
     ]) {
-      assertSameResult(schema, input, "optNullDef");
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+      if (zodResult.success && aotResult.success) {
+        expect(aotResult.data).toEqual(zodResult.data);
+      }
     }
   });
 

@@ -83,12 +83,12 @@ describe("slow-path — union", () => {
         {
           type: "default",
           inner: { type: "string", checks: [{ kind: "min_length", minimum: 5 }] },
-          defaultValue: "x",
+          fallbackIndex: 0,
         },
         { type: "undefined" },
       ],
     };
-    const safeParse = compileIR(ir);
+    const safeParse = compileIR(ir, "test", [{ _zod: { def: { defaultValue: "x" } } }]);
     const result = safeParse(undefined);
     expect(result.success).toBe(true);
     expect(result.data).toBe(undefined);

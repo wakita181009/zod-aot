@@ -9,15 +9,6 @@ export function extractDefault(def: ZodDef, ctx: ExtractorContext): SchemaIR {
     return { type: "default", inner, fallbackIndex };
   }
 
-  // No fallback tracking (unit tests) — use snapshot.
-  const defaultValue = def.defaultValue;
-  if (defaultValue instanceof Date) {
-    return ctx.fallback("unsupported");
-  }
-  try {
-    JSON.stringify(defaultValue);
-  } catch {
-    return ctx.fallback("unsupported");
-  }
-  return { type: "default", inner, defaultValue };
+  // Without fallback tracking, default values cannot be safely referenced at runtime.
+  return ctx.fallback("unsupported");
 }

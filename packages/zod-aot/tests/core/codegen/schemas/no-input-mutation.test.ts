@@ -39,15 +39,15 @@ describe("slow-path — no input mutation", () => {
           configurable: true,
         });
       }
-      envLike.port = "8080";
-      envLike.host = "localhost";
+      envLike["port"] = "8080";
+      envLike["host"] = "localhost";
 
       const safeParse = compileIR(ir);
       const result = safeParse(envLike);
       expect(result.success).toBe(true);
       expect(result.data).toEqual({ port: 8080, host: "localhost" });
       // Original env-like object must keep string values
-      expect(envLike.port).toBe("8080");
+      expect(envLike["port"]).toBe("8080");
     });
   });
 
@@ -59,17 +59,17 @@ describe("slow-path — no input mutation", () => {
           name: {
             type: "default",
             inner: { type: "string", checks: [] },
-            defaultValue: "anonymous",
+            fallbackIndex: 0,
           },
         },
       };
       const input: Record<string, unknown> = {};
-      const safeParse = compileIR(ir);
+      const safeParse = compileIR(ir, "test", [{ _zod: { def: { defaultValue: "anonymous" } } }]);
       const result = safeParse(input);
       expect(result.success).toBe(true);
       expect(result.data).toEqual({ name: "anonymous" });
       // Original must not have the default value inserted
-      expect(input.name).toBeUndefined();
+      expect(input["name"]).toBeUndefined();
     });
   });
 

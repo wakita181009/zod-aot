@@ -3,13 +3,9 @@ import type { FastGen, SlowGen } from "../context.js";
 import { emit } from "../emit.js";
 
 export function slowDefault(ir: DefaultIR, g: SlowGen): string {
-  const defaultExpr =
-    "fallbackIndex" in ir
-      ? `__fb[${ir.fallbackIndex}]._zod.def.defaultValue`
-      : JSON.stringify(ir.defaultValue);
   return emit`
     if(${g.input}===undefined){
-      ${g.output}=${defaultExpr};
+      ${g.output}=__fb[${ir.fallbackIndex}]._zod.def.defaultValue;
     }else{
       ${g.visit(ir.inner, { input: g.output, output: g.output })}
     }
