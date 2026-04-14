@@ -28,13 +28,14 @@ describe("fastPathEligible", () => {
     expect(result.fastPathBlocker).toBe("fallback (transform)");
   });
 
-  it("ineligible for default node", () => {
+  it("eligible for default node (non-undefined input uses fast path)", () => {
     const ir: SchemaIR = {
       type: "default",
       inner: { type: "string", checks: [] },
       defaultValue: "",
     };
-    expect(diagnoseSchema(ir).fastPathBlocker).toBe("default");
+    expect(diagnoseSchema(ir).fastPathEligible).toBe(true);
+    expect(diagnoseSchema(ir).fastPathBlocker).toBeUndefined();
   });
 
   it("ineligible for catch node", () => {
@@ -85,7 +86,7 @@ describe("fastPathEligible", () => {
     expect(diagnoseSchema(ir).fastPathBlocker).toBe("coerce (number)");
   });
 
-  it("ineligible for nested blocker in object", () => {
+  it("eligible for nested default in object", () => {
     const ir: SchemaIR = {
       type: "object",
       properties: {
@@ -93,7 +94,8 @@ describe("fastPathEligible", () => {
         value: { type: "default", inner: { type: "string", checks: [] }, defaultValue: "" },
       },
     };
-    expect(diagnoseSchema(ir).fastPathBlocker).toBe("default");
+    expect(diagnoseSchema(ir).fastPathEligible).toBe(true);
+    expect(diagnoseSchema(ir).fastPathBlocker).toBeUndefined();
   });
 
   it("ineligible for nested blocker in array", () => {
@@ -173,13 +175,14 @@ describe("fastPathEligible", () => {
     expect(diagnoseSchema(ir).fastPathEligible).toBe(true);
   });
 
-  it("ineligible for tuple with ineligible rest", () => {
+  it("eligible for tuple with default rest", () => {
     const ir: SchemaIR = {
       type: "tuple",
       items: [{ type: "string", checks: [] }],
       rest: { type: "default", inner: { type: "string", checks: [] }, defaultValue: "" },
     };
-    expect(diagnoseSchema(ir).fastPathBlocker).toBe("default");
+    expect(diagnoseSchema(ir).fastPathEligible).toBe(true);
+    expect(diagnoseSchema(ir).fastPathBlocker).toBeUndefined();
   });
 
   it("eligible for record of eligible types", () => {
@@ -446,13 +449,13 @@ describe("diagnoseSchema", () => {
     const ir: SchemaIR = {
       type: "object",
       properties: {
-        value: { type: "default", inner: { type: "string", checks: [] }, defaultValue: "" },
+        value: { type: "catch", inner: { type: "string", checks: [] }, defaultValue: "" },
       },
     };
     const result = diagnoseSchema(ir);
 
     expect(result.fastPathEligible).toBe(false);
-    expect(result.fastPathBlocker).toBe("default");
+    expect(result.fastPathBlocker).toBe("catch");
   });
 
   it("fastPathBlocker is undefined when eligible", () => {

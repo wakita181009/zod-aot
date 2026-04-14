@@ -152,7 +152,7 @@ describe("fast-path — set", () => {
   it("returns null for ineligible element type", () => {
     const ir: SetIR = {
       type: "set",
-      valueType: { type: "default", inner: { type: "string", checks: [] }, defaultValue: "" },
+      valueType: { type: "fallback", reason: "transform" },
     };
     expect(compileFastCheck(ir)).toBeNull();
   });

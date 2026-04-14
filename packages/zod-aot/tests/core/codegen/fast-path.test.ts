@@ -77,9 +77,8 @@ describe("createFastGen", () => {
       const ctx = makeCtx();
       const g = createFastGen("input", ctx);
       const ir: SchemaIR = {
-        type: "default",
-        inner: { type: "string", checks: [] },
-        defaultValue: "",
+        type: "fallback",
+        reason: "transform",
       };
       const expr = g.visit(ir);
       expect(expr).toBeNull();
@@ -125,7 +124,7 @@ describe("createFastGen", () => {
       const ctx = makeCtx();
       const g = createFastGen("v", ctx);
 
-      const ineligible: SchemaIR["type"][] = ["default", "catch", "fallback", "effect"];
+      const ineligible: SchemaIR["type"][] = ["catch", "fallback", "effect"];
 
       for (const type of ineligible) {
         // Construct minimal IR for each type
@@ -228,14 +227,16 @@ describe("fast-path — dispatcher", () => {
     expect(compileFastCheck({ type: "fallback", reason: "transform" })).toBeNull();
   });
 
-  it("default → null", () => {
-    expect(
-      compileFastCheck({
-        type: "default",
-        inner: { type: "string", checks: [] },
-        defaultValue: "",
-      }),
-    ).toBeNull();
+  it("default → eligible (non-undefined passes, undefined falls to slow path)", () => {
+    const fn = compileFastCheck({
+      type: "default",
+      inner: { type: "string", checks: [] },
+      defaultValue: "",
+    });
+    expect(fn).not.toBeNull();
+    expect(fn?.("hello")).toBe(true);
+    expect(fn?.(undefined)).toBe(false);
+    expect(fn?.(42)).toBe(false);
   });
 
   it("catch → null", () => {
@@ -300,7 +301,7 @@ describe("fast-path — dispatcher", () => {
     expect(
       compileFastCheck({
         type: "set",
-        valueType: { type: "default", inner: { type: "string", checks: [] }, defaultValue: "" },
+        valueType: { type: "fallback", reason: "transform" },
       }),
     ).toBeNull();
   });
@@ -323,7 +324,7 @@ describe("fast-path — dispatcher", () => {
     expect(
       compileFastCheck({
         type: "map",
-        keyType: { type: "default", inner: { type: "string", checks: [] }, defaultValue: "" },
+        keyType: { type: "fallback", reason: "transform" },
         valueType: { type: "number", checks: [] },
       }),
     ).toBeNull();

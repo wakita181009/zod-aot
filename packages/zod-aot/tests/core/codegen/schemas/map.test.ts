@@ -166,7 +166,7 @@ describe("fast-path — map", () => {
     expect(
       compileFastCheck({
         type: "map",
-        keyType: { type: "default", inner: { type: "string", checks: [] }, defaultValue: "" },
+        keyType: { type: "fallback", reason: "transform" },
         valueType: { type: "number", checks: [] },
       }),
     ).toBeNull();
@@ -177,7 +177,7 @@ describe("fast-path — map", () => {
       compileFastCheck({
         type: "map",
         keyType: { type: "string", checks: [] },
-        valueType: { type: "default", inner: { type: "number", checks: [] }, defaultValue: 0 },
+        valueType: { type: "fallback", reason: "transform" },
       }),
     ).toBeNull();
   });
