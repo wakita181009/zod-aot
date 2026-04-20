@@ -20,7 +20,7 @@ jobs:
         with:
           manifest-file: .release-please-manifest.json
           config-file: release-please-config.json
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   publish:
     name: Publish to npm
