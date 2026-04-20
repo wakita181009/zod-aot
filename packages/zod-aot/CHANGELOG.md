@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.1](https://github.com/wakita181009/zod-aot/compare/v0.19.0...v0.19.1) (2026-04-20)
+
+
+### Bug Fixes
+
+* support --auto-discover flag in check and generate CLI commands ([#139](https://github.com/wakita181009/zod-aot/issues/139)) ([7c4112e](https://github.com/wakita181009/zod-aot/commit/7c4112e59885992cc0f7230fe59413e14898a1e6))
+
 ## [0.19.0](https://github.com/wakita181009/zod-aot/compare/v0.18.3...v0.19.0) (2026-04-14)
 
 
