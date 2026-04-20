@@ -19,7 +19,12 @@ vi.mock("#src/discovery.js", async (importOriginal) => {
 const mockDiscoverSchemas = vi.mocked(discoverSchemas);
 const fixturesDir = path.resolve(import.meta.dirname, "../../fixtures");
 
-const defaultOpts = { json: false, failUnder: undefined, noColor: true };
+const defaultOpts = {
+  json: false,
+  failUnder: undefined,
+  noColor: true,
+  autoDiscover: false,
+};
 
 describe("check (schema compilability)", () => {
   it("simple schema is fully compilable", async () => {
@@ -165,10 +170,29 @@ describe("runCheck", () => {
         }),
       ).rejects.toThrow("process.exit");
       expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining("no compile() calls"));
+      expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining("--auto-discover"));
       expect(exitSpy).toHaveBeenCalledWith(1);
     } finally {
       logSpy.mockRestore();
       exitSpy.mockRestore();
+    }
+  });
+
+  it("finds plain Zod exports with --auto-discover", async () => {
+    const { runCheck } = await import("#src/cli/commands/check.js");
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(vi.fn());
+
+    try {
+      await runCheck({
+        inputs: [path.join(fixturesDir, "auto-discover-simple.ts")],
+        ...defaultOpts,
+        autoDiscover: true,
+      });
+      const output = consoleSpy.mock.calls.map((c) => c[0]).join("\n");
+      expect(output).toContain("UserSchema");
+      expect(output).toContain("100%");
+    } finally {
+      consoleSpy.mockRestore();
     }
   });
 });
@@ -186,6 +210,7 @@ describe("runCheck --json", () => {
         json: true,
         failUnder: undefined,
         noColor: true,
+        autoDiscover: false,
       });
       const jsonOutput = consoleSpy.mock.calls[consoleSpy.mock.calls.length - 1]?.[0] as string;
       const report = JSON.parse(jsonOutput);
@@ -212,6 +237,7 @@ describe("runCheck --json", () => {
         json: true,
         failUnder: undefined,
         noColor: true,
+        autoDiscover: false,
       });
       const jsonOutput = consoleSpy.mock.calls[consoleSpy.mock.calls.length - 1]?.[0] as string;
       const report = JSON.parse(jsonOutput);
@@ -531,6 +557,7 @@ describe("runCheck — multiple files", () => {
         json: true,
         failUnder: undefined,
         noColor: true,
+        autoDiscover: false,
       });
       const jsonOutput = consoleSpy.mock.calls[consoleSpy.mock.calls.length - 1]?.[0] as string;
       const report = JSON.parse(jsonOutput);

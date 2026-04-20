@@ -262,7 +262,9 @@ describe("runWatch", () => {
         expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining("Watching"));
       });
 
-      expect(mockLogger.warn).toHaveBeenCalledWith("No compile() calls found in any source file.");
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.stringContaining("No compile() calls found"),
+      );
     } finally {
       process.emit("SIGINT", "SIGINT");
       await watchPromise;

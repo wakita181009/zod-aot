@@ -5,7 +5,7 @@ import { loadSourceFile } from "./loader.js";
 
 export interface DiscoverOptions extends LoadOptions {
   /** Auto-detect all exported Zod schemas without requiring compile() wrappers. */
-  autoDiscover?: boolean;
+  autoDiscover?: boolean | undefined;
 }
 
 /**

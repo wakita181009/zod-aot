@@ -25,8 +25,8 @@ function printUsage(): void {
 zod-aot v${VERSION} — Compile Zod schemas into zero-overhead validation functions
 
 Usage:
-  zod-aot generate <files...> [-o <output>] [-w]
-  zod-aot check <files...> [--json] [--fail-under <pct>] [--no-color]
+  zod-aot generate <files...> [-o <output>] [-w] [--auto-discover]
+  zod-aot check <files...> [--json] [--fail-under <pct>] [--no-color] [--auto-discover]
 
 Commands:
   generate    Generate optimized validation code from compile() calls
@@ -36,6 +36,7 @@ Options:
   -o, --output <path>        Output file or directory
   -w, --watch                Watch for changes and regenerate
   --no-zod-compat            Minimal output without Zod compatibility (smaller bundle)
+  --auto-discover            Scan all exported Zod schemas (no compile() wrapper required)
   --json                     Output diagnosis as JSON (check only)
   --fail-under <pct>         Exit with code 1 if any schema's coverage < pct (check only)
   --no-color                 Disable colored output (check only)
@@ -46,7 +47,9 @@ Examples:
   zod-aot generate src/schemas.ts
   zod-aot generate src/schemas.ts -o src/schemas.compiled.ts
   zod-aot generate src/ --watch
+  zod-aot generate src/env.ts --auto-discover
   zod-aot check src/schemas.ts
+  zod-aot check src/env.ts --auto-discover
   zod-aot check src/schemas.ts --json --fail-under 80
 `.trim(),
   );
@@ -71,6 +74,7 @@ function parseArgs(argv: string[]): Command {
     let output: string | undefined;
     let watch = false;
     let zodCompat: boolean | undefined;
+    let autoDiscover = false;
 
     for (let i = 0; i < rest.length; i++) {
       const arg = rest[i] as string;
@@ -86,6 +90,8 @@ function parseArgs(argv: string[]): Command {
         watch = true;
       } else if (arg === "--no-zod-compat") {
         zodCompat = false;
+      } else if (arg === "--auto-discover") {
+        autoDiscover = true;
       } else if (arg.startsWith("-")) {
         logger.error(`Unknown option: ${arg}`);
         process.exit(1);
@@ -106,6 +112,7 @@ function parseArgs(argv: string[]): Command {
         output,
         watch,
         zodCompat,
+        autoDiscover,
       },
     };
   }
@@ -115,6 +122,7 @@ function parseArgs(argv: string[]): Command {
     let json = false;
     let failUnder: number | undefined;
     let noColor = false;
+    let autoDiscover = false;
 
     for (let i = 0; i < rest.length; i++) {
       const arg = rest[i] as string;
@@ -135,6 +143,8 @@ function parseArgs(argv: string[]): Command {
         failUnder = num;
       } else if (arg === "--no-color") {
         noColor = true;
+      } else if (arg === "--auto-discover") {
+        autoDiscover = true;
       } else if (arg.startsWith("-")) {
         logger.error(`Unknown option: ${arg}`);
         process.exit(1);
@@ -148,7 +158,7 @@ function parseArgs(argv: string[]): Command {
       process.exit(1);
     }
 
-    return { kind: "check", options: { inputs, json, failUnder, noColor } };
+    return { kind: "check", options: { inputs, json, failUnder, noColor, autoDiscover } };
   }
 
   logger.error(`Unknown command: ${command}. Run 'zod-aot --help' for usage.`);
