@@ -143,6 +143,27 @@ describe("generateFile", () => {
     expect(result).toBeNull();
   });
 
+  it("compiles plain Zod exports with autoDiscover", async () => {
+    const filePath = path.join(fixturesDir, "auto-discover-simple.ts");
+    const result = await generateFile(filePath, `${tmpOutputDir}/`, { autoDiscover: true });
+
+    expect(result).not.toBeNull();
+    if (!result) return;
+    outputFiles.push(result.outputPath);
+
+    expect(result.schemaCount).toBe(1);
+    expect(result.schemaNames).toEqual(["UserSchema"]);
+
+    const content = await fs.promises.readFile(result.outputPath, "utf-8");
+    expect(content).toContain("function safeParse_UserSchema");
+  });
+
+  it("returns null when autoDiscover is false for plain Zod exports", async () => {
+    const filePath = path.join(fixturesDir, "auto-discover-simple.ts");
+    const result = await generateFile(filePath, `${tmpOutputDir}/`);
+    expect(result).toBeNull();
+  });
+
   it("respects custom output path", async () => {
     const filePath = path.join(fixturesDir, "simple-schema.ts");
     const customOutput = path.join(tmpOutputDir, "custom-output.compiled.ts");
@@ -199,7 +220,9 @@ describe("runGenerate", () => {
 
     try {
       await runGenerate({ inputs: [path.join(fixturesDir, "no-compile.ts")], output: undefined });
-      expect(mockLogger.warn).toHaveBeenCalledWith("No compile() calls found in any source file.");
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.stringContaining("No compile() calls found"),
+      );
     } finally {
       logSpy.mockRestore();
     }

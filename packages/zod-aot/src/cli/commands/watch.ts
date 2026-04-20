@@ -14,6 +14,7 @@ interface WatchOptions {
   inputs: string[];
   output: string | undefined;
   zodCompat?: boolean | undefined;
+  autoDiscover?: boolean | undefined;
 }
 
 /** Dependencies for runWatch, injectable for testing. */
@@ -101,7 +102,10 @@ export async function runWatch(
 
   for (const filePath of files) {
     try {
-      const result = await generateFile(filePath, options.output, { zodCompat: options.zodCompat });
+      const result = await generateFile(filePath, options.output, {
+        zodCompat: options.zodCompat,
+        autoDiscover: options.autoDiscover,
+      });
       if (result) {
         logResult(result);
         totalSchemas += result.schemaCount;
@@ -116,8 +120,12 @@ export async function runWatch(
     logger.info(
       `Generated ${totalSchemas} schema${totalSchemas > 1 ? "s" : ""} from ${totalFiles} file${totalFiles > 1 ? "s" : ""}.`,
     );
+  } else if (options.autoDiscover) {
+    logger.warn("No Zod schemas exported from any source file.");
   } else {
-    logger.warn("No compile() calls found in any source file.");
+    logger.warn(
+      "No compile() calls found in any source file. Use --auto-discover to scan plain Zod exports.",
+    );
   }
 
   // Set up file watching
@@ -135,6 +143,7 @@ export async function runWatch(
         const result = await generateFile(filePath, options.output, {
           cacheBust: true,
           zodCompat: options.zodCompat,
+          autoDiscover: options.autoDiscover,
         });
         if (result) {
           logResult(result);

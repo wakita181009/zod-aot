@@ -12,6 +12,7 @@ export interface GenerateOptions {
   inputs: string[];
   output: string | undefined;
   zodCompat?: boolean | undefined;
+  autoDiscover?: boolean | undefined;
 }
 
 export interface GenerateFileResult {
@@ -91,13 +92,20 @@ export async function findSchemaFiles(dir: string): Promise<string[]> {
 export async function generateFile(
   filePath: string,
   outputFlag: string | undefined,
-  options?: { cacheBust?: boolean | undefined; zodCompat?: boolean | undefined },
+  options?: {
+    cacheBust?: boolean | undefined;
+    zodCompat?: boolean | undefined;
+    autoDiscover?: boolean | undefined;
+  },
 ): Promise<GenerateFileResult | null> {
   const relPath = path.relative(process.cwd(), filePath);
 
   let schemas: DiscoveredSchema[];
   try {
-    schemas = await discoverSchemas(filePath, options?.cacheBust ? { cacheBust: true } : undefined);
+    schemas = await discoverSchemas(filePath, {
+      cacheBust: options?.cacheBust,
+      autoDiscover: options?.autoDiscover,
+    });
   } catch (err) {
     throw new Error(`Failed to load ${relPath}: ${getErrorMessage(err)}`);
   }
@@ -138,7 +146,10 @@ export async function runGenerate(options: GenerateOptions): Promise<void> {
   for (const filePath of files) {
     let result: GenerateFileResult | null;
     try {
-      result = await generateFile(filePath, options.output, { zodCompat: options.zodCompat });
+      result = await generateFile(filePath, options.output, {
+        zodCompat: options.zodCompat,
+        autoDiscover: options.autoDiscover,
+      });
     } catch (err) {
       logger.error(getErrorMessage(err));
       process.exit(1);
@@ -155,7 +166,13 @@ export async function runGenerate(options: GenerateOptions): Promise<void> {
   }
 
   if (totalFiles === 0) {
-    logger.warn("No compile() calls found in any source file.");
+    if (options.autoDiscover) {
+      logger.warn("No Zod schemas exported from any source file.");
+    } else {
+      logger.warn(
+        "No compile() calls found in any source file. Use --auto-discover to scan plain Zod exports.",
+      );
+    }
   } else {
     logger.info(
       `Generated ${totalSchemas} schema${totalSchemas > 1 ? "s" : ""} from ${totalFiles} file${totalFiles > 1 ? "s" : ""}.`,

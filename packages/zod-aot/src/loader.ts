@@ -12,7 +12,7 @@ function detectRuntime(): Runtime {
 
 export interface LoadOptions {
   /** Append a cache-busting query parameter to bypass Node.js module cache (useful for HMR). */
-  cacheBust?: boolean;
+  cacheBust?: boolean | undefined;
 }
 
 /** Cache: tsconfig.json absolute path → resolved jiti alias map */

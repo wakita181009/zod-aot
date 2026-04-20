@@ -84,6 +84,7 @@ export interface CheckOptions {
   json: boolean;
   failUnder: number | undefined;
   noColor: boolean;
+  autoDiscover: boolean;
 }
 
 export async function runCheck(options: CheckOptions): Promise<void> {
@@ -121,14 +122,17 @@ export async function runCheck(options: CheckOptions): Promise<void> {
 
     let schemas: DiscoveredSchema[];
     try {
-      schemas = await discoverSchemas(filePath);
+      schemas = await discoverSchemas(filePath, { autoDiscover: options.autoDiscover });
     } catch (e) {
       logger.error(`Failed to load ${relPath}: ${getErrorMessage(e)}`);
       process.exit(1);
     }
 
     if (schemas.length === 0) {
-      logger.warn(`${relPath}: no compile() calls found`);
+      const hint = options.autoDiscover
+        ? "no Zod schemas exported"
+        : "no compile() calls found (use --auto-discover to scan plain Zod exports)";
+      logger.warn(`${relPath}: ${hint}`);
       continue;
     }
 
