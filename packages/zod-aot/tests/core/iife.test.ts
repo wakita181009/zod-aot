@@ -89,7 +89,7 @@ describe("generateIIFE()", () => {
     const iife = generateIIFE("UserSchema", info);
 
     expect(iife).toContain("Object.create(UserSchema)");
-    expect(iife).toContain("__w.schema=UserSchema;");
+    expect(iife).not.toContain("__w.schema=");
   });
 
   describe("zodCompat: false", () => {
@@ -100,7 +100,7 @@ describe("generateIIFE()", () => {
       expect(iife).toContain("/* @__PURE__ */");
       expect(iife).not.toContain("Object.create");
       expect(iife).toContain("var __w={};");
-      expect(iife).toContain("__w.schema=UserSchema;");
+      expect(iife).not.toContain("__w.schema=");
     });
   });
 });

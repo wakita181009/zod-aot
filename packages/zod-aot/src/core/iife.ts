@@ -52,7 +52,6 @@ export function generateIIFE(
     `__w.safeParse=${fnName};`,
     `__w.safeParseAsync=function(input){return Promise.resolve(${fnName}(input));};`,
     `__w.parseAsync=function(input){const r=${fnName}(input);if(r.success)return Promise.resolve(r.data);return Promise.reject(r.error);};`,
-    `__w.schema=${schemaExpr};`,
     "return __w;",
     "})()",
   ].join("\n");

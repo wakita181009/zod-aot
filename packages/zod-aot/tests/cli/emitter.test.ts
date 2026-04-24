@@ -89,7 +89,7 @@ describe("generateCompiledFileContent()", () => {
 });
 
 describe("generateCompiledFileContent() — zodCompat: false", () => {
-  it("always imports source schemas for .schema reference", () => {
+  it("omits source import when no refEntries (enables tree-shaking)", () => {
     const result: CodeGenResult = {
       code: "/* zod-aot */",
       functionDef: "function safeParse_test(input){\nreturn{success:true,data:input};\n}",
@@ -102,7 +102,8 @@ describe("generateCompiledFileContent() — zodCompat: false", () => {
       { zodCompat: false },
     );
 
-    expect(content).toContain('import { validateTest as __src_validateTest } from "./test"');
+    expect(content).not.toContain("__src_validateTest");
+    expect(content).not.toContain('from "./test"');
   });
 
   it("still imports source schemas when fallbacks exist", () => {

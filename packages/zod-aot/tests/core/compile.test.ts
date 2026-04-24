@@ -3,13 +3,19 @@ import { z } from "zod";
 import { compile, isCompiledSchema } from "#src/core/compile.js";
 
 describe("compile()", () => {
-  it("returns a CompiledSchema with parse/safeParse/schema", () => {
+  it("returns a CompiledSchema with parse/safeParse", () => {
     const schema = z.string();
     const compiled = compile(schema);
 
     expect(compiled.parse).toBeTypeOf("function");
     expect(compiled.safeParse).toBeTypeOf("function");
-    expect(compiled.schema).toBe(schema);
+  });
+
+  it("retains internal schema reference for CLI emitter discovery", () => {
+    const schema = z.string();
+    const compiled = compile(schema);
+
+    expect((compiled as unknown as { schema: unknown }).schema).toBe(schema);
   });
 
   it("preserves Zod properties via Object.create prototype", () => {

@@ -162,7 +162,7 @@ describe("rewriteSource()", () => {
     expect(result).toContain("(() => {");
     expect(result).toContain("safeParse_validateUser");
     expect(result).toContain("Object.create(UserSchema)");
-    expect(result).toContain("__w.schema=UserSchema;");
+    expect(result).not.toContain("__w.schema=");
     expect(result).not.toContain("compile(UserSchema)");
     // compile import should be removed
     expect(result).not.toContain(`import { compile } from "zod-aot"`);
@@ -239,7 +239,8 @@ describe("rewriteSource()", () => {
     const schemas = [makeCompiledInfo("validateUser", simpleSchema)];
     const result = rewriteSource(code, schemas);
 
-    expect(result).toContain("__w.schema=MyUserSchema;");
+    expect(result).toContain("Object.create(MyUserSchema)");
+    expect(result).not.toContain("__w.schema=");
   });
 
   it("handles inline schema expressions with nested parentheses", () => {
@@ -253,8 +254,8 @@ describe("rewriteSource()", () => {
 
     expect(result).toContain("safeParse_validateUser");
     expect(result).not.toContain("compile(z.object");
-    // The schema arg should capture the full expression
-    expect(result).toContain("__w.schema=z.object({ name: z.string() });");
+    // The schema arg should be used in Object.create
+    expect(result).toContain("Object.create(z.object({ name: z.string() }))");
   });
 
   it("handles inline schema with trailing comma", () => {
@@ -270,8 +271,8 @@ describe("rewriteSource()", () => {
 
     expect(result).toContain("safeParse_validateUser");
     expect(result).not.toContain("compile(");
-    // Trailing comma should be stripped from the schema arg
-    expect(result).toContain("__w.schema=z.object({ name: z.string() });");
+    // Trailing comma should be stripped; schema arg used in Object.create
+    expect(result).toContain("Object.create(z.object({ name: z.string() }))");
     expect(result).not.toContain("z.object({ name: z.string() }),");
   });
 
