@@ -12,6 +12,14 @@ export const ZOD_CONFIG_IMPORT =
 /** File-level __msg declaration (must appear once after ZOD_CONFIG_IMPORT). */
 export const ZOD_MSG_DECLARATION = "var __msg=__zodAotConfig().localeError;";
 
+/**
+ * File-level validator factory (must appear once per compiled file).
+ * Wraps a safeParse function into the CompiledSchema interface.
+ * schema=null produces a plain object; schema=ZodSchema uses Object.create.
+ */
+export const MK_VALIDATOR_DECL =
+  "function __mkv(fn,schema){var w=schema?Object.create(schema):{};w.parse=function(input){var r=fn(input);if(r.success)return r.data;throw r.error;};w.safeParse=fn;w.safeParseAsync=function(input){return Promise.resolve(fn(input));};w.parseAsync=function(input){var r=fn(input);if(r.success)return Promise.resolve(r.data);return Promise.reject(r.error);};return w;}";
+
 function extractFunctionName(functionDef: string): string {
   const match = /^function\s+(\w+)\s*\(/.exec(functionDef);
   if (!match?.[1]) {
@@ -36,7 +44,7 @@ export function generateIIFE(
   const { codegenResult, refEntries } = schema;
   const fnName = extractFunctionName(codegenResult.functionDef);
   const zodCompat = options?.zodCompat !== false;
-  const init = zodCompat ? `Object.create(${schemaExpr})` : "{}";
+  const schemaArg = zodCompat ? schemaExpr : "null";
 
   return [
     "/* @__PURE__ */ (() => {",
@@ -47,12 +55,7 @@ export function generateIIFE(
       .split("\n")
       .filter((l) => l.trim() !== "" && l.trim() !== "/* zod-aot */"),
     codegenResult.functionDef,
-    `var __w=${init};`,
-    `__w.parse=function(input){const r=${fnName}(input);if(r.success)return r.data;throw r.error;};`,
-    `__w.safeParse=${fnName};`,
-    `__w.safeParseAsync=function(input){return Promise.resolve(${fnName}(input));};`,
-    `__w.parseAsync=function(input){const r=${fnName}(input);if(r.success)return Promise.resolve(r.data);return Promise.reject(r.error);};`,
-    "return __w;",
+    `return __mkv(${fnName},${schemaArg});`,
     "})()",
   ].join("\n");
 }

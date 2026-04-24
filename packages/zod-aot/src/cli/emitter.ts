@@ -1,6 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
-import { generateIIFE, ZOD_CONFIG_IMPORT, ZOD_MSG_DECLARATION } from "#src/core/iife.js";
+import {
+  generateIIFE,
+  MK_VALIDATOR_DECL,
+  ZOD_CONFIG_IMPORT,
+  ZOD_MSG_DECLARATION,
+} from "#src/core/iife.js";
 import type { CompiledSchemaInfo } from "#src/core/pipeline.js";
 
 /**
@@ -51,6 +56,7 @@ export function generateCompiledFileContent(
     "",
     ZOD_CONFIG_IMPORT,
     ZOD_MSG_DECLARATION,
+    MK_VALIDATOR_DECL,
     "",
     ...importLine,
     ...exports,

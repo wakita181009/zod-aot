@@ -1,6 +1,11 @@
 import { parseExpressionAt } from "acorn";
 import picomatch from "picomatch";
-import { generateIIFE, ZOD_CONFIG_IMPORT, ZOD_MSG_DECLARATION } from "#src/core/iife.js";
+import {
+  generateIIFE,
+  MK_VALIDATOR_DECL,
+  ZOD_CONFIG_IMPORT,
+  ZOD_MSG_DECLARATION,
+} from "#src/core/iife.js";
 import { type CompiledSchemaInfo, compileSchemas } from "#src/core/pipeline.js";
 import type { DiscoveredSchema } from "#src/core/types.js";
 import { discoverSchemas } from "#src/discovery.js";
@@ -147,13 +152,19 @@ export async function transformCode(
 }
 
 /**
- * Add zod config import for __msg (localeError) if needed.
- * Called once after all rewrite passes to avoid duplicate imports.
+ * Add zod config import + __mkv factory for transformed files.
+ * Called once after all rewrite passes to avoid duplicate declarations.
  */
 function injectZodConfigImport(code: string): string {
-  if (!code.includes("__msg")) return code;
-  if (code.includes("__zodAotConfig")) return code;
-  return [ZOD_CONFIG_IMPORT, ZOD_MSG_DECLARATION, code].join("\n");
+  if (!code.includes("__mkv")) return code;
+  const prefix: string[] = [];
+  if (!code.includes("__zodAotConfig")) {
+    prefix.push(ZOD_CONFIG_IMPORT, ZOD_MSG_DECLARATION);
+  }
+  if (!code.includes("function __mkv(")) {
+    prefix.push(MK_VALIDATOR_DECL);
+  }
+  return prefix.length > 0 ? [...prefix, code].join("\n") : code;
 }
 
 /**

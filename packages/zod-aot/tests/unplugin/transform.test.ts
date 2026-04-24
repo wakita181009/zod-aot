@@ -161,7 +161,7 @@ describe("rewriteSource()", () => {
     expect(result).toContain("/* @__PURE__ */");
     expect(result).toContain("(() => {");
     expect(result).toContain("safeParse_validateUser");
-    expect(result).toContain("Object.create(UserSchema)");
+    expect(result).toContain("__mkv(safeParse_validateUser,UserSchema)");
     expect(result).not.toContain("__w.schema=");
     expect(result).not.toContain("compile(UserSchema)");
     // compile import should be removed
@@ -239,7 +239,7 @@ describe("rewriteSource()", () => {
     const schemas = [makeCompiledInfo("validateUser", simpleSchema)];
     const result = rewriteSource(code, schemas);
 
-    expect(result).toContain("Object.create(MyUserSchema)");
+    expect(result).toContain("__mkv(safeParse_validateUser,MyUserSchema)");
     expect(result).not.toContain("__w.schema=");
   });
 
@@ -254,8 +254,8 @@ describe("rewriteSource()", () => {
 
     expect(result).toContain("safeParse_validateUser");
     expect(result).not.toContain("compile(z.object");
-    // The schema arg should be used in Object.create
-    expect(result).toContain("Object.create(z.object({ name: z.string() }))");
+    // The schema arg should be passed to __mkv
+    expect(result).toContain("__mkv(safeParse_validateUser,z.object({ name: z.string() }))");
   });
 
   it("handles inline schema with trailing comma", () => {
@@ -271,8 +271,8 @@ describe("rewriteSource()", () => {
 
     expect(result).toContain("safeParse_validateUser");
     expect(result).not.toContain("compile(");
-    // Trailing comma should be stripped; schema arg used in Object.create
-    expect(result).toContain("Object.create(z.object({ name: z.string() }))");
+    // Trailing comma should be stripped; schema arg passed to __mkv
+    expect(result).toContain("__mkv(safeParse_validateUser,z.object({ name: z.string() }))");
     expect(result).not.toContain("z.object({ name: z.string() }),");
   });
 
@@ -553,7 +553,7 @@ describe("rewriteSourceAutoDiscover()", () => {
 
     expect(result).toContain("/* @__PURE__ */");
     expect(result).toContain("safeParse_UserSchema");
-    expect(result).toContain("Object.create(z.object({ name: z.string() })");
+    expect(result).toContain("__mkv(safeParse_UserSchema,z.object({ name: z.string() })");
   });
 
   it("replaces multiple schema exports", () => {
@@ -586,7 +586,7 @@ describe("rewriteSourceAutoDiscover()", () => {
     const schemas = [makeCompiledInfo("UserSchema", simpleSchema)];
     const result = rewriteSourceAutoDiscover(code, schemas, { zodCompat: false });
 
-    expect(result).toContain("var __w={}");
+    expect(result).toContain("__mkv(safeParse_UserSchema,null)");
     expect(result).not.toContain("Object.create");
   });
 
@@ -827,7 +827,7 @@ describe("rewriteSource() — zodCompat option", () => {
     const schemas = [makeCompiledInfo("validateUser", simpleSchema)];
     const result = rewriteSource(code, schemas, { zodCompat: false });
 
-    expect(result).toContain("var __w={}");
+    expect(result).toContain("__mkv(safeParse_validateUser,null)");
     expect(result).not.toContain("Object.create");
   });
 
@@ -840,6 +840,6 @@ describe("rewriteSource() — zodCompat option", () => {
     const schemas = [makeCompiledInfo("validateUser", simpleSchema)];
     const result = rewriteSource(code, schemas, { zodCompat: true });
 
-    expect(result).toContain("Object.create(UserSchema)");
+    expect(result).toContain("__mkv(safeParse_validateUser,UserSchema)");
   });
 });
