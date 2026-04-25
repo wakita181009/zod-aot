@@ -25,7 +25,7 @@ export function generateValidator(
   const fg = createFastGen("input", ctx);
   const fastExpr = generateFast(ir, fg);
 
-  const sg = createSlowGen("__data", "__data", "[]", "__issues", ctx);
+  const sg = createSlowGen("_d", "_d", "[]", "_e", ctx);
   const slowCode = generateSlow(ir, sg);
 
   const code = ["/* zod-aot */", ...ctx.preamble].join("\n");
@@ -46,20 +46,7 @@ export function generateValidator(
     };
   }
 
-  functionDefParts.push(
-    `var __issues=[];`,
-    `var __data=input;`,
-    slowCode,
-    `if(__issues.length>0){`,
-    `for(var __fi=0;__fi<__issues.length;__fi++){`,
-    `if(typeof __msg==="function")__issues[__fi].message=__msg(__issues[__fi]);`,
-    `__issues[__fi].input=undefined;`,
-    `}`,
-    `return{success:false,error:new __ZodError(__issues)};`,
-    `}`,
-    `return{success:true,data:__data};`,
-    `}`,
-  );
+  functionDefParts.push(`var _e=[];`, `var _d=input;`, slowCode, `return __fin(_e,_d);`, `}`);
 
   const functionDef = functionDefParts.join("\n");
 

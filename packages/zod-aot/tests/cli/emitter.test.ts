@@ -66,9 +66,10 @@ describe("generateCompiledFileContent()", () => {
     expect(content).toContain(
       'import { config as __zodAotConfig, ZodRealError as __ZodError } from "zod"',
     );
-    // __msg and __mkv are declared at file level (once per file)
+    // __msg, __mkv, __fin are declared at file level (once per file)
     expect(content).toContain("var __msg=__zodAotConfig().localeError;");
     expect(content).toContain("function __mkv(fn,schema)");
+    expect(content).toContain("function __fin(e,d)");
   });
 
   it("always imports source schemas for Object.create", () => {

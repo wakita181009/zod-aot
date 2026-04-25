@@ -13,6 +13,14 @@ export const ZOD_CONFIG_IMPORT =
 export const ZOD_MSG_DECLARATION = "var __msg=__zodAotConfig().localeError;";
 
 /**
+ * File-level finalization helper (must appear once per compiled file).
+ * Processes issues (adds messages, strips input) and returns SafeParseResult.
+ * Each generated safeParse function calls __fin(_e, _d) instead of inlining this logic.
+ */
+export const FIN_DECL =
+  'function __fin(e,d){for(var i=0;i<e.length;i++){if(typeof __msg==="function")e[i].message=__msg(e[i]);e[i].input=undefined;}return e.length?{success:false,error:new __ZodError(e)}:{success:true,data:d};}';
+
+/**
  * File-level validator factory (must appear once per compiled file).
  * Wraps a safeParse function into the CompiledSchema interface.
  * schema=null produces a plain object; schema=ZodSchema uses Object.create.

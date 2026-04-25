@@ -1,6 +1,7 @@
 import { parseExpressionAt } from "acorn";
 import picomatch from "picomatch";
 import {
+  FIN_DECL,
   generateIIFE,
   MK_VALIDATOR_DECL,
   ZOD_CONFIG_IMPORT,
@@ -163,6 +164,9 @@ function injectZodConfigImport(code: string): string {
   }
   if (!code.includes("function __mkv(")) {
     prefix.push(MK_VALIDATOR_DECL);
+  }
+  if (!code.includes("function __fin(")) {
+    prefix.push(FIN_DECL);
   }
   return prefix.length > 0 ? [...prefix, code].join("\n") : code;
 }

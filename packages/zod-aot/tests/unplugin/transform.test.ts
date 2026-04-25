@@ -226,8 +226,8 @@ describe("rewriteSource()", () => {
 
     // rewriteSource itself no longer injects the config import
     // (that's done by injectZodConfigImport in transformCode).
-    // But the IIFE still uses __msg.
-    expect(result).toContain("__msg");
+    // The IIFE calls __fin (which internally uses __msg injected at file level).
+    expect(result).toContain("__fin");
   });
 
   it("preserves schema variable reference in generated code", () => {
@@ -597,8 +597,8 @@ describe("rewriteSourceAutoDiscover()", () => {
 
     // rewriteSourceAutoDiscover itself no longer injects the config import
     // (that's done by injectZodConfigImport in transformCode).
-    // But the IIFE still uses __msg.
-    expect(result).toContain("__msg");
+    // The IIFE calls __fin (which internally uses __msg injected at file level).
+    expect(result).toContain("__fin");
   });
 });
 

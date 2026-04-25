@@ -3,7 +3,7 @@ import { ZodRealError, z } from "zod";
 import { generateValidator } from "#src/core/codegen/index.js";
 import type { RefEntry } from "#src/core/extract/index.js";
 import { extractSchema } from "#src/core/extract/index.js";
-import { generateIIFE, MK_VALIDATOR_DECL } from "#src/core/iife.js";
+import { FIN_DECL, generateIIFE, MK_VALIDATOR_DECL } from "#src/core/iife.js";
 import type { CompiledSchemaInfo } from "#src/core/pipeline.js";
 
 type MkvFn = (
@@ -12,6 +12,11 @@ type MkvFn = (
 ) => Record<string, unknown>;
 
 const __mkv = new Function(`${MK_VALIDATOR_DECL}; return __mkv;`)() as MkvFn;
+// __fin needs __msg and __ZodError in scope; both are passed per-execution
+type FinFn = (e: unknown[], d: unknown) => { success: boolean; data?: unknown; error?: unknown };
+function makeFinFn(msg: unknown, ZodError: unknown): FinFn {
+  return new Function("__msg", "__ZodError", `${FIN_DECL}; return __fin;`)(msg, ZodError) as FinFn;
+}
 
 function makeInfo(exportName: string, schema: z.ZodType): CompiledSchemaInfo {
   const ir = extractSchema(schema);
@@ -147,8 +152,9 @@ describe("generateIIFE() — runtime execution", () => {
   function executeIIFE(schema: CompiledSchemaInfo, options?: { zodCompat?: boolean }) {
     const iife = generateIIFE("Schema", schema, options);
     const __msg = z.config().localeError;
-    const fn = new Function("Schema", "__msg", "__ZodError", "__mkv", `return ${iife};`);
-    return fn({}, __msg, ZodRealError, __mkv) as {
+    const __fin = makeFinFn(__msg, ZodRealError);
+    const fn = new Function("Schema", "__msg", "__ZodError", "__mkv", "__fin", `return ${iife};`);
+    return fn({}, __msg, ZodRealError, __mkv, __fin) as {
       parse: (input: unknown) => unknown;
       safeParse: (input: unknown) => {
         success: boolean;

@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { ZodRealError, z } from "zod";
+import { FIN_DECL } from "#src/core/iife.js";
 import { compileSchemas } from "#src/core/pipeline.js";
+
+const __fin = new Function("__ZodError", `${FIN_DECL}; return __fin;`)(ZodRealError);
 
 describe("compileSchemas", () => {
   it("returns CompiledSchemaInfo for each schema", () => {
@@ -121,9 +124,10 @@ describe("compileSchemas", () => {
     const fbArr = info?.refEntries.map((e) => e.schema) ?? [];
     const fn = new Function(
       "__ZodError",
+      "__fin",
       "__rf",
       `${info?.codegenResult.code}\nreturn ${info?.codegenResult.functionDef};`,
-    )(ZodRealError, fbArr);
+    )(ZodRealError, __fin, fbArr);
 
     // Each call with undefined should invoke the factory, producing different values
     const r1 = fn(undefined);
@@ -142,9 +146,10 @@ describe("compileSchemas", () => {
     const fbArr = info?.refEntries.map((e) => e.schema) ?? [];
     const fn = new Function(
       "__ZodError",
+      "__fin",
       "__rf",
       `${info?.codegenResult.code}\nreturn ${info?.codegenResult.functionDef};`,
-    )(ZodRealError, fbArr);
+    )(ZodRealError, __fin, fbArr);
 
     const r1 = fn(undefined);
     expect(r1.success).toBe(true);
@@ -166,9 +171,10 @@ describe("compileSchemas", () => {
     const fbArr = info?.refEntries.map((e) => e.schema) ?? [];
     const fn = new Function(
       "__ZodError",
+      "__fin",
       "__rf",
       `${info?.codegenResult.code}\nreturn ${info?.codegenResult.functionDef};`,
-    )(ZodRealError, fbArr);
+    )(ZodRealError, __fin, fbArr);
 
     expect(fn(undefined)).toEqual({ success: true, data: "hello" });
     expect(fn("world")).toEqual({ success: true, data: "world" });
@@ -184,9 +190,10 @@ describe("compileSchemas", () => {
     const fbArr = info?.refEntries.map((e) => e.schema) ?? [];
     const fn = new Function(
       "__ZodError",
+      "__fin",
       "__rf",
       `${info?.codegenResult.code}\nreturn ${info?.codegenResult.functionDef};`,
-    )(ZodRealError, fbArr);
+    )(ZodRealError, __fin, fbArr);
 
     // undefined → factory generates unique UUID each time
     const r1 = fn(undefined);
@@ -219,9 +226,10 @@ describe("compileSchemas", () => {
     const fbArr = info?.refEntries.map((e) => e.schema) ?? [];
     const fn = new Function(
       "__ZodError",
+      "__fin",
       "__rf",
       `${info?.codegenResult.code}\nreturn ${info?.codegenResult.functionDef};`,
-    )(ZodRealError, fbArr);
+    )(ZodRealError, __fin, fbArr);
 
     const r1 = fn(undefined);
     const r2 = fn(undefined);
@@ -250,9 +258,10 @@ describe("compileSchemas", () => {
     const fbArr = info?.refEntries.map((e) => e.schema) ?? [];
     const fn = new Function(
       "__ZodError",
+      "__fin",
       "__rf",
       `${info?.codegenResult.code}\nreturn ${info?.codegenResult.functionDef};`,
-    )(ZodRealError, fbArr);
+    )(ZodRealError, __fin, fbArr);
 
     // Omitted fields get defaults
     const r1 = fn({ name: "alice" });

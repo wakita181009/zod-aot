@@ -2,7 +2,14 @@ import { ZodRealError } from "zod";
 import type { CodeGenContext } from "#src/core/codegen/context.js";
 import { createFastGen, generateFast } from "#src/core/codegen/fast-path.js";
 import { generateValidator } from "#src/core/codegen/index.js";
+import { FIN_DECL } from "#src/core/iife.js";
 import type { SchemaIR } from "#src/core/types.js";
+
+// __msg intentionally undefined: codegen tests verify raw issues, not locale-transformed messages.
+const __fin = new Function("__msg", "__ZodError", `${FIN_DECL}; return __fin;`)(
+  undefined,
+  ZodRealError,
+);
 
 /**
  * Helper: generate code from IR, compile it, and return the safeParse function.
@@ -17,10 +24,12 @@ export function compileIR(
   });
   const fn =
     refSchemas && refSchemas.length > 0
-      ? new Function("__ZodError", "__rf", `${result.code}\nreturn ${result.functionDef};`)
-      : new Function("__ZodError", `${result.code}\nreturn ${result.functionDef};`);
+      ? new Function("__ZodError", "__fin", "__rf", `${result.code}\nreturn ${result.functionDef};`)
+      : new Function("__ZodError", "__fin", `${result.code}\nreturn ${result.functionDef};`);
   return (
-    refSchemas && refSchemas.length > 0 ? fn(ZodRealError, refSchemas) : fn(ZodRealError)
+    refSchemas && refSchemas.length > 0
+      ? fn(ZodRealError, __fin, refSchemas)
+      : fn(ZodRealError, __fin)
   ) as (input: unknown) => {
     success: boolean;
     data?: unknown;

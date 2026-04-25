@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import {
+  FIN_DECL,
   generateIIFE,
   MK_VALIDATOR_DECL,
   ZOD_CONFIG_IMPORT,
@@ -57,6 +58,7 @@ export function generateCompiledFileContent(
     ZOD_CONFIG_IMPORT,
     ZOD_MSG_DECLARATION,
     MK_VALIDATOR_DECL,
+    FIN_DECL,
     "",
     ...importLine,
     ...exports,

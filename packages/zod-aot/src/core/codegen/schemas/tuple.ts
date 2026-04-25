@@ -1,6 +1,6 @@
 import type { SchemaIR, TupleIR } from "../../types.js";
 import type { FastGen, SlowGen } from "../context.js";
-import { hasMutation } from "../context.js";
+import { extendStaticPathIndex, hasMutation } from "../context.js";
 import { emit } from "../emit.js";
 
 export function slowTuple(ir: SchemaIR & { type: "tuple" }, g: SlowGen): string {
@@ -26,7 +26,7 @@ export function slowTuple(ir: SchemaIR & { type: "tuple" }, g: SlowGen): string 
   for (let i = 0; i < len; i++) {
     const itemIR = ir.items[i] as SchemaIR;
     const elemExpr = `${g.input}[${i}]`;
-    const elemPath = `${g.path}.concat(${i})`;
+    const elemPath = extendStaticPathIndex(g.path, i);
     code += g.visit(itemIR, { input: elemExpr, output: elemExpr, path: elemPath });
   }
 

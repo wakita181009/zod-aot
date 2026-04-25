@@ -123,6 +123,24 @@ export function escapeString(s: string): string {
 }
 
 /**
+ * Extend a path expression with a static string key.
+ * Avoids [].concat("key") at root level; falls back to .concat() for nested paths.
+ */
+export function extendStaticPath(parentPath: string, key: string): string {
+  if (parentPath === "[]") return `[${escapeString(key)}]`;
+  return `${parentPath}.concat(${escapeString(key)})`;
+}
+
+/**
+ * Extend a path expression with a numeric index.
+ * Avoids [].concat(0) at root level; falls back to .concat() for nested paths.
+ */
+export function extendStaticPathIndex(parentPath: string, index: number): string {
+  if (parentPath === "[]") return `[${index}]`;
+  return `${parentPath}.concat(${index})`;
+}
+
+/**
  * Check if a SchemaIR tree contains any value-mutating operations
  * (coerce, default, catch) that would write back to the input expression.
  * Used by container generators to decide whether to shallow-clone.
