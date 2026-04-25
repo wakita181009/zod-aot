@@ -3,29 +3,15 @@ import { ZodRealError, z } from "zod";
 import { generateValidator } from "#src/core/codegen/index.js";
 import type { RefEntry } from "#src/core/extract/index.js";
 import { extractSchema } from "#src/core/extract/index.js";
-import { generateIIFE } from "#src/core/iife.js";
+import { generateIIFE, MK_VALIDATOR_DECL } from "#src/core/iife.js";
+import type { CompiledSchemaInfo } from "#src/core/pipeline.js";
 
-function mkv(
+type MkvFn = (
   fn: (input: unknown) => { success: true; data: unknown } | { success: false; error: unknown },
   schema: object | null,
-) {
-  const w = schema ? Object.create(schema) : ({} as Record<string, unknown>);
-  w.parse = (input: unknown) => {
-    const r = fn(input);
-    if (r.success) return r.data;
-    throw r.error;
-  };
-  w.safeParse = fn;
-  w.safeParseAsync = (input: unknown) => Promise.resolve(fn(input));
-  w.parseAsync = (input: unknown) => {
-    const r = fn(input);
-    if (r.success) return Promise.resolve(r.data);
-    return Promise.reject(r.error);
-  };
-  return w;
-}
+) => Record<string, unknown>;
 
-import type { CompiledSchemaInfo } from "#src/core/pipeline.js";
+const __mkv = new Function(`${MK_VALIDATOR_DECL}; return __mkv;`)() as MkvFn;
 
 function makeInfo(exportName: string, schema: z.ZodType): CompiledSchemaInfo {
   const ir = extractSchema(schema);
@@ -162,7 +148,7 @@ describe("generateIIFE() — runtime execution", () => {
     const iife = generateIIFE("Schema", schema, options);
     const __msg = z.config().localeError;
     const fn = new Function("Schema", "__msg", "__ZodError", "__mkv", `return ${iife};`);
-    return fn({}, __msg, ZodRealError, mkv) as {
+    return fn({}, __msg, ZodRealError, __mkv) as {
       parse: (input: unknown) => unknown;
       safeParse: (input: unknown) => {
         success: boolean;

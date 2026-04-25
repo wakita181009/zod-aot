@@ -2,7 +2,9 @@
   "name": "@zod-aot/benchmarks",
   "private": true,
   "type": "module",
-  "scripts": {},
+  "scripts": {
+    "size": "tsx suites/size.ts"
+  },
   "exports": {
     "./schemas": "./schemas/index.ts",
     "./schemas/primitives": "./schemas/primitives/index.ts",
