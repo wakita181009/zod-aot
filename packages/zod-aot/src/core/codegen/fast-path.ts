@@ -9,7 +9,7 @@
 
 import type { SchemaIR } from "../types.js";
 import type { CodeGenContext, FastGen, FastGenerator } from "./context.js";
-import { escapeString } from "./context.js";
+import { emitRegex, emitTemp } from "./context.js";
 import { fastAny } from "./schemas/any.js";
 import { fastArray } from "./schemas/array.js";
 import { fastBigInt } from "./schemas/bigint.js";
@@ -104,17 +104,8 @@ export function createFastGen(inputExpr: string, ctx: CodeGenContext): FastGen {
     visit(ir, overrides) {
       return generateFast(ir, createFastGen(overrides?.input ?? inputExpr, ctx));
     },
-    temp(prefix) {
-      return `__${prefix}_${ctx.counter++}`;
-    },
-    regex(prefix, pattern) {
-      const cached = ctx.regexCache.get(pattern);
-      if (cached) return cached;
-      const name = `__re_${prefix}_${ctx.counter++}`;
-      ctx.preamble.push(`var ${name}=new RegExp(${escapeString(pattern)});`);
-      ctx.regexCache.set(pattern, name);
-      return name;
-    },
+    temp: (prefix) => emitTemp(ctx, prefix),
+    regex: (prefix, pattern) => emitRegex(ctx, prefix, pattern),
   };
 }
 

@@ -2,11 +2,12 @@ import type { RecordIR, SchemaIR } from "../../types.js";
 import type { FastGen, SlowGen } from "../context.js";
 import { hasMutation } from "../context.js";
 import { emit } from "../emit.js";
+import { invalidType } from "../emit-issue.js";
 
 export function slowRecord(ir: SchemaIR & { type: "record" }, g: SlowGen): string {
   let code = emit`
     if(typeof ${g.input}!=="object"||${g.input}===null||Array.isArray(${g.input})){
-      ${g.issues}.push({code:"invalid_type",expected:"record",input:${g.input},path:${g.path}});
+      ${invalidType(g, "record")}
     }else{`;
 
   if (hasMutation(ir.valueType)) {

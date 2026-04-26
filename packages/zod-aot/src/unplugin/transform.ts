@@ -1,10 +1,22 @@
 import { parseExpressionAt } from "acorn";
 import picomatch from "picomatch";
-import { generateIIFE, ZOD_CONFIG_IMPORT, ZOD_MSG_DECLARATION } from "#src/core/iife.js";
-import { type CompiledSchemaInfo, compileSchemas } from "#src/core/pipeline.js";
+import type { CodegenMode } from "#src/core/codegen/context.js";
+import {
+  FIN_DECL,
+  generateIIFE,
+  MK_VALIDATOR_DECL,
+  ZOD_CONFIG_IMPORT,
+  ZOD_MSG_DECLARATION,
+} from "#src/core/iife.js";
+import {
+  aggregateUsedHelpers,
+  type CompiledSchemaInfo,
+  compileSchemas,
+} from "#src/core/pipeline.js";
 import type { DiscoveredSchema } from "#src/core/types.js";
 import { discoverSchemas } from "#src/discovery.js";
 import type { TransformOptions, ZodAotPluginOptions } from "./types.js";
+import { VIRTUAL_RUNTIME_ID } from "./virtual.js";
 
 /** Matches a runtime (non-type-only) import from "zod". */
 const HAS_RUNTIME_ZOD_IMPORT = /import\s+(?!type\s)[^;]*from\s+["']zod["']/;
@@ -46,10 +58,11 @@ function warn(msg: string): void {
 export async function transformCode(
   code: string,
   id: string,
-  options?: TransformOptions,
+  options: TransformOptions,
 ): Promise<string | null> {
-  const verbose = options?.verbose === true;
-  const autoDiscover = options?.autoDiscover === true;
+  const verbose = options.verbose === true;
+  const autoDiscover = options.autoDiscover === true;
+  const mode = options.mode;
 
   // Quick bail-out check
   if (autoDiscover) {
@@ -79,9 +92,11 @@ export async function transformCode(
   }
   if (schemas.length === 0) return null;
 
-  // For each schema, run the compilation pipeline
+  // Lean mode (Vite/Rollup/etc.) uses virtual:zod-aot/runtime imports for cross-file dedup.
+  // Inline mode (webpack/rspack) emits self-contained file-level helpers.
   let failedCount = 0;
   const compiled = compileSchemas(schemas, {
+    mode,
     onError(exportName, error) {
       failedCount++;
       warn(
@@ -109,12 +124,17 @@ export async function transformCode(
   if (compiled.length === 0) return null;
 
   // Report build stats only when at least one schema was compiled
-  options?.onBuildStats?.({
+  options.onBuildStats?.({
     files: 1,
     schemas: schemas.length,
     optimized: compiled.length,
     failed: failedCount,
   });
+
+  // __mkv and __fin are always needed (they wrap every IIFE).
+  const usedHelpers = aggregateUsedHelpers(compiled);
+  usedHelpers.add("__mkv");
+  usedHelpers.add("__fin");
 
   // Two-pass rewrite: separate compile() schemas from autoDiscover schemas
   if (autoDiscover) {
@@ -132,28 +152,60 @@ export async function transformCode(
     let result = code;
     // Pass 1: rewrite compile() schemas with existing function
     if (compileSchemaInfos.length > 0) {
-      result = rewriteSource(result, compileSchemaInfos, { zodCompat: options?.zodCompat });
+      result = rewriteSource(result, compileSchemaInfos, { zodCompat: options.zodCompat });
     }
     // Pass 2: rewrite autoDiscover schemas with new function
     if (autoDiscoverSchemaInfos.length > 0) {
       result = rewriteSourceAutoDiscover(result, autoDiscoverSchemaInfos, {
-        zodCompat: options?.zodCompat,
+        zodCompat: options.zodCompat,
       });
     }
-    return injectZodConfigImport(result);
+    return injectRuntime(result, usedHelpers, mode);
   }
 
-  return injectZodConfigImport(rewriteSource(code, compiled, { zodCompat: options?.zodCompat }));
+  return injectRuntime(
+    rewriteSource(code, compiled, { zodCompat: options.zodCompat }),
+    usedHelpers,
+    mode,
+  );
 }
 
 /**
- * Add zod config import for __msg (localeError) if needed.
- * Called once after all rewrite passes to avoid duplicate imports.
+ * Prepend the runtime helpers required by the rewritten source.
+ *
+ * Lean mode emits a single `import { ... } from "virtual:zod-aot/runtime";`
+ * line — bundlers that accept the `virtual:` URI scheme (Vite/Rollup/etc.)
+ * dedup the helpers across every transformed file.
+ *
+ * Inline mode prepends file-level `function __mkv` / `function __fin`
+ * declarations directly so the file is self-contained — used for webpack/rspack
+ * which reject the `virtual:` URI scheme at the resolver layer.
+ *
+ * Idempotent: if the file already contains the relevant marker (re-run during
+ * watch/HMR), we skip re-injection.
  */
-function injectZodConfigImport(code: string): string {
-  if (!code.includes("__msg")) return code;
-  if (code.includes("__zodAotConfig")) return code;
-  return [ZOD_CONFIG_IMPORT, ZOD_MSG_DECLARATION, code].join("\n");
+function injectRuntime(code: string, usedHelpers: Set<string>, mode: CodegenMode): string {
+  if (mode === "lean") {
+    if (usedHelpers.size === 0) return code;
+    if (code.includes(VIRTUAL_RUNTIME_ID)) return code;
+    const names = [...usedHelpers].sort().join(", ");
+    return `import { ${names} } from "${VIRTUAL_RUNTIME_ID}";\n${code}`;
+  }
+  // Inline mode: ship file-level helper declarations instead of a virtual import.
+  // In inline mode, codegen emits per-IIFE issue literals + per-IIFE `__re_*` decls
+  // so we only need __mkv / __fin (plus __msg via the zod config import).
+  if (!code.includes("__mkv")) return code;
+  const prefix: string[] = [];
+  if (!code.includes("__zodAotConfig")) {
+    prefix.push(ZOD_CONFIG_IMPORT, ZOD_MSG_DECLARATION);
+  }
+  if (!code.includes("function __mkv(")) {
+    prefix.push(MK_VALIDATOR_DECL);
+  }
+  if (!code.includes("function __fin(")) {
+    prefix.push(FIN_DECL);
+  }
+  return prefix.length > 0 ? [...prefix, code].join("\n") : code;
 }
 
 /**

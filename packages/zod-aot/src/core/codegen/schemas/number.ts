@@ -2,6 +2,7 @@ import type { CheckIR, NumberIR } from "../../types.js";
 import type { FastGen, SlowGen } from "../context.js";
 import { checkPriority, sortChecksPreservingEffects } from "../context.js";
 import { emit } from "../emit.js";
+import { invalidType, tooBig, tooSmall } from "../emit-issue.js";
 import { refineCheck } from "./effect.js";
 
 export function slowNumber(ir: NumberIR, g: SlowGen): string {
@@ -11,11 +12,11 @@ export function slowNumber(ir: NumberIR, g: SlowGen): string {
   }
   code += emit`
     if(typeof ${g.input}!=="number"){
-      ${g.issues}.push({code:"invalid_type",expected:"number",input:${g.input},path:${g.path}});
+      ${invalidType(g, "number")}
     }else if(Number.isNaN(${g.input})){
-      ${g.issues}.push({code:"invalid_type",expected:"number",received:"NaN",input:${g.input},path:${g.path}});
+      ${invalidType(g, "number", { extra: 'received:"NaN"' })}
     }else if(!Number.isFinite(${g.input})){
-      ${g.issues}.push({code:"invalid_type",expected:"number",received:"Infinity",input:${g.input},path:${g.path}});
+      ${invalidType(g, "number", { extra: 'received:"Infinity"' })}
     }`;
 
   if (ir.checks.length > 0) {
@@ -26,12 +27,12 @@ export function slowNumber(ir: NumberIR, g: SlowGen): string {
           if (check.inclusive) {
             code += emit`
               if(${g.input}<${check.value}){
-                ${g.issues}.push({code:"too_small",minimum:${check.value},origin:"number",inclusive:true,input:${g.input},path:${g.path}});
+                ${tooSmall(g, check.value, "number", true)}
               }`;
           } else {
             code += emit`
               if(${g.input}<=${check.value}){
-                ${g.issues}.push({code:"too_small",minimum:${check.value},origin:"number",inclusive:false,input:${g.input},path:${g.path}});
+                ${tooSmall(g, check.value, "number", false)}
               }`;
           }
           break;
@@ -39,12 +40,12 @@ export function slowNumber(ir: NumberIR, g: SlowGen): string {
           if (check.inclusive) {
             code += emit`
               if(${g.input}>${check.value}){
-                ${g.issues}.push({code:"too_big",maximum:${check.value},origin:"number",inclusive:true,input:${g.input},path:${g.path}});
+                ${tooBig(g, check.value, "number", true)}
               }`;
           } else {
             code += emit`
               if(${g.input}>=${check.value}){
-                ${g.issues}.push({code:"too_big",maximum:${check.value},origin:"number",inclusive:false,input:${g.input},path:${g.path}});
+                ${tooBig(g, check.value, "number", false)}
               }`;
           }
           break;
@@ -52,32 +53,32 @@ export function slowNumber(ir: NumberIR, g: SlowGen): string {
           if (check.format === "safeint") {
             code += emit`
               if(!Number.isSafeInteger(${g.input})){
-                ${g.issues}.push({code:"invalid_type",expected:"int",format:"safeint",input:${g.input},path:${g.path}});
+                ${invalidType(g, "int", { extra: 'format:"safeint"' })}
               }`;
           } else if (check.format === "int32") {
             code += emit`
               if(!Number.isInteger(${g.input})){
-                ${g.issues}.push({code:"invalid_type",expected:"int",format:"int32",input:${g.input},path:${g.path}});
+                ${invalidType(g, "int", { extra: 'format:"int32"' })}
               }else if(${g.input}<-2147483648){
-                ${g.issues}.push({code:"too_small",minimum:-2147483648,origin:"number",inclusive:true,input:${g.input},path:${g.path}});
+                ${tooSmall(g, -2147483648, "number", true)}
               }else if(${g.input}>2147483647){
-                ${g.issues}.push({code:"too_big",maximum:2147483647,origin:"number",inclusive:true,input:${g.input},path:${g.path}});
+                ${tooBig(g, 2147483647, "number", true)}
               }`;
           } else if (check.format === "uint32") {
             code += emit`
               if(!Number.isInteger(${g.input})){
-                ${g.issues}.push({code:"invalid_type",expected:"int",format:"uint32",input:${g.input},path:${g.path}});
+                ${invalidType(g, "int", { extra: 'format:"uint32"' })}
               }else if(${g.input}<0){
-                ${g.issues}.push({code:"too_small",minimum:0,origin:"number",inclusive:true,input:${g.input},path:${g.path}});
+                ${tooSmall(g, 0, "number", true)}
               }else if(${g.input}>4294967295){
-                ${g.issues}.push({code:"too_big",maximum:4294967295,origin:"number",inclusive:true,input:${g.input},path:${g.path}});
+                ${tooBig(g, 4294967295, "number", true)}
               }`;
           } else if (check.format === "float32") {
             code += emit`
               if(${g.input}<-3.4028234663852886e+38){
-                ${g.issues}.push({code:"too_small",minimum:-3.4028234663852886e+38,origin:"number",inclusive:true,input:${g.input},path:${g.path}});
+                ${tooSmall(g, "-3.4028234663852886e+38", "number", true)}
               }else if(${g.input}>3.4028234663852886e+38){
-                ${g.issues}.push({code:"too_big",maximum:3.4028234663852886e+38,origin:"number",inclusive:true,input:${g.input},path:${g.path}});
+                ${tooBig(g, "3.4028234663852886e+38", "number", true)}
               }`;
           }
           // float64 range is [-Number.MAX_VALUE, Number.MAX_VALUE], already covered by the isFinite check above

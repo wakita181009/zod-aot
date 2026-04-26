@@ -3,6 +3,10 @@ import os from "node:os";
 import path from "node:path";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import { ZodRealError, type z } from "zod";
+import { FIN_DECL } from "#src/core/iife.js";
+
+const __fin = new Function("__ZodError", `${FIN_DECL}; return __fin;`)(ZodRealError);
+
 import {
   findSchemaFiles,
   generateFile,
@@ -366,9 +370,11 @@ describe("generate E2E", () => {
     if (!schema) return;
     const ir = extractSchema(schema.schema);
     const result = generateValidator(ir, schema.exportName);
-    const safeParseFn = new Function("__ZodError", `${result.code}\nreturn ${result.functionDef};`)(
-      ZodRealError,
-    ) as (input: unknown) => SafeParseResult<unknown>;
+    const safeParseFn = new Function(
+      "__ZodError",
+      "__fin",
+      `${result.code}\nreturn ${result.functionDef};`,
+    )(ZodRealError, __fin) as (input: unknown) => SafeParseResult<unknown>;
 
     // Valid input
     const validResult = safeParseFn({ name: "Alice", age: 25 });
@@ -416,9 +422,11 @@ describe("generate E2E", () => {
     const zodSchema = schema.schema as z.ZodType;
     const ir = extractSchema(schema.schema);
     const result = generateValidator(ir, schema.exportName);
-    const safeParseFn = new Function("__ZodError", `${result.code}\nreturn ${result.functionDef};`)(
-      ZodRealError,
-    ) as (input: unknown) => SafeParseResult<unknown>;
+    const safeParseFn = new Function(
+      "__ZodError",
+      "__fin",
+      `${result.code}\nreturn ${result.functionDef};`,
+    )(ZodRealError, __fin) as (input: unknown) => SafeParseResult<unknown>;
 
     const validInput = { name: "Bob", age: 30 };
     const zodResult = zodSchema.safeParse(validInput);
@@ -437,9 +445,11 @@ describe("generate E2E", () => {
     const zodSchema = schema.schema as z.ZodType;
     const ir = extractSchema(schema.schema);
     const result = generateValidator(ir, schema.exportName);
-    const safeParseFn = new Function("__ZodError", `${result.code}\nreturn ${result.functionDef};`)(
-      ZodRealError,
-    ) as (input: unknown) => SafeParseResult<unknown>;
+    const safeParseFn = new Function(
+      "__ZodError",
+      "__fin",
+      `${result.code}\nreturn ${result.functionDef};`,
+    )(ZodRealError, __fin) as (input: unknown) => SafeParseResult<unknown>;
 
     const invalidInput = { name: "", age: -1 };
     const zodResult = zodSchema.safeParse(invalidInput);

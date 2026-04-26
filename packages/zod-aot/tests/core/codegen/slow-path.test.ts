@@ -9,6 +9,8 @@ function makeCtx(overrides?: Partial<CodeGenContext>): CodeGenContext {
     counter: 0,
     fnName: "safeParse_test",
     regexCache: new Map(),
+    mode: "inline",
+    usedHelpers: new Set(),
     ...overrides,
   };
 }

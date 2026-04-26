@@ -1,11 +1,12 @@
 import type { NanIR } from "../../types.js";
 import type { FastGen, SlowGen } from "../context.js";
 import { emit } from "../emit.js";
+import { invalidType } from "../emit-issue.js";
 
 export function slowNan(_ir: NanIR, g: SlowGen): string {
   return `${emit`
     if(typeof ${g.input}!=="number"||!Number.isNaN(${g.input})){
-      ${g.issues}.push({code:"invalid_type",expected:"nan",input:${g.input},path:${g.path}});
+      ${invalidType(g, "nan")}
     }
   `}\n`;
 }

@@ -28,7 +28,7 @@ import {
   ZeroCaptureRefineStringSchema,
   ZeroCaptureTransformObjectSchema,
   ZeroCaptureTransformStringSchema,
-} from "../../schemas/index.js";
+} from "../../fixtures/schemas/index.js";
 
 // ─── Zero-capture transforms (fully optimized at build time) ────────────────
 // ajv/typia excluded: transform() is a Zod-specific feature.

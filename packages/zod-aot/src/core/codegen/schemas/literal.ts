@@ -2,6 +2,7 @@ import type { LiteralIR } from "../../types.js";
 import type { FastGen, SlowGen } from "../context.js";
 import { escapeString } from "../context.js";
 import { emit } from "../emit.js";
+import { invalidValue } from "../emit-issue.js";
 
 export function slowLiteral(ir: LiteralIR, g: SlowGen): string {
   if (ir.values.length === 1) {
@@ -14,11 +15,11 @@ export function slowLiteral(ir: LiteralIR, g: SlowGen): string {
     } else {
       cond = `${g.input}!==${String(v)}`;
     }
-    return `${emit`
+    return emit`
       if(${cond}){
-        ${g.issues}.push({code:"invalid_value",values:${JSON.stringify([v])},input:${g.input},path:${g.path}});
+        ${invalidValue(g, JSON.stringify([v]))}
       }
-    `}\n`;
+    `;
   }
 
   const valueChecks = ir.values
@@ -29,11 +30,11 @@ export function slowLiteral(ir: LiteralIR, g: SlowGen): string {
     })
     .join("||");
 
-  return `${emit`
+  return emit`
     if(!(${valueChecks})){
-      ${g.issues}.push({code:"invalid_value",values:${JSON.stringify(ir.values)},input:${g.input},path:${g.path}});
+      ${invalidValue(g, JSON.stringify(ir.values))}
     }
-  `}\n`;
+  `;
 }
 
 export function fastLiteral(ir: LiteralIR, g: FastGen): string {

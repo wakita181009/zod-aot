@@ -16,6 +16,8 @@ describe("shared CodeGenContext between fast-path and slow-path", () => {
       counter: 0,
       fnName: "safeParse_test",
       regexCache: new Map(),
+      mode: "inline",
+      usedHelpers: new Set(),
     };
 
     // Fast-path runs first (matches orchestrator order)
@@ -56,6 +58,8 @@ describe("shared CodeGenContext between fast-path and slow-path", () => {
       counter: 0,
       fnName: "safeParse_test",
       regexCache: new Map(),
+      mode: "inline",
+      usedHelpers: new Set(),
     };
 
     const fg = createFastGen("input", ctx);
@@ -84,6 +88,8 @@ describe("shared CodeGenContext between fast-path and slow-path", () => {
       counter: 0,
       fnName: "safeParse_test",
       regexCache: new Map(),
+      mode: "inline",
+      usedHelpers: new Set(),
     };
     const fg = createFastGen("input", ctx);
     const sg = createSlowGen("__data", "__data", "[]", "__issues", ctx);

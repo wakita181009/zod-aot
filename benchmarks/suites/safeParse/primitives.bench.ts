@@ -28,7 +28,7 @@ import {
   validSimpleEnum,
   validSimpleString,
   validStringWithChecks,
-} from "../../schemas/index.js";
+} from "../../fixtures/schemas/index.js";
 
 describe("safeParse: simple string", () => {
   bench("zod", () => {

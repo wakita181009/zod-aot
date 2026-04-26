@@ -2,11 +2,12 @@ import type { FileIR } from "../../types.js";
 import type { FastGen, SlowGen } from "../context.js";
 import { escapeString } from "../context.js";
 import { emit } from "../emit.js";
+import { invalidType, invalidValue, tooBig, tooSmall } from "../emit-issue.js";
 
 export function slowFile(ir: FileIR, g: SlowGen): string {
   let code = emit`
     if(!(${g.input} instanceof File)){
-      ${g.issues}.push({code:"invalid_type",expected:"file",input:${g.input},path:${g.path}});
+      ${invalidType(g, "file")}
     }else{`;
 
   if (ir.checks) {
@@ -15,27 +16,28 @@ export function slowFile(ir: FileIR, g: SlowGen): string {
         case "min_size":
           code += emit`
             if(${g.input}.size<${check.minimum}){
-              ${g.issues}.push({code:"too_small",minimum:${check.minimum},origin:"file",inclusive:true,input:${g.input},path:${g.path}});
+              ${tooSmall(g, check.minimum, "file", true)}
             }`;
           break;
         case "max_size":
           code += emit`
             if(${g.input}.size>${check.maximum}){
-              ${g.issues}.push({code:"too_big",maximum:${check.maximum},origin:"file",inclusive:true,input:${g.input},path:${g.path}});
+              ${tooBig(g, check.maximum, "file", true)}
             }`;
           break;
         case "mime_type": {
           if (check.mime.length === 0) break;
+          const mimeValuesExpr = JSON.stringify(check.mime);
           if (check.mime.length === 1) {
             code += emit`
               if(${g.input}.type!==${escapeString(check.mime[0] as string)}){
-                ${g.issues}.push({code:"invalid_value",values:${JSON.stringify(check.mime)},input:${g.input},path:${g.path}});
+                ${invalidValue(g, mimeValuesExpr)}
               }`;
           } else {
             const setVar = g.set("mime", check.mime);
             code += emit`
               if(!${setVar}.has(${g.input}.type)){
-                ${g.issues}.push({code:"invalid_value",values:${JSON.stringify(check.mime)},input:${g.input},path:${g.path}});
+                ${invalidValue(g, mimeValuesExpr)}
               }`;
           }
           break;

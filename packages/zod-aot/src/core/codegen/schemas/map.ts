@@ -1,6 +1,7 @@
 import type { MapIR, SchemaIR } from "../../types.js";
 import type { FastGen, SlowGen } from "../context.js";
 import { emit } from "../emit.js";
+import { invalidType } from "../emit-issue.js";
 
 export function slowMap(ir: SchemaIR & { type: "map" }, g: SlowGen): string {
   const entryVar = g.temp("map_e");
@@ -8,7 +9,7 @@ export function slowMap(ir: SchemaIR & { type: "map" }, g: SlowGen): string {
 
   return `${emit`
     if(!(${g.input} instanceof Map)){
-      ${g.issues}.push({code:"invalid_type",expected:"map",input:${g.input},path:${g.path}});
+      ${invalidType(g, "map")}
     }else{
       var ${idxVar}=0;
       for(var ${entryVar} of ${g.input}){

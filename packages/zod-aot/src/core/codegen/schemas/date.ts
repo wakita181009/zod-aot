@@ -2,6 +2,7 @@ import type { DateIR } from "../../types.js";
 import type { FastGen, SlowGen } from "../context.js";
 import { checkPriority } from "../context.js";
 import { emit } from "../emit.js";
+import { invalidType, tooBig, tooSmall } from "../emit-issue.js";
 
 export function slowDate(ir: DateIR, g: SlowGen): string {
   let code = "";
@@ -10,9 +11,9 @@ export function slowDate(ir: DateIR, g: SlowGen): string {
   }
   code += emit`
     if(!(${g.input} instanceof Date)){
-      ${g.issues}.push({code:"invalid_type",expected:"date",input:${g.input},path:${g.path}});
+      ${invalidType(g, "date")}
     }else if(isNaN(${g.input}.getTime())){
-      ${g.issues}.push({code:"invalid_type",expected:"date",received:"Invalid Date",input:${g.input},path:${g.path}});
+      ${invalidType(g, "date", { extra: 'received:"Invalid Date"' })}
     }`;
 
   if (ir.checks.length > 0) {
@@ -24,12 +25,12 @@ export function slowDate(ir: DateIR, g: SlowGen): string {
           if (check.inclusive) {
             code += emit`
               if(${timeExpr}<${check.timestamp}){
-                ${g.issues}.push({code:"too_small",minimum:${check.timestamp},inclusive:true,origin:"date",input:${g.input},path:${g.path}});
+                ${tooSmall(g, check.timestamp, "date", true)}
               }`;
           } else {
             code += emit`
               if(${timeExpr}<=${check.timestamp}){
-                ${g.issues}.push({code:"too_small",minimum:${check.timestamp},inclusive:false,origin:"date",input:${g.input},path:${g.path}});
+                ${tooSmall(g, check.timestamp, "date", false)}
               }`;
           }
           break;
@@ -37,12 +38,12 @@ export function slowDate(ir: DateIR, g: SlowGen): string {
           if (check.inclusive) {
             code += emit`
               if(${timeExpr}>${check.timestamp}){
-                ${g.issues}.push({code:"too_big",maximum:${check.timestamp},inclusive:true,origin:"date",input:${g.input},path:${g.path}});
+                ${tooBig(g, check.timestamp, "date", true)}
               }`;
           } else {
             code += emit`
               if(${timeExpr}>=${check.timestamp}){
-                ${g.issues}.push({code:"too_big",maximum:${check.timestamp},inclusive:false,origin:"date",input:${g.input},path:${g.path}});
+                ${tooBig(g, check.timestamp, "date", false)}
               }`;
           }
           break;

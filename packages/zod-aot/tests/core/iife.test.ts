@@ -3,8 +3,20 @@ import { ZodRealError, z } from "zod";
 import { generateValidator } from "#src/core/codegen/index.js";
 import type { RefEntry } from "#src/core/extract/index.js";
 import { extractSchema } from "#src/core/extract/index.js";
-import { generateIIFE } from "#src/core/iife.js";
+import { FIN_DECL, generateIIFE, MK_VALIDATOR_DECL } from "#src/core/iife.js";
 import type { CompiledSchemaInfo } from "#src/core/pipeline.js";
+
+type MkvFn = (
+  fn: (input: unknown) => { success: true; data: unknown } | { success: false; error: unknown },
+  schema: object | null,
+) => Record<string, unknown>;
+
+const __mkv = new Function(`${MK_VALIDATOR_DECL}; return __mkv;`)() as MkvFn;
+// __fin needs __msg and __ZodError in scope; both are passed per-execution
+type FinFn = (e: unknown[], d: unknown) => { success: boolean; data?: unknown; error?: unknown };
+function makeFinFn(msg: unknown, ZodError: unknown): FinFn {
+  return new Function("__msg", "__ZodError", `${FIN_DECL}; return __fin;`)(msg, ZodError) as FinFn;
+}
 
 function makeInfo(exportName: string, schema: z.ZodType): CompiledSchemaInfo {
   const ir = extractSchema(schema);
@@ -35,11 +47,13 @@ describe("generateIIFE()", () => {
     expect(iife).toContain("/* @__PURE__ */");
   });
 
-  it("includes parse() that throws on invalid input", () => {
+  it("delegates parse() throw to __mkv factory", () => {
     const info = makeInfo("validateNum", z.number());
     const iife = generateIIFE("NumSchema", info);
 
-    expect(iife).toContain("throw r.error");
+    // throw/parse logic lives in __mkv now; IIFE just calls __mkv
+    expect(iife).toContain("return __mkv(safeParse_validateNum,NumSchema);");
+    expect(iife).not.toContain("throw r.error");
   });
 
   it("includes __rf when schema has fallbacks (captured-variable transform)", () => {
@@ -75,32 +89,24 @@ describe("generateIIFE()", () => {
     expect(iife).not.toContain("__rf");
   });
 
-  it("includes safeParseAsync and parseAsync", () => {
+  it("uses __mkv factory with schema arg (zodCompat: true)", () => {
     const info = makeInfo("validateUser", simpleSchema);
     const iife = generateIIFE("UserSchema", info);
 
-    expect(iife).toContain("__w.safeParseAsync=function");
-    expect(iife).toContain("__w.parseAsync=function");
-    expect(iife).toContain("Promise.resolve");
-  });
-
-  it("uses Object.create by default (zodCompat: true)", () => {
-    const info = makeInfo("validateUser", simpleSchema);
-    const iife = generateIIFE("UserSchema", info);
-
-    expect(iife).toContain("Object.create(UserSchema)");
-    expect(iife).toContain("__w.schema=UserSchema;");
+    expect(iife).toContain("return __mkv(safeParse_validateUser,UserSchema);");
+    expect(iife).not.toContain("var __w=");
+    expect(iife).not.toContain("__w.schema=");
   });
 
   describe("zodCompat: false", () => {
-    it("produces plain object without Object.create", () => {
+    it("uses __mkv factory with null schema arg", () => {
       const info = makeInfo("validateUser", simpleSchema);
       const iife = generateIIFE("UserSchema", info, { zodCompat: false });
 
       expect(iife).toContain("/* @__PURE__ */");
+      expect(iife).toContain("return __mkv(safeParse_validateUser,null);");
       expect(iife).not.toContain("Object.create");
-      expect(iife).toContain("var __w={};");
-      expect(iife).toContain("__w.schema=UserSchema;");
+      expect(iife).not.toContain("var __w=");
     });
   });
 });
@@ -146,8 +152,9 @@ describe("generateIIFE() — runtime execution", () => {
   function executeIIFE(schema: CompiledSchemaInfo, options?: { zodCompat?: boolean }) {
     const iife = generateIIFE("Schema", schema, options);
     const __msg = z.config().localeError;
-    const fn = new Function("Schema", "__msg", "__ZodError", `return ${iife};`);
-    return fn({}, __msg, ZodRealError) as {
+    const __fin = makeFinFn(__msg, ZodRealError);
+    const fn = new Function("Schema", "__msg", "__ZodError", "__mkv", "__fin", `return ${iife};`);
+    return fn({}, __msg, ZodRealError, __mkv, __fin) as {
       parse: (input: unknown) => unknown;
       safeParse: (input: unknown) => {
         success: boolean;

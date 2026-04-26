@@ -1,6 +1,7 @@
 import type { BooleanIR } from "../../types.js";
 import type { FastGen, SlowGen } from "../context.js";
 import { emit } from "../emit.js";
+import { invalidType } from "../emit-issue.js";
 
 export function slowBoolean(ir: BooleanIR, g: SlowGen): string {
   let code = "";
@@ -9,7 +10,7 @@ export function slowBoolean(ir: BooleanIR, g: SlowGen): string {
   }
   code += emit`
     if(typeof ${g.input}!=="boolean"){
-      ${g.issues}.push({code:"invalid_type",expected:"boolean",input:${g.input},path:${g.path}});
+      ${invalidType(g, "boolean")}
     }
   `;
   return `${code}\n`;

@@ -26,7 +26,7 @@ import {
   validSet5,
   validSet20,
   validTuple,
-} from "../../schemas/index.js";
+} from "../../fixtures/schemas/index.js";
 
 describe("safeParse: tuple [string, int, boolean]", () => {
   bench("zod", () => {

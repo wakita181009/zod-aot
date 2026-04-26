@@ -8,6 +8,8 @@
     "test:coverage": "vitest run --coverage",
     "test:smoke": "pnpm run pack && cd smoke && npm install ../zod-aot-*.tgz --silent && npm test",
     "bench": "vitest bench --config benchmarks/vitest.config.ts",
+    "size": "pnpm --filter @zod-aot/benchmarks size",
+    "size:bundle": "pnpm --filter @zod-aot/benchmarks size:bundle",
     "check": "biome check .",
     "check:fix": "biome check --fix .",
     "format": "biome format --write .",

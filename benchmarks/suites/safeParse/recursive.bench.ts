@@ -7,7 +7,7 @@ import {
   v3TreeNodeSchema,
   validTreeDeep,
   validTreeShallow,
-} from "../../schemas/index.js";
+} from "../../fixtures/schemas/index.js";
 
 describe("safeParse: recursive tree — shallow (7 nodes)", () => {
   bench("zod", () => {

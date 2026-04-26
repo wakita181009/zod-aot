@@ -3,8 +3,11 @@ import { ZodRealError, z } from "zod";
 import { generateValidator } from "#src/core/codegen/index.js";
 import type { RefEntry } from "#src/core/extract/index.js";
 import { extractSchema } from "#src/core/extract/index.js";
+import { FIN_DECL } from "#src/core/iife.js";
 import type { SafeParseResult, SchemaIR } from "#src/core/types.js";
 import { zodAtLeast } from "./zod-version.js";
+
+const __fin = new Function("__ZodError", `${FIN_DECL}; return __fin;`)(ZodRealError);
 
 /**
  * End-to-end helper: Zod schema → extract IR → generate code → compile → safeParse.
@@ -13,8 +16,8 @@ import { zodAtLeast } from "./zod-version.js";
 function compileZodSchema(schema: z.ZodType, name = "test") {
   const ir = extractSchema(schema);
   const result = generateValidator(ir, name);
-  const fn = new Function("__ZodError", `${result.code}\nreturn ${result.functionDef};`);
-  return fn(ZodRealError) as (input: unknown) => {
+  const fn = new Function("__ZodError", "__fin", `${result.code}\nreturn ${result.functionDef};`);
+  return fn(ZodRealError, __fin) as (input: unknown) => {
     success: boolean;
     data?: unknown;
     error?: { issues: unknown[] };
@@ -1110,12 +1113,14 @@ function compileWithRefs(schema: z.ZodType, name = "test") {
   const result = generateValidator(ir, name, { refCount: refEntries.length });
   const refSchemas = refEntries.map((e) => e.schema);
   return refSchemas.length > 0
-    ? (new Function("__ZodError", "__rf", `${result.code}\nreturn ${result.functionDef};`)(
+    ? (new Function("__ZodError", "__fin", "__rf", `${result.code}\nreturn ${result.functionDef};`)(
         ZodRealError,
+        __fin,
         refSchemas,
       ) as (input: unknown) => SafeParseResult<unknown>)
-    : (new Function("__ZodError", `${result.code}\nreturn ${result.functionDef};`)(
+    : (new Function("__ZodError", "__fin", `${result.code}\nreturn ${result.functionDef};`)(
         ZodRealError,
+        __fin,
       ) as (input: unknown) => SafeParseResult<unknown>);
 }
 

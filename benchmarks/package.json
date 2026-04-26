@@ -2,16 +2,9 @@
   "name": "@zod-aot/benchmarks",
   "private": true,
   "type": "module",
-  "scripts": {},
-  "exports": {
-    "./schemas": "./schemas/index.ts",
-    "./schemas/primitives": "./schemas/primitives/index.ts",
-    "./schemas/objects": "./schemas/objects/index.ts",
-    "./schemas/collections": "./schemas/collections/index.ts",
-    "./schemas/unions": "./schemas/unions/index.ts",
-    "./schemas/recursive": "./schemas/recursive/index.ts",
-    "./schemas/effects": "./schemas/effects/index.ts",
-    "./schemas/real-world": "./schemas/real-world/index.ts"
+  "scripts": {
+    "size:codegen": "tsx suites/size/codegen.ts",
+    "size:bundle": "tsx suites/size/bundle.ts"
   },
   "dependencies": {
     "@standard-schema/spec": "^1.1.0",
@@ -24,6 +17,7 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "@typia/unplugin": "^12.0.2"
+    "@typia/unplugin": "^12.0.2",
+    "vite": "catalog:"
   }
 }

@@ -14,6 +14,8 @@ describe("slow-path — fallback", () => {
       counter: 0,
       fnName: "safeParse_test",
       regexCache: new Map(),
+      mode: "inline",
+      usedHelpers: new Set(),
     };
     const g = createSlowGen("input", "input", "[]", "__issues", ctx);
     const code = slowFallback(ir, g);
@@ -28,6 +30,8 @@ describe("slow-path — fallback", () => {
       counter: 0,
       fnName: "safeParse_test",
       regexCache: new Map(),
+      mode: "inline",
+      usedHelpers: new Set(),
     };
     const g = createSlowGen("input", "input", "[]", "__issues", ctx);
     const code = slowFallback(ir, g);
@@ -42,6 +46,8 @@ describe("slow-path — fallback", () => {
       counter: 0,
       fnName: "safeParse_test",
       regexCache: new Map(),
+      mode: "inline",
+      usedHelpers: new Set(),
     };
     const g = createSlowGen("v", "v", "p", "iss", ctx);
     const code = slowFallback(ir, g);

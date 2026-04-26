@@ -2,12 +2,13 @@ import type { ArrayIR, CheckIR, SchemaIR } from "../../types.js";
 import type { FastGen, SlowGen } from "../context.js";
 import { checkPriority, hasMutation } from "../context.js";
 import { emit } from "../emit.js";
+import { invalidType, tooBig, tooSmall } from "../emit-issue.js";
 import { refineCheck } from "./effect.js";
 
 export function slowArray(ir: SchemaIR & { type: "array" }, g: SlowGen): string {
   let code = emit`
     if(!Array.isArray(${g.input})){
-      ${g.issues}.push({code:"invalid_type",expected:"array",input:${g.input},path:${g.path}});
+      ${invalidType(g, "array")}
     }else{`;
 
   if (hasMutation(ir.element)) {
@@ -19,21 +20,21 @@ export function slowArray(ir: SchemaIR & { type: "array" }, g: SlowGen): string 
       case "min_length":
         code += emit`
           if(${g.input}.length<${check.minimum}){
-            ${g.issues}.push({code:"too_small",minimum:${check.minimum},origin:"array",inclusive:true,input:${g.input},path:${g.path}});
+            ${tooSmall(g, check.minimum, "array", true)}
           }`;
         break;
       case "max_length":
         code += emit`
           if(${g.input}.length>${check.maximum}){
-            ${g.issues}.push({code:"too_big",maximum:${check.maximum},origin:"array",inclusive:true,input:${g.input},path:${g.path}});
+            ${tooBig(g, check.maximum, "array", true)}
           }`;
         break;
       case "length_equals":
         code += emit`
           if(${g.input}.length<${check.length}){
-            ${g.issues}.push({code:"too_small",minimum:${check.length},origin:"array",inclusive:true,exact:true,input:${g.input},path:${g.path}});
+            ${tooSmall(g, check.length, "array", true, { exact: true })}
           }else if(${g.input}.length>${check.length}){
-            ${g.issues}.push({code:"too_big",maximum:${check.length},origin:"array",inclusive:true,exact:true,input:${g.input},path:${g.path}});
+            ${tooBig(g, check.length, "array", true, { exact: true })}
           }`;
         break;
       case "refine_effect":

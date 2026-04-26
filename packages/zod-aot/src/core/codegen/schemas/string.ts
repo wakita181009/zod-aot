@@ -1,13 +1,9 @@
 import type { CheckIR, StringIR } from "../../types.js";
 import type { FastGen, SlowGen } from "../context.js";
-import {
-  checkPriority,
-  EMAIL_REGEX_SOURCE,
-  escapeString,
-  sortChecksPreservingEffects,
-  UUID_REGEX_SOURCE,
-} from "../context.js";
+import { checkPriority, escapeString, sortChecksPreservingEffects } from "../context.js";
 import { emit } from "../emit.js";
+import { invalidFormat, invalidType, tooBig, tooSmall } from "../emit-issue.js";
+import { EMAIL_REGEX_SOURCE, UUID_REGEX_SOURCE } from "../well-known-regex.js";
 import { refineCheck } from "./effect.js";
 
 export function slowString(ir: StringIR, g: SlowGen): string {
@@ -17,7 +13,7 @@ export function slowString(ir: StringIR, g: SlowGen): string {
   }
   code += emit`
     if(typeof ${g.input}!=="string"){
-      ${g.issues}.push({code:"invalid_type",expected:"string",input:${g.input},path:${g.path}});
+      ${invalidType(g, "string")}
     }`;
 
   if (ir.checks.length > 0) {
@@ -27,39 +23,39 @@ export function slowString(ir: StringIR, g: SlowGen): string {
         case "min_length":
           code += emit`
             if(${g.input}.length<${check.minimum}){
-              ${g.issues}.push({code:"too_small",minimum:${check.minimum},origin:"string",inclusive:true,input:${g.input},path:${g.path}});
+              ${tooSmall(g, check.minimum, "string", true)}
             }`;
           break;
         case "max_length":
           code += emit`
             if(${g.input}.length>${check.maximum}){
-              ${g.issues}.push({code:"too_big",maximum:${check.maximum},origin:"string",inclusive:true,input:${g.input},path:${g.path}});
+              ${tooBig(g, check.maximum, "string", true)}
             }`;
           break;
         case "length_equals":
           code += emit`
             if(${g.input}.length<${check.length}){
-              ${g.issues}.push({code:"too_small",minimum:${check.length},origin:"string",inclusive:true,exact:true,input:${g.input},path:${g.path}});
+              ${tooSmall(g, check.length, "string", true, { exact: true })}
             }else if(${g.input}.length>${check.length}){
-              ${g.issues}.push({code:"too_big",maximum:${check.length},origin:"string",inclusive:true,exact:true,input:${g.input},path:${g.path}});
+              ${tooBig(g, check.length, "string", true, { exact: true })}
             }`;
           break;
         case "includes":
           code += emit`
             if(!${g.input}.includes(${escapeString(check.includes)}${check.position !== undefined ? `,${check.position}` : ""})){
-              ${g.issues}.push({code:"invalid_format",format:"includes",includes:${escapeString(check.includes)},input:${g.input},path:${g.path}});
+              ${invalidFormat(g, "includes", { extra: `includes:${escapeString(check.includes)}` })}
             }`;
           break;
         case "starts_with":
           code += emit`
             if(!${g.input}.startsWith(${escapeString(check.prefix)})){
-              ${g.issues}.push({code:"invalid_format",format:"starts_with",prefix:${escapeString(check.prefix)},input:${g.input},path:${g.path}});
+              ${invalidFormat(g, "starts_with", { extra: `prefix:${escapeString(check.prefix)}` })}
             }`;
           break;
         case "ends_with":
           code += emit`
             if(!${g.input}.endsWith(${escapeString(check.suffix)})){
-              ${g.issues}.push({code:"invalid_format",format:"ends_with",suffix:${escapeString(check.suffix)},input:${g.input},path:${g.path}});
+              ${invalidFormat(g, "ends_with", { extra: `suffix:${escapeString(check.suffix)}` })}
             }`;
           break;
         case "refine_effect":
@@ -74,12 +70,11 @@ export function slowString(ir: StringIR, g: SlowGen): string {
           } else if (check.format === "url") {
             code += emit`
               if(!(function(s){try{new URL(s);return true;}catch(e){return false;}})(${g.input})){
-                ${g.issues}.push({code:"invalid_format",format:"url",input:${g.input},path:${g.path}});
+                ${invalidFormat(g, "url")}
               }`;
             continue;
           } else if (check.format === "uuid") {
-            const uuidPattern = check.pattern ?? UUID_REGEX_SOURCE;
-            regexVar = g.regex("uuid", uuidPattern);
+            regexVar = g.regex("uuid", check.pattern ?? UUID_REGEX_SOURCE);
           } else {
             if (check.pattern) {
               regexVar = g.regex("str", check.pattern);
@@ -89,7 +84,7 @@ export function slowString(ir: StringIR, g: SlowGen): string {
           }
           code += emit`
             if(!${regexVar}.test(${g.input})){
-              ${g.issues}.push({code:"invalid_format",format:${escapeString(check.format)},pattern:${regexVar}.toString(),origin:"string",input:${g.input},path:${g.path}});
+              ${invalidFormat(g, { expr: escapeString(check.format) }, { extra: `pattern:${regexVar}.toString(),origin:"string"` })}
             }`;
           break;
         }

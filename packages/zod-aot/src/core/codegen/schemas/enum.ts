@@ -2,21 +2,23 @@ import type { EnumIR } from "../../types.js";
 import type { FastGen, SlowGen } from "../context.js";
 import { ENUM_INLINE_THRESHOLD, escapeString } from "../context.js";
 import { emit } from "../emit.js";
+import { invalidValue } from "../emit-issue.js";
 
 export function slowEnum(ir: EnumIR, g: SlowGen): string {
+  const valuesExpr = JSON.stringify(ir.values);
   if (ir.values.length <= ENUM_INLINE_THRESHOLD) {
     // Inline equality checks for small enums (avoids Set allocation in preamble)
     const condition = ir.values.map((v) => `${g.input}!==${escapeString(v)}`).join("&&");
     return `${emit`
       if(${condition}){
-        ${g.issues}.push({code:"invalid_value",values:${JSON.stringify(ir.values)},input:${g.input},path:${g.path}});
+        ${invalidValue(g, valuesExpr)}
       }
     `}\n`;
   }
   const setVar = g.set("enum", ir.values);
   return `${emit`
     if(!${setVar}.has(${g.input})){
-      ${g.issues}.push({code:"invalid_value",values:${JSON.stringify(ir.values)},input:${g.input},path:${g.path}});
+      ${invalidValue(g, valuesExpr)}
     }
   `}\n`;
 }
