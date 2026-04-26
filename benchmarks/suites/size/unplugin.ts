@@ -8,7 +8,7 @@
  * `__zaReUuid`) and shared helpers (`__mkv`, `__fin`, issue factories) must
  * appear exactly ONCE in the bundle no matter how many files reference them.
  *
- * Run: pnpm size:bundle
+ * Run: pnpm size:unplugin
  */
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";

@@ -65,7 +65,7 @@ Key files:
 - `unplugin/transform.ts`: discovery → `compileSchemas({ mode })` → `rewriteSource()` (compile mode) or `rewriteSourceAutoDiscover()` (autoDiscover mode) replaces schemas with IIFE, then `injectRuntime()` prepends `import { __mkv, __fin, ... } from "virtual:zod-aot/runtime"` (lean) or file-level `function __mkv(...)`/`function __fin(...)` declarations (inline). Verbose logging + `BuildStats` tracking. Uses `acorn.parseExpressionAt()` for expression boundary detection in autoDiscover mode. Two-pass rewrite for mixed files (compile() + autoDiscover)
 - `unplugin/virtual.ts`: `resolveVirtualId()`/`loadVirtual()` for the `virtual:zod-aot/runtime` module. Source built once at load time from `MK_VALIDATOR_DECL` + `FIN_DECL` + `ISSUE_DECLS` + `WELL_KNOWN_REGEXES` as `export function __mkv(...)` / `export const __zaReEmail=new RegExp(...)`. `ALL_HELPER_NAMES` lists every helper for tooling
 - `unplugin/index.ts`: `createUnplugin()` factory. Selects `mode = "lean"` for frameworks in `VIRTUAL_MODULE_FRAMEWORKS = {vite, rollup, rolldown, esbuild, farm, bun}`, `"inline"` for webpack/rspack (which reject the `virtual:` URI scheme)
-- `benchmarks/vitest.config.ts`: uses `zodAot()` vite plugin + `@typia/unplugin` for build-time compilation. `benchmarks/suites/size/codegen.ts` measures per-schema CLI emitter output, `benchmarks/suites/size/bundle.ts` builds a 5-file Vite bundle to verify cross-file dedup probes (each well-known regex / `__mkv` must appear exactly once)
+- `benchmarks/vitest.config.ts`: uses `zodAot()` vite plugin + `@typia/unplugin` for build-time compilation. `benchmarks/suites/size/cli.ts` measures per-schema CLI emitter output (`pnpm size:cli`), `benchmarks/suites/size/unplugin.ts` builds a 5-file Vite bundle to verify cross-file dedup probes (each well-known regex / `__mkv` must appear exactly once, `pnpm size:unplugin`)
 
 The generated `safeParse_*` function is identical across all paths. Benchmark results accurately reflect CLI/unplugin output performance.
 
@@ -315,8 +315,8 @@ Source files to reference during implementation:
 pnpm build          # tsc across all packages
 pnpm test           # vitest run
 pnpm bench          # vitest bench
-pnpm size           # CLI emitter codegen size report (per-schema raw + gzip)
-pnpm size:bundle    # Vite multi-file bundle dedup verification (probes must each appear exactly once)
+pnpm size:cli       # CLI emitter codegen size report (per-schema raw + gzip — mirrors `npx zod-aot generate` output)
+pnpm size:unplugin  # Vite multi-file bundle dedup verification (probes must each appear exactly once)
 pnpm check          # biome check .
 pnpm check:fix      # biome check --fix .
 pnpm format         # biome format --write .

@@ -1,6 +1,10 @@
 /**
- * Size report: generates compiled output for representative schemas and measures bytes.
- * Run: pnpm size
+ * Size report for the CLI emitter (cli/emitter.ts → .compiled.ts files).
+ *
+ * Generates compiled output for representative schemas and measures raw + gzip
+ * bytes per schema. Mirrors what `npx zod-aot generate` produces.
+ *
+ * Run: pnpm size:cli
  */
 import { gzipSync } from "node:zlib";
 import type { z } from "zod";
