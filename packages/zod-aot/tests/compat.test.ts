@@ -3,6 +3,7 @@ import { ZodError, ZodRealError, z } from "zod";
 import { generateValidator } from "#src/core/codegen/index.js";
 import type { RefEntry } from "#src/core/extract/index.js";
 import { extractSchema } from "#src/core/extract/index.js";
+import { FIN_DECL } from "#src/core/iife.js";
 import { zodAtLeast } from "./zod-version.js";
 
 /**
@@ -15,13 +16,30 @@ function compileForErrorTest(schema: z.ZodType, name = "test") {
   const result = generateValidator(ir, name, { refCount: refEntries.length });
   // biome-ignore lint/style/noNonNullAssertion: localeError is always set in Zod v4
   const __msg = z.config().localeError!;
+  const __fin = new Function("__msg", "__ZodError", `${FIN_DECL}; return __fin;`)(
+    __msg,
+    ZodRealError,
+  );
   const refSchemas = refEntries.map((e) => e.schema);
   const fn =
     refSchemas.length > 0
-      ? new Function("__msg", "__ZodError", "__rf", `${result.code}\nreturn ${result.functionDef};`)
-      : new Function("__msg", "__ZodError", `${result.code}\nreturn ${result.functionDef};`);
+      ? new Function(
+          "__msg",
+          "__ZodError",
+          "__fin",
+          "__rf",
+          `${result.code}\nreturn ${result.functionDef};`,
+        )
+      : new Function(
+          "__msg",
+          "__ZodError",
+          "__fin",
+          `${result.code}\nreturn ${result.functionDef};`,
+        );
   return (
-    refSchemas.length > 0 ? fn(__msg, ZodRealError, refSchemas) : fn(__msg, ZodRealError)
+    refSchemas.length > 0
+      ? fn(__msg, ZodRealError, __fin, refSchemas)
+      : fn(__msg, ZodRealError, __fin)
   ) as (input: unknown) => {
     success: boolean;
     data?: unknown;

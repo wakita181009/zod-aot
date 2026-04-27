@@ -6,12 +6,22 @@ import type {
   SchemaIR,
   SetCheckIR,
 } from "../types.js";
+import { lookupWellKnownRegex } from "./well-known-regex.js";
+
+/** Codegen output mode. "inline" emits self-contained code (CLI .compiled.ts). "lean" emits references to imports from "virtual:zod-aot/runtime" (unplugin). */
+export type CodegenMode = "inline" | "lean";
 
 export interface CodeGenResult {
   code: string;
   functionDef: string;
   /** Number of fallback schemas referenced by __rf[N] in the generated code. 0 = no fallbacks. */
   refCount: number;
+  /**
+   * Helper names referenced by this schema in lean mode (e.g. "__zaTS", "__zaReEmail").
+   * Used by the unplugin transform to construct the `import { ... } from "virtual:zod-aot/runtime"` line.
+   * Always empty in inline mode.
+   */
+  usedHelpers: Set<string>;
 }
 
 /** Shared mutable state for code generation. Fast and slow paths share the same instance. */
@@ -21,6 +31,10 @@ export interface CodeGenContext {
   fnName: string;
   /** Deduplicates regex patterns: same pattern string → same preamble variable name. */
   regexCache: Map<string, string>;
+  /** Codegen output mode. */
+  mode: CodegenMode;
+  /** Names of helpers from "virtual:zod-aot/runtime" referenced in this schema (lean mode only). */
+  usedHelpers: Set<string>;
 }
 
 // ─── Slow Path context ────────────────────────────────────────────────────────
@@ -80,12 +94,41 @@ export interface FastGen {
 /** Fast-path generator function signature — registered in fastRegistry. */
 export type FastGenerator<T extends SchemaIR = SchemaIR> = (ir: T, g: FastGen) => string | null;
 
-// Zod v4's email regex pattern (as a source string for new RegExp())
-export const EMAIL_REGEX_SOURCE = String.raw`^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$`;
+// ─── Shared emit helpers (used by both slow-path and fast-path factories) ────
 
-/** Fallback UUID regex used when the extractor doesn't provide a pattern (e.g. in unit tests). */
-export const UUID_REGEX_SOURCE =
-  "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$";
+/** Allocate a fresh `__${prefix}_${n}` identifier and bump the shared counter. */
+export function emitTemp(ctx: CodeGenContext, prefix: string): string {
+  return `__${prefix}_${ctx.counter++}`;
+}
+
+/**
+ * Resolve a regex pattern to a runtime variable name.
+ * Lean mode short-circuits well-known patterns to virtual-module names so the
+ * bundler can dedup across files; everything else is cached + declared in the
+ * per-IIFE preamble exactly once per pattern.
+ */
+export function emitRegex(ctx: CodeGenContext, prefix: string, pattern: string): string {
+  if (ctx.mode === "lean") {
+    const wellKnown = lookupWellKnownRegex(pattern);
+    if (wellKnown !== null) {
+      ctx.usedHelpers.add(wellKnown);
+      return wellKnown;
+    }
+  }
+  const cached = ctx.regexCache.get(pattern);
+  if (cached) return cached;
+  const name = `__re_${prefix}_${ctx.counter++}`;
+  ctx.preamble.push(`var ${name}=new RegExp(${escapeString(pattern)});`);
+  ctx.regexCache.set(pattern, name);
+  return name;
+}
+
+/** Declare a `new Set([...])` in the preamble and return its variable name. */
+export function emitSet(ctx: CodeGenContext, prefix: string, values: readonly unknown[]): string {
+  const name = `__set_${prefix}_${ctx.counter++}`;
+  ctx.preamble.push(`var ${name}=new Set(${JSON.stringify([...values])});`);
+  return name;
+}
 
 /** Enum values at or below this count use inline === checks instead of Set.has(). */
 export const ENUM_INLINE_THRESHOLD = 3;
@@ -120,6 +163,24 @@ const CHECK_PRIORITY: Record<string, number> = {
 
 export function escapeString(s: string): string {
   return JSON.stringify(s);
+}
+
+/**
+ * Extend a path expression with a static string key.
+ * Avoids [].concat("key") at root level; falls back to .concat() for nested paths.
+ */
+export function extendStaticPath(parentPath: string, key: string): string {
+  if (parentPath === "[]") return `[${escapeString(key)}]`;
+  return `${parentPath}.concat(${escapeString(key)})`;
+}
+
+/**
+ * Extend a path expression with a numeric index.
+ * Avoids [].concat(0) at root level; falls back to .concat() for nested paths.
+ */
+export function extendStaticPathIndex(parentPath: string, index: number): string {
+  if (parentPath === "[]") return `[${index}]`;
+  return `${parentPath}.concat(${index})`;
 }
 
 /**

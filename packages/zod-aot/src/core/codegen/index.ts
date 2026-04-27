@@ -1,31 +1,46 @@
 import type { SchemaIR } from "../types.js";
-import type { CodeGenContext, CodeGenResult } from "./context.js";
+import type { CodeGenContext, CodeGenResult, CodegenMode } from "./context.js";
 import { createFastGen, generateFast } from "./fast-path.js";
 import { createSlowGen, generateSlow } from "./slow-path.js";
 
 export type { CodeGenResult } from "./context.js";
+
+export interface GenerateValidatorOptions {
+  refCount?: number;
+  /** Codegen output mode. Defaults to "inline". */
+  mode?: CodegenMode;
+}
 
 /**
  * Generate optimized validation code from SchemaIR.
  *
  * - `code`: preamble declarations (Sets, RegExps, etc.) — deterministic for the same IR
  * - `functionDef`: full function expression string referencing preamble vars via closure
+ * - `usedHelpers`: helper names from "virtual:zod-aot/runtime" referenced (lean mode only)
  *
  * Usage: `new Function(code + "\nreturn " + functionDef + ";")()`
  */
 export function generateValidator(
   ir: SchemaIR,
   name: string,
-  options?: { refCount?: number },
+  options?: GenerateValidatorOptions,
 ): CodeGenResult {
   const fnName = `safeParse_${name}`;
-  const ctx: CodeGenContext = { preamble: [], counter: 0, fnName, regexCache: new Map() };
+  const mode: CodegenMode = options?.mode ?? "inline";
+  const ctx: CodeGenContext = {
+    preamble: [],
+    counter: 0,
+    fnName,
+    regexCache: new Map(),
+    mode,
+    usedHelpers: new Set(),
+  };
 
   // Fast Path: generate a boolean expression for eligible schemas
   const fg = createFastGen("input", ctx);
   const fastExpr = generateFast(ir, fg);
 
-  const sg = createSlowGen("__data", "__data", "[]", "__issues", ctx);
+  const sg = createSlowGen("_d", "_d", "[]", "_e", ctx);
   const slowCode = generateSlow(ir, sg);
 
   const code = ["/* zod-aot */", ...ctx.preamble].join("\n");
@@ -43,25 +58,18 @@ export function generateValidator(
       code,
       functionDef: functionDefParts.join("\n"),
       refCount: options?.refCount ?? 0,
+      usedHelpers: ctx.usedHelpers,
     };
   }
 
-  functionDefParts.push(
-    `var __issues=[];`,
-    `var __data=input;`,
-    slowCode,
-    `if(__issues.length>0){`,
-    `for(var __fi=0;__fi<__issues.length;__fi++){`,
-    `if(typeof __msg==="function")__issues[__fi].message=__msg(__issues[__fi]);`,
-    `__issues[__fi].input=undefined;`,
-    `}`,
-    `return{success:false,error:new __ZodError(__issues)};`,
-    `}`,
-    `return{success:true,data:__data};`,
-    `}`,
-  );
+  functionDefParts.push(`var _e=[];`, `var _d=input;`, slowCode, `return __fin(_e,_d);`, `}`);
 
   const functionDef = functionDefParts.join("\n");
 
-  return { code, functionDef, refCount: options?.refCount ?? 0 };
+  return {
+    code,
+    functionDef,
+    refCount: options?.refCount ?? 0,
+    usedHelpers: ctx.usedHelpers,
+  };
 }

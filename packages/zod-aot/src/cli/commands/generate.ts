@@ -114,7 +114,7 @@ export async function generateFile(
     return null;
   }
 
-  const codegenResults = compileSchemas(schemas);
+  const codegenResults = compileSchemas(schemas, { mode: "inline" });
 
   const outputPath = resolveOutputPath(filePath, outputFlag);
   const sourceRelPath = path.relative(path.dirname(outputPath), filePath);

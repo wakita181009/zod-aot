@@ -6,7 +6,7 @@ import {
   typiaValidateDiscriminatedUnion,
   v3DiscriminatedUnionSchema,
   validClickEvent,
-} from "../../schemas/index.js";
+} from "../../fixtures/schemas/index.js";
 
 describe("safeParse: discriminatedUnion (3 options)", () => {
   bench("zod", () => {

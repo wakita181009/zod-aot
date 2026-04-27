@@ -161,8 +161,8 @@ describe("rewriteSource()", () => {
     expect(result).toContain("/* @__PURE__ */");
     expect(result).toContain("(() => {");
     expect(result).toContain("safeParse_validateUser");
-    expect(result).toContain("Object.create(UserSchema)");
-    expect(result).toContain("__w.schema=UserSchema;");
+    expect(result).toContain("__mkv(safeParse_validateUser,UserSchema)");
+    expect(result).not.toContain("__w.schema=");
     expect(result).not.toContain("compile(UserSchema)");
     // compile import should be removed
     expect(result).not.toContain(`import { compile } from "zod-aot"`);
@@ -226,8 +226,8 @@ describe("rewriteSource()", () => {
 
     // rewriteSource itself no longer injects the config import
     // (that's done by injectZodConfigImport in transformCode).
-    // But the IIFE still uses __msg.
-    expect(result).toContain("__msg");
+    // The IIFE calls __fin (which internally uses __msg injected at file level).
+    expect(result).toContain("__fin");
   });
 
   it("preserves schema variable reference in generated code", () => {
@@ -239,7 +239,8 @@ describe("rewriteSource()", () => {
     const schemas = [makeCompiledInfo("validateUser", simpleSchema)];
     const result = rewriteSource(code, schemas);
 
-    expect(result).toContain("__w.schema=MyUserSchema;");
+    expect(result).toContain("__mkv(safeParse_validateUser,MyUserSchema)");
+    expect(result).not.toContain("__w.schema=");
   });
 
   it("handles inline schema expressions with nested parentheses", () => {
@@ -253,8 +254,8 @@ describe("rewriteSource()", () => {
 
     expect(result).toContain("safeParse_validateUser");
     expect(result).not.toContain("compile(z.object");
-    // The schema arg should capture the full expression
-    expect(result).toContain("__w.schema=z.object({ name: z.string() });");
+    // The schema arg should be passed to __mkv
+    expect(result).toContain("__mkv(safeParse_validateUser,z.object({ name: z.string() }))");
   });
 
   it("handles inline schema with trailing comma", () => {
@@ -270,8 +271,8 @@ describe("rewriteSource()", () => {
 
     expect(result).toContain("safeParse_validateUser");
     expect(result).not.toContain("compile(");
-    // Trailing comma should be stripped from the schema arg
-    expect(result).toContain("__w.schema=z.object({ name: z.string() });");
+    // Trailing comma should be stripped; schema arg passed to __mkv
+    expect(result).toContain("__mkv(safeParse_validateUser,z.object({ name: z.string() }))");
     expect(result).not.toContain("z.object({ name: z.string() }),");
   });
 
@@ -354,7 +355,7 @@ describe("transformCode() E2E", () => {
     const fixturePath = path.join(fixturesDir, "simple-schema.ts");
     const code = readFixtureAsUserCode(fixturePath);
 
-    const result = await transformCode(code, fixturePath);
+    const result = await transformCode(code, fixturePath, { mode: "lean" });
 
     expect(result).not.toBeNull();
     expect(result).toContain("safeParse_validateUser");
@@ -366,7 +367,7 @@ describe("transformCode() E2E", () => {
     const fixturePath = path.join(fixturesDir, "multi-schema.ts");
     const code = readFixtureAsUserCode(fixturePath);
 
-    const result = await transformCode(code, fixturePath);
+    const result = await transformCode(code, fixturePath, { mode: "lean" });
 
     expect(result).not.toBeNull();
     expect(result).toContain("safeParse_validateUser");
@@ -377,14 +378,14 @@ describe("transformCode() E2E", () => {
     const fixturePath = path.join(fixturesDir, "no-compile.ts");
     const code = readFixtureAsUserCode(fixturePath);
 
-    const result = await transformCode(code, fixturePath);
+    const result = await transformCode(code, fixturePath, { mode: "lean" });
 
     expect(result).toBeNull();
   });
 
   it("returns null when code does not reference zod-aot", async () => {
     const code = `export const x = 1;`;
-    const result = await transformCode(code, "/fake/path.ts");
+    const result = await transformCode(code, "/fake/path.ts", { mode: "lean" });
 
     expect(result).toBeNull();
   });
@@ -393,13 +394,13 @@ describe("transformCode() E2E", () => {
     const fixturePath = path.join(fixturesDir, "no-compile.ts");
     // Inject "zod-aot" and "compile" strings to pass bail-out, but the file has no compile() calls
     const code = `import { compile } from "zod-aot";\nimport { z } from "zod";\nconst Schema = z.object({ name: z.string() });\n`;
-    const result = await transformCode(code, fixturePath);
+    const result = await transformCode(code, fixturePath, { mode: "lean" });
     expect(result).toBeNull();
   });
 
   it("returns null when code contains compile but not zod-aot", async () => {
     const code = `import { compile } from "other-lib";\nexport const x = compile(foo);`;
-    const result = await transformCode(code, "/fake/path.ts");
+    const result = await transformCode(code, "/fake/path.ts", { mode: "lean" });
 
     expect(result).toBeNull();
   });
@@ -410,6 +411,7 @@ describe("transformCode() E2E", () => {
     const stats: BuildStats[] = [];
 
     await transformCode(code, fixturePath, {
+      mode: "lean",
       onBuildStats: (s) => stats.push(s),
     });
 
@@ -426,7 +428,7 @@ describe("transformCode() E2E", () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(vi.fn());
 
     try {
-      await transformCode(code, fixturePath, { verbose: true });
+      await transformCode(code, fixturePath, { mode: "lean", verbose: true });
       const output = logSpy.mock.calls.map((c) => c[0]).join("\n");
       expect(output).toContain("[zod-aot]");
       expect(output).toContain("✓");
@@ -441,7 +443,7 @@ describe("transformCode() E2E", () => {
     // Pre-inject the __zodAotConfig import to simulate already present
     const code = `import { config as __zodAotConfig } from "zod";\n${baseCode}`;
 
-    const result = await transformCode(code, fixturePath);
+    const result = await transformCode(code, fixturePath, { mode: "lean" });
 
     expect(result).not.toBeNull();
     // Should NOT add a second config import line
@@ -457,7 +459,7 @@ describe("transformCode() E2E", () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(vi.fn());
 
     try {
-      await transformCode(code, fixturePath, { verbose: true });
+      await transformCode(code, fixturePath, { mode: "lean", verbose: true });
       const output = logSpy.mock.calls.map((c) => c[0]).join("\n");
       expect(output).toContain("1 ref)");
     } finally {
@@ -471,7 +473,7 @@ describe("transformCode() E2E", () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(vi.fn());
 
     try {
-      await transformCode(code, fixturePath, { verbose: true });
+      await transformCode(code, fixturePath, { mode: "lean", verbose: true });
       const output = logSpy.mock.calls.map((c) => c[0]).join("\n");
       expect(output).toContain("refs)");
     } finally {
@@ -481,7 +483,91 @@ describe("transformCode() E2E", () => {
 
   it("throws when discoverSchemas fails", async () => {
     const code = `import { compile } from "zod-aot";\nexport const v = compile(S);`;
-    await expect(transformCode(code, "/nonexistent/bad-file.ts")).rejects.toThrow("[zod-aot]");
+    await expect(transformCode(code, "/nonexistent/bad-file.ts", { mode: "lean" })).rejects.toThrow(
+      "[zod-aot]",
+    );
+  });
+});
+
+describe('transformCode() — mode: "inline"', () => {
+  it("prepends file-level __mkv and __fin declarations instead of virtual import", async () => {
+    const fixturePath = path.join(fixturesDir, "simple-schema.ts");
+    const code = readFixtureAsUserCode(fixturePath);
+
+    const result = await transformCode(code, fixturePath, { mode: "inline" });
+
+    expect(result).not.toBeNull();
+    // Inline mode emits self-contained file-level helpers, no virtual import
+    expect(result).not.toContain("virtual:zod-aot/runtime");
+    expect(result).toContain("function __mkv(");
+    expect(result).toContain("function __fin(");
+    // __zodAotConfig import is prepended once for __msg
+    expect(result).toContain("__zodAotConfig");
+    expect(result).toContain("safeParse_validateUser");
+  });
+
+  it("does not emit __za* helper imports in inline mode", async () => {
+    const fixturePath = path.join(fixturesDir, "simple-schema.ts");
+    const code = readFixtureAsUserCode(fixturePath);
+
+    const result = await transformCode(code, fixturePath, { mode: "inline" });
+
+    expect(result).not.toBeNull();
+    // Inline mode emits issue object literals at each check site, not factory calls
+    expect(result).not.toContain("__zaTS(");
+    expect(result).not.toContain("__zaTB(");
+    expect(result).not.toContain("__zaIT(");
+    // No import of well-known regexes in inline mode (they're declared per-IIFE)
+    expect(result).not.toContain("__zaReEmail");
+  });
+
+  it("declares __mkv and __fin only once when multiple schemas exist", async () => {
+    const fixturePath = path.join(fixturesDir, "multi-schema.ts");
+    const code = readFixtureAsUserCode(fixturePath);
+
+    const result = await transformCode(code, fixturePath, { mode: "inline" });
+
+    expect(result).not.toBeNull();
+    // File-level helpers must be declared exactly once even with multiple validators
+    const mkvDecls = result?.match(/function __mkv\(/g) ?? [];
+    const finDecls = result?.match(/function __fin\(/g) ?? [];
+    expect(mkvDecls.length).toBe(1);
+    expect(finDecls.length).toBe(1);
+    // Both validators reference the shared factory
+    expect(result).toContain("safeParse_validateUser");
+    expect(result).toContain("safeParse_validateProduct");
+  });
+
+  it("produces functionally equivalent output to lean mode (modulo helper layout)", async () => {
+    const fixturePath = path.join(fixturesDir, "simple-schema.ts");
+    const code = readFixtureAsUserCode(fixturePath);
+
+    const leanResult = await transformCode(code, fixturePath, { mode: "lean" });
+    const inlineResult = await transformCode(code, fixturePath, { mode: "inline" });
+
+    expect(leanResult).not.toBeNull();
+    expect(inlineResult).not.toBeNull();
+    // Both modes generate the same compiled validator function name
+    expect(leanResult).toContain("safeParse_validateUser");
+    expect(inlineResult).toContain("safeParse_validateUser");
+    // Lean mode imports from virtual module; inline mode embeds helpers
+    expect(leanResult).toContain("virtual:zod-aot/runtime");
+    expect(inlineResult).not.toContain("virtual:zod-aot/runtime");
+  });
+
+  it("supports autoDiscover with inline mode", async () => {
+    const fixturePath = path.join(fixturesDir, "auto-discover-simple.ts");
+    const code = readFixtureAsUserCode(fixturePath);
+
+    const result = await transformCode(code, fixturePath, {
+      mode: "inline",
+      autoDiscover: true,
+    });
+
+    expect(result).not.toBeNull();
+    expect(result).not.toContain("virtual:zod-aot/runtime");
+    expect(result).toContain("function __mkv(");
+    expect(result).toContain("/* @__PURE__ */");
   });
 });
 
@@ -552,7 +638,7 @@ describe("rewriteSourceAutoDiscover()", () => {
 
     expect(result).toContain("/* @__PURE__ */");
     expect(result).toContain("safeParse_UserSchema");
-    expect(result).toContain("Object.create(z.object({ name: z.string() })");
+    expect(result).toContain("__mkv(safeParse_UserSchema,z.object({ name: z.string() })");
   });
 
   it("replaces multiple schema exports", () => {
@@ -585,7 +671,7 @@ describe("rewriteSourceAutoDiscover()", () => {
     const schemas = [makeCompiledInfo("UserSchema", simpleSchema)];
     const result = rewriteSourceAutoDiscover(code, schemas, { zodCompat: false });
 
-    expect(result).toContain("var __w={}");
+    expect(result).toContain("__mkv(safeParse_UserSchema,null)");
     expect(result).not.toContain("Object.create");
   });
 
@@ -596,8 +682,8 @@ describe("rewriteSourceAutoDiscover()", () => {
 
     // rewriteSourceAutoDiscover itself no longer injects the config import
     // (that's done by injectZodConfigImport in transformCode).
-    // But the IIFE still uses __msg.
-    expect(result).toContain("__msg");
+    // The IIFE calls __fin (which internally uses __msg injected at file level).
+    expect(result).toContain("__fin");
   });
 });
 
@@ -606,7 +692,7 @@ describe("transformCode() — autoDiscover", () => {
     const fixturePath = path.join(fixturesDir, "auto-discover-simple.ts");
     const code = readFixtureAsUserCode(fixturePath);
 
-    const result = await transformCode(code, fixturePath, { autoDiscover: true });
+    const result = await transformCode(code, fixturePath, { mode: "lean", autoDiscover: true });
 
     expect(result).not.toBeNull();
     expect(result).toContain("safeParse_UserSchema");
@@ -617,7 +703,7 @@ describe("transformCode() — autoDiscover", () => {
     const fixturePath = path.join(fixturesDir, "auto-discover-multi.ts");
     const code = readFixtureAsUserCode(fixturePath);
 
-    const result = await transformCode(code, fixturePath, { autoDiscover: true });
+    const result = await transformCode(code, fixturePath, { mode: "lean", autoDiscover: true });
 
     expect(result).not.toBeNull();
     expect(result).toContain("safeParse_UserSchema");
@@ -628,7 +714,7 @@ describe("transformCode() — autoDiscover", () => {
     const fixturePath = path.join(fixturesDir, "auto-discover-mixed.ts");
     const code = readFixtureAsUserCode(fixturePath);
 
-    const result = await transformCode(code, fixturePath, { autoDiscover: true });
+    const result = await transformCode(code, fixturePath, { mode: "lean", autoDiscover: true });
 
     expect(result).not.toBeNull();
     // compile() schema should be rewritten
@@ -643,7 +729,7 @@ describe("transformCode() — autoDiscover", () => {
     const fixturePath = path.join(fixturesDir, "simple-schema.ts");
     const code = readFixtureAsUserCode(fixturePath);
 
-    const result = await transformCode(code, fixturePath, { autoDiscover: true });
+    const result = await transformCode(code, fixturePath, { mode: "lean", autoDiscover: true });
 
     expect(result).not.toBeNull();
     expect(result).toContain("safeParse_validateUser");
@@ -653,21 +739,24 @@ describe("transformCode() — autoDiscover", () => {
 
   it("returns null when no runtime Zod import in autoDiscover mode", async () => {
     const code = `export const x = 1;`;
-    const result = await transformCode(code, "/fake/path.ts", { autoDiscover: true });
+    const result = await transformCode(code, "/fake/path.ts", { mode: "lean", autoDiscover: true });
 
     expect(result).toBeNull();
   });
 
   it("returns null for type-only Zod import in autoDiscover mode", async () => {
     const code = `import type { z } from "zod";\nexport const x = 1;`;
-    const result = await transformCode(code, "/fake/path.ts", { autoDiscover: true });
+    const result = await transformCode(code, "/fake/path.ts", { mode: "lean", autoDiscover: true });
 
     expect(result).toBeNull();
   });
 
   it("returns null (does not throw) when file loading fails in autoDiscover mode", async () => {
     const code = `import { z } from "zod";\nexport const v = z.string();`;
-    const result = await transformCode(code, "/nonexistent/bad-file.ts", { autoDiscover: true });
+    const result = await transformCode(code, "/nonexistent/bad-file.ts", {
+      mode: "lean",
+      autoDiscover: true,
+    });
 
     expect(result).toBeNull();
   });
@@ -678,6 +767,7 @@ describe("transformCode() — autoDiscover", () => {
 
     try {
       const result = await transformCode(code, "/nonexistent/bad-file.ts", {
+        mode: "lean",
         autoDiscover: true,
         verbose: true,
       });
@@ -697,6 +787,7 @@ describe("transformCode() — autoDiscover", () => {
     const stats: BuildStats[] = [];
 
     await transformCode(code, fixturePath, {
+      mode: "lean",
       autoDiscover: true,
       onBuildStats: (s) => stats.push(s),
     });
@@ -711,7 +802,7 @@ describe("transformCode() — autoDiscover", () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(vi.fn());
 
     try {
-      await transformCode(code, fixturePath, { autoDiscover: true, verbose: true });
+      await transformCode(code, fixturePath, { mode: "lean", autoDiscover: true, verbose: true });
       const output = logSpy.mock.calls.map((c) => c[0]).join("\n");
       expect(output).toContain("Auto-discovering");
       expect(output).toContain("1 Zod export found");
@@ -727,7 +818,7 @@ describe("transformCode() — autoDiscover", () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(vi.fn());
 
     try {
-      await transformCode(code, fixturePath, { autoDiscover: true, verbose: true });
+      await transformCode(code, fixturePath, { mode: "lean", autoDiscover: true, verbose: true });
       const output = logSpy.mock.calls.map((c) => c[0]).join("\n");
       expect(output).toContain("Auto-discovering");
       expect(output).toContain("exports found");
@@ -745,7 +836,7 @@ describe("transformCode() — compilation failure paths", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(vi.fn());
 
     try {
-      const result = await transformCode(code, fixturePath);
+      const result = await transformCode(code, fixturePath, { mode: "lean" });
       // goodValidator should be compiled, brokenValidator should fail
       expect(result).not.toBeNull();
       expect(result).toContain("safeParse_goodValidator");
@@ -765,7 +856,7 @@ describe("transformCode() — compilation failure paths", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(vi.fn());
 
     try {
-      await transformCode(code, fixturePath, { autoDiscover: true });
+      await transformCode(code, fixturePath, { mode: "lean", autoDiscover: true });
       const warnMsg = warnSpy.mock.calls.find(
         (c) => typeof c[0] === "string" && c[0].includes("brokenValidator"),
       )?.[0] as string;
@@ -783,7 +874,7 @@ describe("transformCode() — compilation failure paths", () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(vi.fn());
 
     try {
-      await transformCode(code, fixturePath, { verbose: true });
+      await transformCode(code, fixturePath, { mode: "lean", verbose: true });
       const output = logSpy.mock.calls.map((c) => c[0]).join("\n");
       expect(output).toContain("1 schema(s) failed");
     } finally {
@@ -798,7 +889,7 @@ describe("transformCode() — compilation failure paths", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(vi.fn());
 
     try {
-      const result = await transformCode(code, fixturePath);
+      const result = await transformCode(code, fixturePath, { mode: "lean" });
       expect(result).toBeNull();
       // Both schemas should have triggered warnings
       expect(warnSpy).toHaveBeenCalledTimes(2);
@@ -826,7 +917,7 @@ describe("rewriteSource() — zodCompat option", () => {
     const schemas = [makeCompiledInfo("validateUser", simpleSchema)];
     const result = rewriteSource(code, schemas, { zodCompat: false });
 
-    expect(result).toContain("var __w={}");
+    expect(result).toContain("__mkv(safeParse_validateUser,null)");
     expect(result).not.toContain("Object.create");
   });
 
@@ -839,6 +930,6 @@ describe("rewriteSource() — zodCompat option", () => {
     const schemas = [makeCompiledInfo("validateUser", simpleSchema)];
     const result = rewriteSource(code, schemas, { zodCompat: true });
 
-    expect(result).toContain("Object.create(UserSchema)");
+    expect(result).toContain("__mkv(safeParse_validateUser,UserSchema)");
   });
 });

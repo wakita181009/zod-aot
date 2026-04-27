@@ -2,6 +2,7 @@ import type { BigIntIR } from "../../types.js";
 import type { FastGen, SlowGen } from "../context.js";
 import { checkPriority } from "../context.js";
 import { emit } from "../emit.js";
+import { invalidType, tooBig, tooSmall } from "../emit-issue.js";
 
 export function slowBigInt(ir: BigIntIR, g: SlowGen): string {
   let code = "";
@@ -10,7 +11,7 @@ export function slowBigInt(ir: BigIntIR, g: SlowGen): string {
   }
   code += emit`
     if(typeof ${g.input}!=="bigint"){
-      ${g.issues}.push({code:"invalid_type",expected:"bigint",input:${g.input},path:${g.path}});
+      ${invalidType(g, "bigint")}
     }`;
 
   if (ir.checks.length > 0) {
@@ -21,12 +22,12 @@ export function slowBigInt(ir: BigIntIR, g: SlowGen): string {
           if (check.inclusive) {
             code += emit`
               if(${g.input}<${check.value}n){
-                ${g.issues}.push({code:"too_small",minimum:${check.value}n,origin:"bigint",inclusive:true,input:${g.input},path:${g.path}});
+                ${tooSmall(g, `${check.value}n`, "bigint", true)}
               }`;
           } else {
             code += emit`
               if(${g.input}<=${check.value}n){
-                ${g.issues}.push({code:"too_small",minimum:${check.value}n,origin:"bigint",inclusive:false,input:${g.input},path:${g.path}});
+                ${tooSmall(g, `${check.value}n`, "bigint", false)}
               }`;
           }
           break;
@@ -34,12 +35,12 @@ export function slowBigInt(ir: BigIntIR, g: SlowGen): string {
           if (check.inclusive) {
             code += emit`
               if(${g.input}>${check.value}n){
-                ${g.issues}.push({code:"too_big",maximum:${check.value}n,origin:"bigint",inclusive:true,input:${g.input},path:${g.path}});
+                ${tooBig(g, `${check.value}n`, "bigint", true)}
               }`;
           } else {
             code += emit`
               if(${g.input}>=${check.value}n){
-                ${g.issues}.push({code:"too_big",maximum:${check.value}n,origin:"bigint",inclusive:false,input:${g.input},path:${g.path}});
+                ${tooBig(g, `${check.value}n`, "bigint", false)}
               }`;
           }
           break;

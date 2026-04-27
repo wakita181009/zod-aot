@@ -1,13 +1,14 @@
 import type { ObjectIR, SchemaIR } from "../../types.js";
 import type { FastGen, SlowGen } from "../context.js";
-import { escapeString, hasMutation } from "../context.js";
+import { escapeString, extendStaticPath, hasMutation } from "../context.js";
 import { emit } from "../emit.js";
+import { invalidType } from "../emit-issue.js";
 import { refineCheck } from "./effect.js";
 
 export function slowObject(ir: SchemaIR & { type: "object" }, g: SlowGen): string {
   let code = emit`
     if(typeof ${g.input}!=="object"||${g.input}===null||Array.isArray(${g.input})){
-      ${g.issues}.push({code:"invalid_type",expected:"object",input:${g.input},path:${g.path}});
+      ${invalidType(g, "object")}
     }else{`;
 
   const needsClone = Object.values(ir.properties).some(hasMutation);
@@ -16,7 +17,7 @@ export function slowObject(ir: SchemaIR & { type: "object" }, g: SlowGen): strin
 
   for (const [key, propIR] of Object.entries(ir.properties)) {
     const propExpr = `${objVar}[${escapeString(key)}]`;
-    const propPath = `${g.path}.concat(${escapeString(key)})`;
+    const propPath = extendStaticPath(g.path, key);
     code += g.visit(propIR, { input: propExpr, output: propExpr, path: propPath });
   }
 

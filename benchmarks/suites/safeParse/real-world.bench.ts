@@ -13,7 +13,7 @@ import {
   validFallbackArray10,
   validFallbackArray50,
   validPartialFallbackObject,
-} from "../../schemas/index.js";
+} from "../../fixtures/schemas/index.js";
 
 // ─── Multi-feature Scenario ─────────────────────────────────────────────────
 

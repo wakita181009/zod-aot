@@ -12,7 +12,8 @@ const COMPILED_MARKER = Symbol.for("zod-aot:compiled");
  */
 function createFallback<T>(zodSchema: unknown): CompiledSchema<T> {
   const facade = Object.create(zodSchema as object) as CompiledSchema<T>;
-  facade.schema = zodSchema;
+  // Retained for CLI emitter discovery: (__src_X as any).schema resolves the original Zod schema.
+  (facade as unknown as Record<string, unknown>)["schema"] = zodSchema;
   return facade;
 }
 

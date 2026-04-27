@@ -13,6 +13,7 @@
 import { ZodRealError, z } from "zod";
 import { generateValidator } from "../dist/core/codegen/index.js";
 import { extractSchema } from "../dist/core/extract/index.js";
+import { FIN_DECL } from "../dist/core/iife.js";
 import { compile } from "../dist/index.js";
 
 let passed = 0;
@@ -58,9 +59,14 @@ assert(typeof result.code === "string", "generateValidator produces code string"
 assert(result.code.length > 0, "generated code is non-empty");
 assert(typeof result.functionDef === "string", "generateValidator produces function def");
 
-// Compile and run the generated code (pass __msg and __ZodError for localeError + ZodError)
+// Compile and run the generated code (pass __msg and __ZodError for localeError + ZodError).
+// FIN_DECL provides the shared __fin finalizer that every safeParse_* function calls.
 const __msg = z.config().localeError;
-const fn = new Function("__msg", "__ZodError", `${result.code}\nreturn ${result.functionDef};`);
+const fn = new Function(
+  "__msg",
+  "__ZodError",
+  `${FIN_DECL}\n${result.code}\nreturn ${result.functionDef};`,
+);
 const safeParse = fn(__msg, ZodRealError);
 
 // Valid input

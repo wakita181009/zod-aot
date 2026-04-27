@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { ZodRealError, z } from "zod";
+import { FIN_DECL } from "#src/core/iife.js";
 import { compileSchemas } from "#src/core/pipeline.js";
+
+const __fin = new Function("__ZodError", `${FIN_DECL}; return __fin;`)(ZodRealError);
 
 describe("compileSchemas", () => {
   it("returns CompiledSchemaInfo for each schema", () => {
@@ -8,7 +11,7 @@ describe("compileSchemas", () => {
       { exportName: "validateUser", schema: z.object({ name: z.string() }) },
       { exportName: "validatePost", schema: z.object({ title: z.string() }) },
     ];
-    const results = compileSchemas(schemas);
+    const results = compileSchemas(schemas, { mode: "inline" });
 
     expect(results).toHaveLength(2);
     expect(results[0]?.exportName).toBe("validateUser");
@@ -33,7 +36,7 @@ describe("compileSchemas", () => {
         schema: z.object({ name: z.string() }),
       },
     ];
-    const results = compileSchemas(schemas);
+    const results = compileSchemas(schemas, { mode: "inline" });
 
     expect(results[0]?.refEntries.length).toBeGreaterThan(0);
     expect(results[0]?.codegenResult.refCount).toBe(results[0]?.refEntries.length);
@@ -47,7 +50,7 @@ describe("compileSchemas", () => {
       b: z.string(),
       c: z.number().refine((v) => v > 0),
     });
-    const results = compileSchemas([{ exportName: "test", schema }]);
+    const results = compileSchemas([{ exportName: "test", schema }], { mode: "inline" });
 
     // Zero-capture transform and refine are now compiled (no fallback)
     expect(results[0]?.refEntries.length).toBe(0);
@@ -62,7 +65,7 @@ describe("compileSchemas", () => {
       b: z.string(),
       c: z.number().transform((v) => v + Number(external2)),
     });
-    const results = compileSchemas([{ exportName: "test", schema }]);
+    const results = compileSchemas([{ exportName: "test", schema }], { mode: "inline" });
 
     expect(results[0]?.codegenResult.refCount).toBe(results[0]?.refEntries.length);
     // a (captured transform) + c (captured transform)
@@ -76,6 +79,7 @@ describe("compileSchemas", () => {
     ];
     const errors: { name: string; error: Error }[] = [];
     const results = compileSchemas(schemas, {
+      mode: "inline",
       onError(name: string, error: Error) {
         errors.push({ name, error });
       },
@@ -90,7 +94,7 @@ describe("compileSchemas", () => {
   it("throws on error when onError is not provided", () => {
     const schemas = [{ exportName: "badOne", schema: null }];
 
-    expect(() => compileSchemas(schemas)).toThrow();
+    expect(() => compileSchemas(schemas, { mode: "inline" })).toThrow();
   });
 
   it("generates valid code for each schema", () => {
@@ -100,7 +104,7 @@ describe("compileSchemas", () => {
         schema: z.object({ name: z.string().min(1), age: z.number() }),
       },
     ];
-    const results = compileSchemas(schemas);
+    const results = compileSchemas(schemas, { mode: "inline" });
     const code = results[0]?.codegenResult.code;
     const fnName = results[0]?.codegenResult.functionDef;
 
@@ -114,16 +118,17 @@ describe("compileSchemas", () => {
   it("factory default produces correct runtime values via __rf[]", () => {
     let counter = 0;
     const schema = z.object({ id: z.number() }).default(() => ({ id: counter++ }));
-    const results = compileSchemas([{ exportName: "factoryDefault", schema }]);
+    const results = compileSchemas([{ exportName: "factoryDefault", schema }], { mode: "inline" });
     const info = results[0];
     expect(info).toBeDefined();
 
     const fbArr = info?.refEntries.map((e) => e.schema) ?? [];
     const fn = new Function(
       "__ZodError",
+      "__fin",
       "__rf",
       `${info?.codegenResult.code}\nreturn ${info?.codegenResult.functionDef};`,
-    )(ZodRealError, fbArr);
+    )(ZodRealError, __fin, fbArr);
 
     // Each call with undefined should invoke the factory, producing different values
     const r1 = fn(undefined);
@@ -135,16 +140,17 @@ describe("compileSchemas", () => {
 
   it("factory Date default works at runtime via __rf[]", () => {
     const schema = z.date().default(() => new Date());
-    const results = compileSchemas([{ exportName: "dateFactory", schema }]);
+    const results = compileSchemas([{ exportName: "dateFactory", schema }], { mode: "inline" });
     const info = results[0];
     expect(info).toBeDefined();
 
     const fbArr = info?.refEntries.map((e) => e.schema) ?? [];
     const fn = new Function(
       "__ZodError",
+      "__fin",
       "__rf",
       `${info?.codegenResult.code}\nreturn ${info?.codegenResult.functionDef};`,
-    )(ZodRealError, fbArr);
+    )(ZodRealError, __fin, fbArr);
 
     const r1 = fn(undefined);
     expect(r1.success).toBe(true);
@@ -159,16 +165,17 @@ describe("compileSchemas", () => {
 
   it("static default still works via __rf[] runtime reference", () => {
     const schema = z.string().default("hello");
-    const results = compileSchemas([{ exportName: "staticDefault", schema }]);
+    const results = compileSchemas([{ exportName: "staticDefault", schema }], { mode: "inline" });
     const info = results[0];
     expect(info).toBeDefined();
 
     const fbArr = info?.refEntries.map((e) => e.schema) ?? [];
     const fn = new Function(
       "__ZodError",
+      "__fin",
       "__rf",
       `${info?.codegenResult.code}\nreturn ${info?.codegenResult.functionDef};`,
-    )(ZodRealError, fbArr);
+    )(ZodRealError, __fin, fbArr);
 
     expect(fn(undefined)).toEqual({ success: true, data: "hello" });
     expect(fn("world")).toEqual({ success: true, data: "world" });
@@ -177,16 +184,17 @@ describe("compileSchemas", () => {
 
   it("factory UUID default produces unique values each time", () => {
     const schema = z.uuid().default(() => crypto.randomUUID());
-    const results = compileSchemas([{ exportName: "uuidFactory", schema }]);
+    const results = compileSchemas([{ exportName: "uuidFactory", schema }], { mode: "inline" });
     const info = results[0];
     expect(info).toBeDefined();
 
     const fbArr = info?.refEntries.map((e) => e.schema) ?? [];
     const fn = new Function(
       "__ZodError",
+      "__fin",
       "__rf",
       `${info?.codegenResult.code}\nreturn ${info?.codegenResult.functionDef};`,
-    )(ZodRealError, fbArr);
+    )(ZodRealError, __fin, fbArr);
 
     // undefined → factory generates unique UUID each time
     const r1 = fn(undefined);
@@ -212,16 +220,17 @@ describe("compileSchemas", () => {
   it("factory timestamp default produces different values each call", () => {
     // performance.now() has microsecond precision — no need for setTimeout
     const schema = z.number().default(() => performance.now());
-    const results = compileSchemas([{ exportName: "tsFactory", schema }]);
+    const results = compileSchemas([{ exportName: "tsFactory", schema }], { mode: "inline" });
     const info = results[0];
     expect(info).toBeDefined();
 
     const fbArr = info?.refEntries.map((e) => e.schema) ?? [];
     const fn = new Function(
       "__ZodError",
+      "__fin",
       "__rf",
       `${info?.codegenResult.code}\nreturn ${info?.codegenResult.functionDef};`,
-    )(ZodRealError, fbArr);
+    )(ZodRealError, __fin, fbArr);
 
     const r1 = fn(undefined);
     const r2 = fn(undefined);
@@ -242,7 +251,7 @@ describe("compileSchemas", () => {
       role: z.string().default("user"),
       seq: z.number().default(() => counter++),
     });
-    const results = compileSchemas([{ exportName: "nestedDefault", schema }]);
+    const results = compileSchemas([{ exportName: "nestedDefault", schema }], { mode: "inline" });
     const info = results[0];
     expect(info).toBeDefined();
     expect(info?.refEntries.length).toBeGreaterThanOrEqual(2);
@@ -250,9 +259,10 @@ describe("compileSchemas", () => {
     const fbArr = info?.refEntries.map((e) => e.schema) ?? [];
     const fn = new Function(
       "__ZodError",
+      "__fin",
       "__rf",
       `${info?.codegenResult.code}\nreturn ${info?.codegenResult.functionDef};`,
-    )(ZodRealError, fbArr);
+    )(ZodRealError, __fin, fbArr);
 
     // Omitted fields get defaults
     const r1 = fn({ name: "alice" });

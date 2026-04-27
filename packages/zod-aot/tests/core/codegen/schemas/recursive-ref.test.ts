@@ -12,6 +12,8 @@ describe("slow-path — recursiveRef", () => {
       counter: 0,
       fnName: "safeParse_tree",
       regexCache: new Map(),
+      mode: "inline",
+      usedHelpers: new Set(),
     };
     const ir: RecursiveRefIR = { type: "recursiveRef" };
     const g = createSlowGen("input", "input", "[]", "__issues", ctx);
@@ -26,6 +28,8 @@ describe("slow-path — recursiveRef", () => {
       counter: 5,
       fnName: "safeParse_node",
       regexCache: new Map(),
+      mode: "inline",
+      usedHelpers: new Set(),
     };
     const ir: RecursiveRefIR = { type: "recursiveRef" };
     const g = createSlowGen("v", "v", "p", "iss", ctx);
@@ -42,6 +46,8 @@ describe("slow-path — recursiveRef", () => {
       counter: 0,
       fnName: "safeParse_test",
       regexCache: new Map(),
+      mode: "inline",
+      usedHelpers: new Set(),
     };
     const ir: RecursiveRefIR = { type: "recursiveRef" };
     const g = createSlowGen("input", "input", '["children",0]', "__issues", ctx);
@@ -56,6 +62,8 @@ describe("slow-path — recursiveRef", () => {
       counter: 0,
       fnName: "safeParse_test",
       regexCache: new Map(),
+      mode: "inline",
+      usedHelpers: new Set(),
     };
     const ir: RecursiveRefIR = { type: "recursiveRef" };
     const g = createSlowGen("input", "input", "[]", "__issues", ctx);

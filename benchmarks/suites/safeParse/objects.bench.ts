@@ -14,7 +14,7 @@ import {
   validApiResponse10,
   validApiResponse100,
   validUser,
-} from "../../schemas/index.js";
+} from "../../fixtures/schemas/index.js";
 
 describe("safeParse: medium object — valid user", () => {
   bench("zod", () => {
