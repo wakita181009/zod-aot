@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.0](https://github.com/wakita181009/zod-aot/compare/v0.19.1...v0.20.0) (2026-04-27)
+
+
+### Features
+
+* shared runtime helpers and CompiledSchema API cleanup ([#146](https://github.com/wakita181009/zod-aot/issues/146)) ([3b2fef2](https://github.com/wakita181009/zod-aot/commit/3b2fef21b4e4e029bbd69291fee49713b9f6ba5d))
+
 ## [0.19.1](https://github.com/wakita181009/zod-aot/compare/v0.19.0...v0.19.1) (2026-04-20)
 
 
