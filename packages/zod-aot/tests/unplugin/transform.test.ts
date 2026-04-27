@@ -489,6 +489,88 @@ describe("transformCode() E2E", () => {
   });
 });
 
+describe('transformCode() — mode: "inline"', () => {
+  it("prepends file-level __mkv and __fin declarations instead of virtual import", async () => {
+    const fixturePath = path.join(fixturesDir, "simple-schema.ts");
+    const code = readFixtureAsUserCode(fixturePath);
+
+    const result = await transformCode(code, fixturePath, { mode: "inline" });
+
+    expect(result).not.toBeNull();
+    // Inline mode emits self-contained file-level helpers, no virtual import
+    expect(result).not.toContain("virtual:zod-aot/runtime");
+    expect(result).toContain("function __mkv(");
+    expect(result).toContain("function __fin(");
+    // __zodAotConfig import is prepended once for __msg
+    expect(result).toContain("__zodAotConfig");
+    expect(result).toContain("safeParse_validateUser");
+  });
+
+  it("does not emit __za* helper imports in inline mode", async () => {
+    const fixturePath = path.join(fixturesDir, "simple-schema.ts");
+    const code = readFixtureAsUserCode(fixturePath);
+
+    const result = await transformCode(code, fixturePath, { mode: "inline" });
+
+    expect(result).not.toBeNull();
+    // Inline mode emits issue object literals at each check site, not factory calls
+    expect(result).not.toContain("__zaTS(");
+    expect(result).not.toContain("__zaTB(");
+    expect(result).not.toContain("__zaIT(");
+    // No import of well-known regexes in inline mode (they're declared per-IIFE)
+    expect(result).not.toContain("__zaReEmail");
+  });
+
+  it("declares __mkv and __fin only once when multiple schemas exist", async () => {
+    const fixturePath = path.join(fixturesDir, "multi-schema.ts");
+    const code = readFixtureAsUserCode(fixturePath);
+
+    const result = await transformCode(code, fixturePath, { mode: "inline" });
+
+    expect(result).not.toBeNull();
+    // File-level helpers must be declared exactly once even with multiple validators
+    const mkvDecls = result?.match(/function __mkv\(/g) ?? [];
+    const finDecls = result?.match(/function __fin\(/g) ?? [];
+    expect(mkvDecls.length).toBe(1);
+    expect(finDecls.length).toBe(1);
+    // Both validators reference the shared factory
+    expect(result).toContain("safeParse_validateUser");
+    expect(result).toContain("safeParse_validateProduct");
+  });
+
+  it("produces functionally equivalent output to lean mode (modulo helper layout)", async () => {
+    const fixturePath = path.join(fixturesDir, "simple-schema.ts");
+    const code = readFixtureAsUserCode(fixturePath);
+
+    const leanResult = await transformCode(code, fixturePath, { mode: "lean" });
+    const inlineResult = await transformCode(code, fixturePath, { mode: "inline" });
+
+    expect(leanResult).not.toBeNull();
+    expect(inlineResult).not.toBeNull();
+    // Both modes generate the same compiled validator function name
+    expect(leanResult).toContain("safeParse_validateUser");
+    expect(inlineResult).toContain("safeParse_validateUser");
+    // Lean mode imports from virtual module; inline mode embeds helpers
+    expect(leanResult).toContain("virtual:zod-aot/runtime");
+    expect(inlineResult).not.toContain("virtual:zod-aot/runtime");
+  });
+
+  it("supports autoDiscover with inline mode", async () => {
+    const fixturePath = path.join(fixturesDir, "auto-discover-simple.ts");
+    const code = readFixtureAsUserCode(fixturePath);
+
+    const result = await transformCode(code, fixturePath, {
+      mode: "inline",
+      autoDiscover: true,
+    });
+
+    expect(result).not.toBeNull();
+    expect(result).not.toContain("virtual:zod-aot/runtime");
+    expect(result).toContain("function __mkv(");
+    expect(result).toContain("/* @__PURE__ */");
+  });
+});
+
 describe("findExpressionEnd()", () => {
   it("finds end of simple expression", () => {
     const code = "const x = z.string();";

@@ -119,6 +119,7 @@ describe("generateIIFE() — error handling", () => {
         code: "/* zod-aot */",
         functionDef: "const x = 1;",
         refCount: 0,
+        usedHelpers: new Set(),
       },
       refEntries: [],
     };
@@ -134,6 +135,7 @@ describe("generateIIFE() — error handling", () => {
         code: "/* zod-aot */",
         functionDef: "",
         refCount: 0,
+        usedHelpers: new Set(),
       },
       refEntries: [],
     };

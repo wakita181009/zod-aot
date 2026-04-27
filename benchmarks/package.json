@@ -3,8 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "size:codegen": "tsx suites/size/codegen.ts",
-    "size:bundle": "tsx suites/size/bundle.ts"
+    "size:cli": "tsx suites/size/cli.ts",
+    "size:unplugin": "tsx suites/size/unplugin.ts"
   },
   "dependencies": {
     "@standard-schema/spec": "^1.1.0",

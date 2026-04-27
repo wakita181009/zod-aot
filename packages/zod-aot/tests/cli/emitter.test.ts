@@ -9,6 +9,7 @@ describe("generateCompiledFileContent()", () => {
       functionDef:
         'function safeParse_test(input){\nvar __issues=[];\nif(typeof input!=="string"){__issues.push({code:"invalid_type",expected:"string",received:typeof input,path:[],message:"Expected string"});}\nif(__issues.length>0)return{success:false,error:{issues:__issues}};\nreturn{success:true,data:input};\n}',
       refCount: 0,
+      usedHelpers: new Set(),
     };
 
     const content = generateCompiledFileContent(
@@ -30,11 +31,13 @@ describe("generateCompiledFileContent()", () => {
       code: "/* zod-aot */",
       functionDef: "function safeParse_a(input){\nreturn{success:true,data:input};\n}",
       refCount: 0,
+      usedHelpers: new Set(),
     };
     const result2: CodeGenResult = {
       code: "/* zod-aot */",
       functionDef: "function safeParse_b(input){\nreturn{success:true,data:input};\n}",
       refCount: 0,
+      usedHelpers: new Set(),
     };
 
     const content = generateCompiledFileContent(
@@ -56,6 +59,7 @@ describe("generateCompiledFileContent()", () => {
       code: "/* zod-aot */",
       functionDef: "function safeParse_test(input){\nreturn{success:true,data:input};\n}",
       refCount: 0,
+      usedHelpers: new Set(),
     };
 
     const content = generateCompiledFileContent(
@@ -77,6 +81,7 @@ describe("generateCompiledFileContent()", () => {
       code: "/* zod-aot */",
       functionDef: "function safeParse_test(input){\nreturn{success:true,data:input};\n}",
       refCount: 0,
+      usedHelpers: new Set(),
     };
 
     const content = generateCompiledFileContent(
@@ -95,6 +100,7 @@ describe("generateCompiledFileContent() — zodCompat: false", () => {
       code: "/* zod-aot */",
       functionDef: "function safeParse_test(input){\nreturn{success:true,data:input};\n}",
       refCount: 0,
+      usedHelpers: new Set(),
     };
 
     const content = generateCompiledFileContent(
@@ -113,6 +119,7 @@ describe("generateCompiledFileContent() — zodCompat: false", () => {
       functionDef:
         "function safeParse_test(input){\nvar __issues=[];\nreturn{success:true,data:input};\n}",
       refCount: 1,
+      usedHelpers: new Set(),
     };
 
     const content = generateCompiledFileContent(

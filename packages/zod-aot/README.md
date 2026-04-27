@@ -151,6 +151,7 @@ npx zod-aot generate src/ --watch
 | Rolldown | `import zodAot from "zod-aot/rolldown"` |
 | rspack | `import zodAot from "zod-aot/rspack"` |
 | Bun | `import zodAot from "zod-aot/bun"` |
+| Farm | `import zodAot from "zod-aot/farm"` |
 
 ### Options
 
@@ -169,6 +170,24 @@ zodAot({
   verbose: true,
 })
 ```
+
+### Bundle Size & Cross-File Dedup
+
+Generated validators share a small runtime helper layer (`__mkv` validator
+wrapper, issue factories like `__zaTS`/`__zaIT`, and well-known regexes for
+`email`, `uuid`, `cuid`, `ipv4`, etc.).
+
+On bundlers that support virtual modules — **Vite, Rollup, Rolldown, esbuild,
+Farm, Bun** — the plugin imports these helpers from
+`virtual:zod-aot/runtime`, so the bundler emits a single bundle-wide copy
+regardless of how many files reference them. webpack and rspack fall back to
+self-contained file-level helpers (a few hundred bytes per file) since they
+reject the `virtual:` URI scheme at the resolver layer.
+
+The result: a 5-file project with 10 schemas all using `z.email()` and
+`z.uuid()` produces a bundle where each shared regex appears exactly **once**.
+Set `zodCompat: false` to additionally drop the original Zod schema reference
+when you don't need `instanceof` / `.shape` access on the compiled output.
 
 ### autoDiscover: Side Effects Warning
 

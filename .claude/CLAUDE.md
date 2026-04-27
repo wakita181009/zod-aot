@@ -47,24 +47,43 @@ Output          emitter.ts                  rewriteSource()          IIFE inline
 ```
 
 Key files:
-- `core/compile.ts`: `compile()` is NOT the optimizer — it's a Zod fallback + `COMPILED_MARKER` symbol for discovery
-- `core/pipeline.ts`: `compileSchemas()` — shared extract → generate pipeline, `CompiledSchemaInfo` type, `CompileSchemasOptions` with `onError` callback for graceful failure handling
+- `core/compile.ts`: `compile()` is NOT the optimizer — it's a Zod fallback + `COMPILED_MARKER` symbol for discovery. `createFallback()` retains an own-property `.schema` reference for CLI emitter use
+- `core/pipeline.ts`: `compileSchemas()` — shared extract → generate pipeline, `CompiledSchemaInfo` type, `CompileSchemasOptions` with `mode: "inline" | "lean"` and `onError` callback for graceful failure handling, `aggregateUsedHelpers()` collects per-file helper imports
 - `core/diagnostic.ts`: `diagnoseSchema()` — single-pass SchemaIR walker producing `DiagnosticResult` (tree, coverage, Fast Path eligibility, hints)
 - `core/codegen/fast-path.ts`: `generateFast()` — Fast Path dispatcher + typed `fastRegistry` with `FastGen` context
 - `core/codegen/slow-path.ts`: `generateSlow()` — Slow Path dispatcher + typed `slowRegistry` with `SlowGen` context
 - `core/codegen/schemas/effect.ts`: `slowEffect()` — transform effect codegen, `refineCheck()` — inline refine check codegen
-- `core/codegen/context.ts`: `SlowGen`/`FastGen` context interfaces, `SlowGenerator`/`FastGenerator` function types, `CodeGenContext`, `sortChecksPreservingEffects()`, `hasMutation()`, shared constants
+- `core/codegen/context.ts`: `SlowGen`/`FastGen` context interfaces, `SlowGenerator`/`FastGenerator` function types, `CodeGenContext` (with `mode` + `usedHelpers`), `CodeGenResult` (with `usedHelpers: Set<string>`), `CodegenMode = "inline" | "lean"`, `sortChecksPreservingEffects()`, `hasMutation()`, `emitRegex()` (lean-mode well-known regex shortcut), shared constants
 - `core/codegen/emit.ts`: `emit()` — tagged template for Slow Path code generation
-- `core/iife.ts`: `generateIIFE()` — shared IIFE generation for CLI emitter and unplugin transform (owns `extractFunctionName()`)
+- `core/codegen/emit-issue.ts`: `tooSmall()`/`tooBig()`/`invalidType()`/`invalidFormat()`/`invalidValue()` — issue emission helpers that branch on `ctx.mode`: inline emits `{code:"too_small",...}` literals, lean emits factory calls (`__zaTS(...)`) and registers helpers in `ctx.usedHelpers`
+- `core/codegen/issue-decls.ts`: `ISSUE_DECLS` registry — issue factory function bodies (`__zaTS`/`__zaTSx`/`__zaTB`/`__zaTBx`/`__zaIT`/`__zaIF`/`__zaIV`) hosted in the virtual module
+- `core/codegen/well-known-regex.ts`: `WELL_KNOWN_REGEXES` registry — bundle-wide dedup-eligible regex sources (email, uuid, cuid, cuid2, ulid, nanoid, xid, ksuid, ipv4, ipv6, base64, base64url, e164, guid). `lookupWellKnownRegex(source)` returns the virtual export name or null
+- `core/iife.ts`: `generateIIFE()` — shared IIFE generation for CLI emitter and unplugin transform. `MK_VALIDATOR_DECL` (the `__mkv` factory: `Object.create(schema)`-based wrapper with `parse`/`safeParse`/`parseAsync`/`safeParseAsync`), `FIN_DECL` (the `__fin` finalizer: applies `__msg`, strips `input`, builds `SafeParseResult`), `ZOD_CONFIG_IMPORT`, `ZOD_MSG_DECLARATION`
 - `discovery.ts`: `discoverSchemas()` loads file → scans exports with `isCompiledSchema()` or `isZodSchema()` (autoDiscover mode via `DiscoverOptions`)
-- `cli/commands/generate.ts`: discovery → `compileSchemas()` → `emitter.ts` writes `.compiled.ts`
+- `cli/commands/generate.ts`: discovery → `compileSchemas({ mode: "inline" })` → `emitter.ts` writes `.compiled.ts` with file-level `__mkv`/`__fin` declarations
 - `cli/commands/check.ts`: discovery → `extractSchema()` → `diagnoseSchema()` → tree view / JSON output
-- `unplugin/transform.ts`: discovery → `compileSchemas()` → `rewriteSource()` (compile mode) or `rewriteSourceAutoDiscover()` (autoDiscover mode) replaces schemas with IIFE, verbose logging + `BuildStats` tracking. Uses `acorn.parseExpressionAt()` for expression boundary detection in autoDiscover mode. Two-pass rewrite for mixed files (compile() + autoDiscover).
-- `benchmarks/vitest.config.ts`: uses `zodAot()` vite plugin + `@typia/unplugin` for build-time compilation
+- `unplugin/transform.ts`: discovery → `compileSchemas({ mode })` → `rewriteSource()` (compile mode) or `rewriteSourceAutoDiscover()` (autoDiscover mode) replaces schemas with IIFE, then `injectRuntime()` prepends `import { __mkv, __fin, ... } from "virtual:zod-aot/runtime"` (lean) or file-level `function __mkv(...)`/`function __fin(...)` declarations (inline). Verbose logging + `BuildStats` tracking. Uses `acorn.parseExpressionAt()` for expression boundary detection in autoDiscover mode. Two-pass rewrite for mixed files (compile() + autoDiscover)
+- `unplugin/virtual.ts`: `resolveVirtualId()`/`loadVirtual()` for the `virtual:zod-aot/runtime` module. Source built once at load time from `MK_VALIDATOR_DECL` + `FIN_DECL` + `ISSUE_DECLS` + `WELL_KNOWN_REGEXES` as `export function __mkv(...)` / `export const __zaReEmail=new RegExp(...)`. `ALL_HELPER_NAMES` lists every helper for tooling
+- `unplugin/index.ts`: `createUnplugin()` factory. Selects `mode = "lean"` for frameworks in `VIRTUAL_MODULE_FRAMEWORKS = {vite, rollup, rolldown, esbuild, farm, bun}`, `"inline"` for webpack/rspack (which reject the `virtual:` URI scheme)
+- `benchmarks/vitest.config.ts`: uses `zodAot()` vite plugin + `@typia/unplugin` for build-time compilation. `benchmarks/suites/size/cli.ts` measures per-schema CLI emitter output (`pnpm size:cli`), `benchmarks/suites/size/unplugin.ts` builds a 5-file Vite bundle to verify cross-file dedup probes (each well-known regex / `__mkv` must appear exactly once, `pnpm size:unplugin`)
 
 The generated `safeParse_*` function is identical across all paths. Benchmark results accurately reflect CLI/unplugin output performance.
 
-Note: CLI emitter (`emitter.ts`) does not include `schema` property in the output wrapper, unlike unplugin which retains the original Zod schema reference.
+### Codegen Modes (`inline` vs `lean`)
+
+`generateValidator()` accepts a `mode` option that controls how runtime helpers and issue objects are referenced. The IIFE structure (preamble + `safeParse_*` function + `return __mkv(...)`) is identical between modes; only the helper sourcing differs.
+
+| | `inline` (CLI / webpack / rspack) | `lean` (Vite / Rollup / Rolldown / esbuild / Farm / Bun) |
+|---|---|---|
+| `__mkv` / `__fin` | declared once at file top | imported from `virtual:zod-aot/runtime` |
+| Issue objects | `{code:"too_small",minimum,...}` literal at each check site | `__zaTS(min, origin, inclusive, input, path)` factory call |
+| Well-known regexes | `var __re_email_N=new RegExp(...)` per IIFE | `__zaReEmail` import (one bundle-wide copy) |
+| `usedHelpers` tracking | always empty | populated as codegen walks the IR |
+| Cross-file dedup | none — every file is self-contained | bundler-level — single shared module |
+
+Mode selection: CLI always uses `"inline"`. unplugin auto-selects per `meta.framework` (lean for virtual-module-friendly bundlers, inline for webpack/rspack).
+
+Note: The CLI emitter (`emitter.ts`) uses `(__src_X as any).schema` to pass the original Zod schema into `__mkv`. `compile()`-wrapped schemas have a runtime own-property `.schema` set by `createFallback()`; plain Zod schemas (autoDiscover CLI) don't, so `__mkv(fn, undefined)` returns a plain `{parse, safeParse, ...}` object without the prototype chain.
 
 ### Why Runtime Extraction
 
@@ -105,17 +124,17 @@ npx zod-aot check src/schemas.ts    # diagnose with tree view, coverage, hints
 npx zod-aot check src/schemas.ts --json --fail-under 80  # JSON output + CI gate
 ```
 
-### unplugin (Vite / webpack / esbuild / Rollup / Rolldown / rspack)
+### unplugin (Vite / webpack / esbuild / Rollup / Rolldown / rspack / Farm / Bun)
 
 Build-time plugin that replaces `compile()` calls with optimized inline validators.
 
 ```typescript
 // vite.config.ts
-import zodAot from "zod-aot/unplugin/vite";
+import zodAot from "zod-aot/vite";
 export default { plugins: [zodAot()] };
 ```
 
-Plugin entries: `zod-aot/vite`, `zod-aot/webpack`, `zod-aot/esbuild`, `zod-aot/rollup`, `zod-aot/rolldown`, `zod-aot/rspack`, `zod-aot/bun`
+Plugin entries: `zod-aot/vite`, `zod-aot/webpack`, `zod-aot/esbuild`, `zod-aot/rollup`, `zod-aot/rolldown`, `zod-aot/rspack`, `zod-aot/bun`, `zod-aot/farm`
 
 **Transform flow (compile mode):**
 1. `shouldTransform(id)` — file extension check, skip `node_modules`/`.d.ts`/`.compiled.ts`
@@ -136,13 +155,15 @@ Plugin entries: `zod-aot/vite`, `zod-aot/webpack`, `zod-aot/esbuild`, `zod-aot/r
 **Key implementation details:**
 - `enforce: "pre"` — runs before other plugins
 - `/* @__PURE__ */` annotation enables tree-shaking
-- IIFE wraps preamble (regex/Set) + safeParse function + CompiledSchema object
+- IIFE wraps preamble (regex/Set) + safeParse function + `return __mkv(safeParse_*, schemaArg)` call
 - `loadSourceFile()` uses `jiti` on Node.js, native import on Bun/Deno
 - `cacheBust: true` (`?t=${Date.now()}`) for HMR support
 - Options: `include?: string[]`, `exclude?: string[]` (path substring matching), `zodCompat?: boolean`, `verbose?: boolean`, `autoDiscover?: boolean`
 - `verbose: true` logs per-schema compilation status and build summary (`buildEnd`), resets stats each watch cycle
 - `BuildStats` tracked in `transform.ts`: `{ files, schemas, optimized, failed }`
 - `compileSchemas()` uses `onError` callback so a single schema failure doesn't abort the entire file
+- `injectRuntime()` prepends helpers exactly once per file: a single `import { __mkv, __fin, __zaTS, __zaReEmail, ... } from "virtual:zod-aot/runtime"` line in lean mode, or file-level `function __mkv(...)`/`function __fin(...)` declarations in inline mode (idempotent — re-runs during HMR skip re-injection if markers already present)
+- `aggregateUsedHelpers()` collects every helper referenced by the file's compiled schemas; `__mkv` and `__fin` are always added since every IIFE calls them
 
 ## Schema Coverage
 
@@ -190,28 +211,32 @@ zod-aot/
 │       │   │   │   ├── types.ts  # Extractor types
 │       │   │   │   └── extractors/ # Per-type extractors (bigint, date, default, lazy (with cycle detection → recursiveRef), number, pipe, set, string, union)
 │       │   │   └── codegen/
-│       │   │       ├── index.ts     # generateValidator() — orchestrator (Fast Path + Slow Path)
-│       │   │       ├── context.ts   # SlowGen, FastGen interfaces, CodeGenContext, CodeGenResult, constants
-│       │   │       ├── emit.ts      # emit() tagged template — Slow Path utility
-│       │   │       ├── slow-path.ts # slowRegistry + createSlowGen() + generateSlow()
-│       │   │       ├── fast-path.ts # fastRegistry + createFastGen() + generateFast()
-│       │   │       └── schemas/     # 1 file per schema type (slow + fast generators together)
+│       │   │       ├── index.ts            # generateValidator() — orchestrator (Fast Path + Slow Path)
+│       │   │       ├── context.ts          # SlowGen, FastGen interfaces, CodeGenContext (mode + usedHelpers), CodeGenResult, CodegenMode = "inline"|"lean", emitRegex/emitSet/emitTemp, constants
+│       │   │       ├── emit.ts             # emit() tagged template — Slow Path utility
+│       │   │       ├── emit-issue.ts       # tooSmall/tooBig/invalidType/invalidFormat/invalidValue — mode-aware issue emission
+│       │   │       ├── issue-decls.ts      # ISSUE_DECLS — issue factory bodies (__zaTS, __zaIT, ...) hosted in virtual module
+│       │   │       ├── well-known-regex.ts # WELL_KNOWN_REGEXES + lookupWellKnownRegex() for cross-file dedup
+│       │   │       ├── slow-path.ts        # slowRegistry + createSlowGen() + generateSlow()
+│       │   │       ├── fast-path.ts        # fastRegistry + createFastGen() + generateFast()
+│       │   │       └── schemas/            # 1 file per schema type (slow + fast generators together)
 │       │   │           ├── string.ts, number.ts, ... # 34 per-type files
 │       │   │           └── effect.ts # slowEffect(), refineCheck()
 │       │   ├── cli/              # CLI-specific (no unplugin deps)
 │       │   │   ├── index.ts      # CLI entry point (command parser, usage text)
 │       │   │   ├── logger.ts     # Colored logging (info/success/warn/error/dim), TTY-aware
-│       │   │   ├── emitter.ts    # .compiled.ts file generation
+│       │   │   ├── emitter.ts    # .compiled.ts file generation (always mode: "inline")
 │       │   │   ├── errors.ts     # Error message utility
 │       │   │   └── commands/
 │       │   │       ├── generate.ts
 │       │   │       ├── watch.ts
 │       │   │       └── check.ts   # diagnose schemas: tree view, coverage %, Fast Path, hints, --json, --fail-under
 │       │   └── unplugin/         # Build plugin (no cli deps)
-│       │       ├── index.ts      # createUnplugin() factory
-│       │       ├── transform.ts  # shouldTransform, transformCode, rewriteSource, rewriteSourceAutoDiscover, findExpressionEnd
-│       │       ├── types.ts      # ZodAotPluginOptions (includes autoDiscover)
-│       │       └── vite.ts, webpack.ts, esbuild.ts, rollup.ts, rolldown.ts, rspack.ts, bun.ts
+│       │       ├── index.ts      # createUnplugin() factory — selects mode from meta.framework
+│       │       ├── transform.ts  # shouldTransform, transformCode, rewriteSource, rewriteSourceAutoDiscover, injectRuntime, findExpressionEnd
+│       │       ├── virtual.ts    # virtual:zod-aot/runtime module — resolveVirtualId/loadVirtual + ALL_HELPER_NAMES
+│       │       ├── types.ts      # ZodAotPluginOptions (includes autoDiscover), TransformOptions (includes mode)
+│       │       └── vite.ts, webpack.ts, esbuild.ts, rollup.ts, rolldown.ts, rspack.ts, bun.ts, farm.ts
 │       ├── tests/                # Mirrors src/ structure
 │       │   ├── integration.test.ts
 │       │   ├── compat.test.ts
@@ -233,7 +258,8 @@ zod-aot/
 │       │   │   └── commands/
 │       │   │       └── check.test.ts, generate.test.ts, watch.test.ts
 │       │   └── unplugin/
-│       │       ├── transform.test.ts   # includes verbose/BuildStats tests
+│       │       ├── transform.test.ts   # includes verbose/BuildStats + mode: "inline" tests
+│       │       ├── virtual.test.ts     # virtual:zod-aot/runtime module unit tests
 │       │       └── index.test.ts
 │       ├── package.json
 │       └── tsconfig.json
@@ -289,6 +315,8 @@ Source files to reference during implementation:
 pnpm build          # tsc across all packages
 pnpm test           # vitest run
 pnpm bench          # vitest bench
+pnpm size:cli       # CLI emitter codegen size report (per-schema raw + gzip — mirrors `npx zod-aot generate` output)
+pnpm size:unplugin  # Vite multi-file bundle dedup verification (probes must each appear exactly once)
 pnpm check          # biome check .
 pnpm check:fix      # biome check --fix .
 pnpm format         # biome format --write .
