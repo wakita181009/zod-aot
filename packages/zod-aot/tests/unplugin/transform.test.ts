@@ -555,6 +555,20 @@ describe('transformCode() — mode: "inline"', () => {
     expect(inlineResult).not.toContain("virtual:zod-aot/runtime");
   });
 
+  it("uses WP_RUNTIME_ID when runtimeId option is set (rspack/webpack path)", async () => {
+    const fixturePath = path.join(fixturesDir, "simple-schema.ts");
+    const code = readFixtureAsUserCode(fixturePath);
+
+    const result = await transformCode(code, fixturePath, {
+      mode: "lean",
+      runtimeId: "__zod-aot-runtime__",
+    });
+
+    expect(result).not.toBeNull();
+    expect(result).toContain('from "__zod-aot-runtime__"');
+    expect(result).not.toContain("virtual:zod-aot/runtime");
+  });
+
   it("supports autoDiscover with inline mode", async () => {
     const fixturePath = path.join(fixturesDir, "auto-discover-simple.ts");
     const code = readFixtureAsUserCode(fixturePath);

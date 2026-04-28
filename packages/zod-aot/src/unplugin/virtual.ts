@@ -30,9 +30,12 @@ import {
   ZOD_MSG_DECLARATION,
 } from "#src/core/iife.js";
 
+/** Public virtual module ID used by Vite / Rollup / esbuild and other `virtual:`-compatible bundlers. */
 export const VIRTUAL_RUNTIME_ID = "virtual:zod-aot/runtime";
+/** Bare-specifier alias for webpack/rspack, which reject the `virtual:` URI scheme. */
+export const WP_RUNTIME_ID = "__zod-aot-runtime__";
 /** Resolved id (Rollup convention: leading null byte hides the module from other plugins). */
-export const RESOLVED_RUNTIME_ID = "\0virtual:zod-aot/runtime";
+export const RESOLVED_RUNTIME_ID = "\0zod-aot-runtime";
 
 function buildRuntimeSource(): string {
   const parts: string[] = [
@@ -57,7 +60,7 @@ function buildRuntimeSource(): string {
 const RUNTIME_SOURCE = buildRuntimeSource();
 
 export function resolveVirtualId(id: string): string | null {
-  if (id === VIRTUAL_RUNTIME_ID) return RESOLVED_RUNTIME_ID;
+  if (id === VIRTUAL_RUNTIME_ID || id === WP_RUNTIME_ID) return RESOLVED_RUNTIME_ID;
   return null;
 }
 

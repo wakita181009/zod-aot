@@ -160,39 +160,45 @@ export async function transformCode(
         zodCompat: options.zodCompat,
       });
     }
-    return injectRuntime(result, usedHelpers, mode);
+    return injectRuntime(result, usedHelpers, mode, options.runtimeId);
   }
 
   return injectRuntime(
     rewriteSource(code, compiled, { zodCompat: options.zodCompat }),
     usedHelpers,
     mode,
+    options.runtimeId,
   );
 }
 
 /**
  * Prepend the runtime helpers required by the rewritten source.
  *
- * Lean mode emits a single `import { ... } from "virtual:zod-aot/runtime";`
- * line — bundlers that accept the `virtual:` URI scheme (Vite/Rollup/etc.)
- * dedup the helpers across every transformed file.
+ * Lean mode emits a single `import { ... } from "<runtimeId>";` line —
+ * bundlers whose resolveId hook intercepts the specifier dedup helpers across
+ * every transformed file into one shared virtual module.
  *
  * Inline mode prepends file-level `function __mkv` / `function __fin`
- * declarations directly so the file is self-contained — used for webpack/rspack
- * which reject the `virtual:` URI scheme at the resolver layer.
+ * declarations directly so the file is self-contained.
  *
  * Idempotent: if the file already contains the relevant marker (re-run during
  * watch/HMR), we skip re-injection.
  */
-function injectRuntime(code: string, usedHelpers: Set<string>, mode: CodegenMode): string {
+function injectRuntime(
+  code: string,
+  usedHelpers: Set<string>,
+  mode: CodegenMode,
+  runtimeId: string = VIRTUAL_RUNTIME_ID,
+): string {
   if (mode === "lean") {
     if (usedHelpers.size === 0) return code;
-    if (code.includes(VIRTUAL_RUNTIME_ID)) return code;
+    if (code.includes(runtimeId)) return code;
     const names = [...usedHelpers].sort().join(", ");
-    return `import { ${names} } from "${VIRTUAL_RUNTIME_ID}";\n${code}`;
+    return `import { ${names} } from "${runtimeId}";\n${code}`;
   }
-  // Inline mode: ship file-level helper declarations instead of a virtual import.
-  // In inline mode, codegen emits per-IIFE issue literals + per-IIFE `__re_*` decls
+  // Inline mode (CLI emitter, and any bundler not in VIRTUAL_MODULE_FRAMEWORKS):
+  // ship file-level helper declarations instead of a virtual import.
+  // Codegen emits per-IIFE issue literals + per-IIFE `__re_*` decls,
   // so we only need __mkv / __fin (plus __msg via the zod config import).
   if (!code.includes("__mkv")) return code;
   const prefix: string[] = [];

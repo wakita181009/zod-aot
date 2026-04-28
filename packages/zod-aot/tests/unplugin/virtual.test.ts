@@ -5,12 +5,17 @@ import {
   RESOLVED_RUNTIME_ID,
   resolveVirtualId,
   VIRTUAL_RUNTIME_ID,
+  WP_RUNTIME_ID,
 } from "#src/unplugin/virtual.js";
 
 describe("unplugin/virtual", () => {
   describe("resolveVirtualId", () => {
     it("returns the resolved id (\\0-prefixed) for the public virtual id", () => {
       expect(resolveVirtualId(VIRTUAL_RUNTIME_ID)).toBe(RESOLVED_RUNTIME_ID);
+    });
+
+    it("returns the same resolved id for the webpack/rspack bare-specifier alias", () => {
+      expect(resolveVirtualId(WP_RUNTIME_ID)).toBe(RESOLVED_RUNTIME_ID);
     });
 
     it("returns null for any other id", () => {
