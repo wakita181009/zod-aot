@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.1](https://github.com/wakita181009/zod-aot/compare/v0.20.0...v0.20.1) (2026-04-28)
+
+
+### Bug Fixes
+
+* **unplugin:** enable lean mode for rspack and webpack via bare-specifier virtual module ([#152](https://github.com/wakita181009/zod-aot/issues/152)) ([b5bbaed](https://github.com/wakita181009/zod-aot/commit/b5bbaed4c916c843c8efd05eb2b9f581400a5678))
+
 ## [0.20.0](https://github.com/wakita181009/zod-aot/compare/v0.19.1...v0.20.0) (2026-04-27)
 
 
