@@ -2,6 +2,7 @@ import type { CodegenMode } from "#src/core/codegen/context.js";
 
 export interface TransformOptions {
   mode: CodegenMode;
+  runtimeId?: string;
   zodCompat?: boolean | undefined;
   verbose?: boolean | undefined;
   autoDiscover?: boolean | undefined;
