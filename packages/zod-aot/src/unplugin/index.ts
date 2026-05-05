@@ -3,7 +3,13 @@ import type { CodegenMode } from "#src/core/codegen/context.js";
 import { log, shouldTransform, transformCode } from "./transform.js";
 import type { ZodAotPluginOptions } from "./types.js";
 import { BuildStatsAccumulator } from "./types.js";
-import { loadVirtual, resolveVirtualId, VIRTUAL_RUNTIME_ID, WP_RUNTIME_ID } from "./virtual.js";
+import {
+  loadVirtual,
+  RESOLVED_RUNTIME_ID,
+  resolveVirtualId,
+  VIRTUAL_RUNTIME_ID,
+  WP_RUNTIME_ID,
+} from "./virtual.js";
 
 /**
  * Frameworks whose resolveId/load hooks receive any import specifier, including
@@ -39,6 +45,10 @@ export const unplugin = createUnplugin(
 
       resolveId(id: string) {
         return resolveVirtualId(id);
+      },
+
+      loadInclude(id: string): boolean {
+        return id === RESOLVED_RUNTIME_ID;
       },
 
       load(id: string) {

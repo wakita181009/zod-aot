@@ -3,6 +3,10 @@ import { validateAddress, validateNotification, validateUser } from "./schemas.j
 // biome-ignore lint/suspicious/noConsole: sample app output
 const log = console.log;
 
+// Reproduce issue #143: require of JSON file should still work
+const translations = require("./translations/api.json");
+log(`translations loaded: ${JSON.stringify(translations)?.slice(0, 40)}`);
+
 function test(label: string, fn: () => void): void {
   log(`\n--- ${label} ---`);
   try {
