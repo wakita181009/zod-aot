@@ -12,7 +12,7 @@
     "zod-aot": "workspace:*"
   },
   "devDependencies": {
-    "@rspack/cli": "^2.0.0",
+    "@rspack/cli": "^2.0.5",
     "@rspack/core": "^2.0.5",
     "@types/node": "catalog:",
     "typescript": "catalog:"
