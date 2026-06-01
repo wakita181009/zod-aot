@@ -2,7 +2,7 @@ import type { SchemaIR, TupleIR } from "../../types.js";
 import type { FastGen, SlowGen } from "../context.js";
 import { extendStaticPathIndex, hasMutation } from "../context.js";
 import { emit } from "../emit.js";
-import { invalidType, tooBig } from "../emit-issue.js";
+import { invalidType, tooBig, tooSmall } from "../emit-issue.js";
 
 export function slowTuple(ir: SchemaIR & { type: "tuple" }, g: SlowGen): string {
   const len = ir.items.length;
@@ -10,6 +10,8 @@ export function slowTuple(ir: SchemaIR & { type: "tuple" }, g: SlowGen): string 
   let code = emit`
     if(!Array.isArray(${g.input})){
       ${invalidType(g, "tuple")}
+    }else if(${g.input}.length<${len}){
+      ${tooSmall(g, len, "array", true)}
     }else{`;
 
   if (ir.items.some(hasMutation) || (ir.rest !== null && hasMutation(ir.rest))) {

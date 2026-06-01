@@ -58,6 +58,7 @@ function normalizeIssues(issues: Record<string, unknown>[]): Record<string, unkn
     delete normalized["input"];
     delete normalized["inst"];
     delete normalized["continue"];
+    delete normalized["options"];
     return normalized;
   });
 }
@@ -374,7 +375,9 @@ describe("error compat — tuple errors", () => {
     assertSameErrors(z.tuple([z.string(), z.number()]), [42, "hello"], "tuple");
   });
 
-  it("too few elements", () => {
+  // Zod 4.4 changed too-short tuple errors from invalid_type to too_small.
+  // zod-aot matches the 4.4+ behavior; skip on older versions.
+  it.skipIf(!zodAtLeast("4.4"))("too few elements", () => {
     assertSameErrors(z.tuple([z.string(), z.number()]), ["hello"], "tuple");
   });
 });

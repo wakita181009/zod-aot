@@ -26,9 +26,12 @@ export function slowDiscriminatedUnion(
         break;`;
   }
 
+  const validValues = Object.keys(ir.mapping)
+    .map((v) => escapeString(v))
+    .join(",");
   code += emit`
     default:
-      ${g.issues}.push({code:"invalid_union",errors:[],note:"No matching discriminator",discriminator:${discKey},input:${g.input},path:${g.path}.concat(${discKey})});
+      ${g.issues}.push({code:"invalid_union",errors:[],note:"No matching discriminator",discriminator:${discKey},options:[${validValues}],input:${g.input},path:${g.path}.concat(${discKey})});
     }
   }`;
   return `${code}\n`;
