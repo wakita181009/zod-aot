@@ -95,7 +95,7 @@
   "dependencies": {
     "acorn": "^8.16.0",
     "get-tsconfig": "^4.14.0",
-    "jiti": "^2.6.1",
+    "jiti": "^2.7.0",
     "picomatch": "^4.0.4",
     "unplugin": "^3.0.0"
   },
