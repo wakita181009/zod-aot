@@ -8,9 +8,9 @@
   },
   "dependencies": {
     "@standard-schema/spec": "^1.1.0",
-    "ajv": "^8.18.0",
+    "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
-    "typia": "^12.0.2",
+    "typia": "^12.1.1",
     "zod": "catalog:",
     "zod3": "npm:zod@3.23.8",
     "zod-aot": "workspace:*"

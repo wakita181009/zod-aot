@@ -10,15 +10,15 @@
     "test:e2e": "node --import tsx tests/e2e.ts"
   },
   "dependencies": {
-    "next": "^16.2.4",
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5",
+    "next": "^16.2.6",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
     "zod": "catalog:",
     "zod-aot": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "@types/react": "^19.1.8",
+    "@types/react": "^19.2.15",
     "@types/react-dom": "^19.1.6",
     "tsx": "catalog:",
     "typescript": "catalog:",
