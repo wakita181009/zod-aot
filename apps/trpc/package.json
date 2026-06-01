@@ -17,7 +17,7 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "tsdown": "^0.21.10",
+    "tsdown": "^0.22.1",
     "tsx": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
