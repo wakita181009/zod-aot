@@ -139,10 +139,10 @@ importers:
     dependencies:
       '@trpc/client':
         specifier: ^11.17.0
-        version: 11.17.0(@trpc/server@11.16.0(typescript@6.0.3))(typescript@6.0.3)
+        version: 11.17.0(@trpc/server@11.17.0(typescript@6.0.3))(typescript@6.0.3)
       '@trpc/server':
-        specifier: ^11.0.0
-        version: 11.16.0(typescript@6.0.3)
+        specifier: ^11.17.0
+        version: 11.17.0(typescript@6.0.3)
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -1359,8 +1359,8 @@ packages:
       '@trpc/server': 11.17.0
       typescript: '>=5.7.2'
 
-  '@trpc/server@11.16.0':
-    resolution: {integrity: sha512-XgGuUMddrUTd04+za/WE5GFuZ1/YU9XQG0t3VL5WOIu2JspkOlq6k4RYEiqS6HSJt+S0RXaPdIoE2anIP/BBRQ==}
+  '@trpc/server@11.17.0':
+    resolution: {integrity: sha512-jbAOUe0PpUTCYqziyu+8vYXZdDXPudZgnEhWCQ2NjKnVEjfE93RqHTt1oycZJv/HNf51YlRXfEEwSIAbb161rw==}
     hasBin: true
     peerDependencies:
       typescript: '>=5.7.2'
@@ -3190,12 +3190,12 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@trpc/client@11.17.0(@trpc/server@11.16.0(typescript@6.0.3))(typescript@6.0.3)':
+  '@trpc/client@11.17.0(@trpc/server@11.17.0(typescript@6.0.3))(typescript@6.0.3)':
     dependencies:
-      '@trpc/server': 11.16.0(typescript@6.0.3)
+      '@trpc/server': 11.17.0(typescript@6.0.3)
       typescript: 6.0.3
 
-  '@trpc/server@11.16.0(typescript@6.0.3)':
+  '@trpc/server@11.17.0(typescript@6.0.3)':
     dependencies:
       typescript: 6.0.3
 
