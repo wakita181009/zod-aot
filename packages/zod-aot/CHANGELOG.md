@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.3](https://github.com/wakita181009/zod-aot/compare/v0.20.2...v0.20.3) (2026-06-01)
+
+
+### Bug Fixes
+
+* **compat:** align discriminatedUnion options and tuple too_small with Zod latest ([#163](https://github.com/wakita181009/zod-aot/issues/163)) ([5f78d51](https://github.com/wakita181009/zod-aot/commit/5f78d5175786d1b68e44c41a41e2e02584e59866))
+
 ## [0.20.2](https://github.com/wakita181009/zod-aot/compare/v0.20.1...v0.20.2) (2026-05-05)
 
 
