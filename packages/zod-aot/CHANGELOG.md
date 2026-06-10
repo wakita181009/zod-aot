@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.4](https://github.com/wakita181009/zod-aot/compare/v0.20.3...v0.20.4) (2026-06-10)
+
+
+### Bug Fixes
+
+* resolve tsconfig paths inherited via extends against the declaring config ([#191](https://github.com/wakita181009/zod-aot/issues/191)) ([fe5d2ed](https://github.com/wakita181009/zod-aot/commit/fe5d2edcd79f5f118ebb53a8ed781949927e44ee))
+
 ## [0.20.3](https://github.com/wakita181009/zod-aot/compare/v0.20.2...v0.20.3) (2026-06-01)
 
 
