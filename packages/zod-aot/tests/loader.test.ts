@@ -68,6 +68,15 @@ describe("loadSourceFile", () => {
     expect(mod).toHaveProperty("UserSchema");
   });
 
+  it.skipIf(!isNode)("resolves path aliases inherited via tsconfig extends", async () => {
+    // Relative `paths` declared in a shared root tsconfig must resolve
+    // against the root config's directory, not the extending app's.
+    const mod = await loadSourceFile(
+      path.join(fixturesDir, "path-alias-extends", "app", "schema.ts"),
+    );
+    expect(mod).toHaveProperty("UserSchema");
+  });
+
   it.skipIf(!isNode)("loads TSX files with JSX syntax", async () => {
     const mod = await loadSourceFile(path.join(fixturesDir, "with-jsx", "schema.tsx"));
     expect(mod).toHaveProperty("LoginSchema");
