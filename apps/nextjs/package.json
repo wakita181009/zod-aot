@@ -10,7 +10,7 @@
     "test:e2e": "node --import tsx tests/e2e.ts"
   },
   "dependencies": {
-    "next": "^16.2.7",
+    "next": "^16.2.10",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "zod": "catalog:",
