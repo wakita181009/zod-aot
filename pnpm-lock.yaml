@@ -55,10 +55,10 @@ importers:
     dependencies:
       '@hono/zod-validator':
         specifier: ^0.8.0
-        version: 0.8.0(hono@4.12.26)(zod@4.3.6)
+        version: 0.8.0(hono@4.12.30)(zod@4.3.6)
       hono:
-        specifier: ^4.12.26
-        version: 4.12.26
+        specifier: ^4.12.30
+        version: 4.12.30
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -2025,8 +2025,8 @@ packages:
     resolution: {integrity: sha512-EykJT/Q1KjTWctppgIAgfSO0tKVuZUjhgMr17kqTumMl6Afv3EISleU7qZUzoXDFTAHTDC4NOoG/ZxU3EvlMPQ==}
     engines: {node: '>=8'}
 
-  hono@4.12.26:
-    resolution: {integrity: sha512-uyZtpnYxM9CmQ7QsQknM4zN8EftNqhON1qYeIKM0Se67CCEe2c44xyGURwB0axX2fBDu1dqHrHAc1hmNT8ITkw==}
+  hono@4.12.30:
+    resolution: {integrity: sha512-emn+JoJjrN9YTpRDS5it/UI2SO9BAE37T6I3d963RxcZ81G9A4pr2SZTEiiaiKbzx+NKRg5BZ89fCL7gCJCUog==}
     engines: {node: '>=16.9.0'}
 
   hookable@6.1.1:
@@ -3018,9 +3018,9 @@ snapshots:
   '@esbuild/win32-x64@0.28.0':
     optional: true
 
-  '@hono/zod-validator@0.8.0(hono@4.12.26)(zod@4.3.6)':
+  '@hono/zod-validator@0.8.0(hono@4.12.30)(zod@4.3.6)':
     dependencies:
-      hono: 4.12.26
+      hono: 4.12.30
       zod: 4.3.6
 
   '@img/colour@1.1.0':
@@ -4062,7 +4062,7 @@ snapshots:
 
   has-flag@4.0.0: {}
 
-  hono@4.12.26: {}
+  hono@4.12.30: {}
 
   hookable@6.1.1: {}
 
