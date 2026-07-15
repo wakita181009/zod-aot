@@ -3,6 +3,10 @@ packages:
   - "apps/*"
   - "benchmarks"
 
+onlyBuiltDependencies:
+  - esbuild
+  - sharp
+
 catalog:
   "@types/node": ^26.0.0
   "@vitest/coverage-v8": ^4.1.4
