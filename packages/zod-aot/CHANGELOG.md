@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.5](https://github.com/wakita181009/zod-aot/compare/v0.20.4...v0.20.5) (2026-07-15)
+
+
+### Bug Fixes
+
+* handle enum discriminant in discriminatedUnion extraction ([#216](https://github.com/wakita181009/zod-aot/issues/216)) ([d2d3573](https://github.com/wakita181009/zod-aot/commit/d2d35734d7f3adae015a973635e954bcb2af1a9f))
+
 ## [0.20.4](https://github.com/wakita181009/zod-aot/compare/v0.20.3...v0.20.4) (2026-06-10)
 
 
