@@ -8,7 +8,7 @@ zod-aot runs on Node.js, Bun, and Deno. All runtimes are tested in CI.
 
 | Runtime | Tested Versions |
 |---------|----------------|
-| Node.js | 22, 24 |
+| Node.js | 22, 24, 26 |
 | Bun | 1.3 |
 | Deno | v2.x |
 
@@ -347,7 +347,7 @@ Key rules:
 
 ## CI/CD
 
-- **CI** (`.github/workflows/ci.yml`): Runs on push to main and PRs. Lint → typecheck → build → test on Node 22/24, Bun 1.3, Deno v2.x. Also tests Zod v4.0.0–latest compatibility.
+- **CI** (`.github/workflows/ci.yml`): Runs on push to main and PRs. Lint → typecheck → build → test on Node 22/24/26, Bun 1.3, Deno v2.x. Also tests Zod v4.0.0–latest compatibility.
 - **Release** (`.github/workflows/release-please.yml`): Triggered by push to main via [release-please](https://github.com/googleapis/release-please). Creates release PRs automatically, then publishes to npm with provenance on release creation.
 
 ## Verification
