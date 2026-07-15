@@ -3,9 +3,9 @@ packages:
   - "apps/*"
   - "benchmarks"
 
-onlyBuiltDependencies:
-  - esbuild
-  - sharp
+allowBuilds:
+  esbuild: true
+  sharp: true
 
 catalog:
   "@types/node": ^26.0.0
