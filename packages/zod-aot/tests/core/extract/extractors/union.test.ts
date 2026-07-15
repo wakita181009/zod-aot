@@ -74,7 +74,11 @@ describe("extractSchema — discriminatedUnion", () => {
     }
   });
 
-  it("mapping omits options whose discriminator is not a literal", () => {
+  it("maps every value of an enum discriminator to its option", () => {
+    // zod's discriminatedUnion accepts a `z.enum` as a member's discriminator; each of its
+    // values must map to that member. (Regression: a prior version handled only `z.literal`
+    // discriminators and silently dropped the enum member from the switch, so its inputs
+    // failed to parse.)
     const ir = extractSchema(
       z.discriminatedUnion("type", [
         z.object({ type: z.enum(["a", "c"]), value: z.string() }),
@@ -83,12 +87,13 @@ describe("extractSchema — discriminatedUnion", () => {
     ) as DiscriminatedUnionIR;
     expect(ir.type).toBe("discriminatedUnion");
     expect(ir.options).toHaveLength(2);
-    // Only the literal option is mapped
-    expect(ir.mapping).toEqual({ b: 1 });
+    expect(ir.mapping).toEqual({ a: 0, c: 0, b: 1 });
   });
 
-  it("mapping skips non-object options in discriminated union", () => {
-    // Directly call extractUnion with a synthetic def containing a non-object option
+  it("degrades to a plain union when an option's discriminator can't be enumerated", () => {
+    // A non-object option (or any discriminator field that is neither literal nor enum)
+    // cannot be placed in the O(1) switch. Rather than drop it — which would miscompile into
+    // a validator that rejects that option's inputs — fall back to a plain union.
     const ir = extractUnion(
       {
         discriminator: "type",
@@ -119,8 +124,8 @@ describe("extractSchema — discriminatedUnion", () => {
         }) as never,
         fallback: (reason: string) => ({ type: "fallback", reason }),
       } as never,
-    ) as DiscriminatedUnionIR;
-    expect(ir.type).toBe("discriminatedUnion");
-    expect(ir.mapping).toEqual({ b: 1 });
+    ) as UnionIR;
+    expect(ir.type).toBe("union");
+    expect(ir.options).toHaveLength(2);
   });
 });

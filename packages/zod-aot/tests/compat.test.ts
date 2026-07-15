@@ -416,6 +416,30 @@ describe("error compat — discriminated union errors", () => {
   });
 });
 
+describe("discriminated union — enum discriminant (regression)", () => {
+  // A member's discriminator may be a `z.enum`, in which case every enum value must route to
+  // that member. A prior bug expanded only `z.literal` discriminators and dropped the enum
+  // member entirely, so e.g. Slack `message` / `app_mention` events failed the compiled parse
+  // while a sibling literal member (`reaction_added`) still worked.
+  const schema = z.discriminatedUnion("type", [
+    z.object({ type: z.literal("reaction"), emoji: z.string() }),
+    z.object({ type: z.enum(["message", "app_mention"]), text: z.string() }),
+  ]);
+
+  it("accepts inputs for every enum discriminant value", () => {
+    const safeParse = compileForErrorTest(schema, "du_enum");
+    expect(safeParse({ type: "message", text: "hi" }).success).toBe(true);
+    expect(safeParse({ type: "app_mention", text: "hi" }).success).toBe(true);
+    expect(safeParse({ type: "reaction", emoji: "x" }).success).toBe(true);
+  });
+
+  it("still rejects unknown discriminants and wrong field types", () => {
+    const safeParse = compileForErrorTest(schema, "du_enum");
+    expect(safeParse({ type: "nope", text: "hi" }).success).toBe(false);
+    expect(safeParse({ type: "message", text: 42 }).success).toBe(false);
+  });
+});
+
 // ─── Intersection Errors ────────────────────────────────────────────────────
 
 describe("error compat — intersection errors", () => {
