@@ -123,8 +123,8 @@ importers:
         version: link:../../packages/zod-aot
     devDependencies:
       '@rspack/cli':
-        specifier: ^2.0.6
-        version: 2.0.8(@rspack/core@2.0.8)
+        specifier: ^2.1.3
+        version: 2.1.3(@rspack/core@2.0.8)
       '@rspack/core':
         specifier: ^2.0.8
         version: 2.0.8
@@ -1456,8 +1456,8 @@ packages:
   '@rspack/binding@2.0.8':
     resolution: {integrity: sha512-3uZ+y8aQxq33ty2srMxg2Nu0XuBI6vVrG50rkDaXqwWqOohfgGUSfFuQK7EnSUNy4aFUQlCG6NHialQHJov0wg==}
 
-  '@rspack/cli@2.0.8':
-    resolution: {integrity: sha512-b7MrVE9kvCs8L7hhPdHR6AvQ5wyD3KeBYD+DZMynt+545rvJYnT11LVNjqQJqAYHrgBTmf+9CNPYmeJvEZesWw==}
+  '@rspack/cli@2.1.3':
+    resolution: {integrity: sha512-TUhLdSfXiSD5D4A85pW7m4vCC/MtPk00+OK1qVtM2OGad/xTPNUtkOrvOz9CEaOLW3L7vkwo+dHc5fqkFEsFPQ==}
     hasBin: true
     peerDependencies:
       '@rspack/core': ^2.0.0-0
@@ -3549,7 +3549,7 @@ snapshots:
       '@rspack/binding-win32-ia32-msvc': 2.0.8
       '@rspack/binding-win32-x64-msvc': 2.0.8
 
-  '@rspack/cli@2.0.8(@rspack/core@2.0.8)':
+  '@rspack/cli@2.1.3(@rspack/core@2.0.8)':
     dependencies:
       '@rspack/core': 2.0.8
 
