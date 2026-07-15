@@ -239,7 +239,7 @@ Additional optimizations:
 
 | Runtime | Version | Status |
 |---------|---------|--------|
-| Node.js | 20+     | Fully supported |
+| Node.js | 22+     | Fully supported |
 | Bun     | 1.3+    | Fully supported |
 | Deno    | 2.0+    | Fully supported |
 
