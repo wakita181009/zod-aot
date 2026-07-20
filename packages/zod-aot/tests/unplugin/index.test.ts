@@ -2,8 +2,20 @@ import path from "node:path";
 import type { UnpluginContextMeta, UnpluginOptions } from "unplugin";
 import { describe, expect, it } from "vitest";
 import { unplugin } from "#src/unplugin/index.js";
+import { VIRTUAL_RUNTIME_ID, WP_RUNTIME_ID } from "#src/unplugin/virtual.js";
 
 const meta = { framework: "vite" } as UnpluginContextMeta;
+
+const COMPILE_FIXTURE = [
+  'import { z } from "zod";',
+  'import { compile } from "zod-aot";',
+  "const UserSchema = z.object({ name: z.string().min(1), age: z.number().int().positive() });",
+  "export const validateUser = compile(UserSchema);",
+].join("\n");
+
+function makeMeta(framework: string): UnpluginContextMeta {
+  return { framework } as unknown as UnpluginContextMeta;
+}
 
 describe("unplugin factory", () => {
   it("creates a plugin with correct name", () => {
@@ -160,6 +172,39 @@ describe("unplugin factory", () => {
       expect(summaryLog).toContain("1/1 schemas optimized across 1 file(s)");
     } finally {
       console.log = originalLog;
+    }
+  });
+});
+
+describe("unplugin framework mode selection", () => {
+  const fixturePath = path.resolve(import.meta.dirname, "../fixtures/simple-schema.ts");
+
+  type Transform = (code: string, id: string) => Promise<{ code: string; map: null } | undefined>;
+
+  async function transformFor(framework: string) {
+    const plugin = unplugin.raw({}, makeMeta(framework)) as UnpluginOptions;
+    const transform = plugin.transform as Transform;
+    return transform(COMPILE_FIXTURE, fixturePath);
+  }
+
+  it("rsbuild uses lean mode via the bare-specifier runtime (rspack-based)", async () => {
+    const result = await transformFor("rsbuild");
+    expect(result?.code).toContain(`from "${WP_RUNTIME_ID}"`);
+    expect(result?.code).not.toContain(VIRTUAL_RUNTIME_ID);
+  });
+
+  it("rspack and webpack share the bare-specifier runtime path", async () => {
+    for (const framework of ["rspack", "webpack"]) {
+      const result = await transformFor(framework);
+      expect(result?.code).toContain(`from "${WP_RUNTIME_ID}"`);
+      expect(result?.code).not.toContain(VIRTUAL_RUNTIME_ID);
+    }
+  });
+
+  it("virtual-module bundlers import from the virtual: runtime", async () => {
+    for (const framework of ["vite", "rollup", "rolldown", "esbuild", "farm", "bun"]) {
+      const result = await transformFor(framework);
+      expect(result?.code).toContain(`from "${VIRTUAL_RUNTIME_ID}"`);
     }
   });
 });

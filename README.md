@@ -23,7 +23,7 @@ npm install zod-aot zod@^4
 
 ### Build Plugin (Recommended)
 
-zod-aot provides build plugins for Vite, webpack, esbuild, Rollup, Rolldown, and rspack via [unplugin](https://github.com/unjs/unplugin). Two modes: **autoDiscover** (zero-config) and **compile()** (explicit opt-in).
+zod-aot provides build plugins for Vite, webpack, esbuild, Rollup, Rolldown, rspack, rsbuild, Farm, and Bun via [unplugin](https://github.com/unjs/unplugin). Two modes: **autoDiscover** (zero-config) and **compile()** (explicit opt-in).
 
 #### autoDiscover (Zero-Config)
 
@@ -142,6 +142,7 @@ Both modes can coexist in the same project — `compile()` schemas are detected 
 | Rollup | `import zodAot from "zod-aot/rollup"` |
 | Rolldown | `import zodAot from "zod-aot/rolldown"` |
 | rspack | `import zodAot from "zod-aot/rspack"` |
+| rsbuild | `import zodAot from "zod-aot/rsbuild"` |
 | Bun | `import zodAot from "zod-aot/bun"` |
 | Farm | `import zodAot from "zod-aot/farm"` |
 
@@ -164,9 +165,10 @@ factories, well-known regexes for `email`, `uuid`, `cuid`, `ipv4`, etc.). On
 bundlers that support virtual modules — **Vite, Rollup, Rolldown, esbuild,
 Farm, Bun** — the plugin imports these helpers once from
 `virtual:zod-aot/runtime`, so the bundler emits a single bundle-wide copy
-regardless of how many files reference them. webpack and rspack fall back to
-self-contained file-level helpers (a few hundred bytes per file) since they
-reject the `virtual:` URI scheme at the resolver layer.
+regardless of how many files reference them. webpack, rspack, and rsbuild
+reject the `virtual:` URI scheme at the resolver layer, so they import the same
+runtime module through a bare-specifier alias (`__zod-aot-runtime__`) instead —
+still a single deduplicated copy per bundle.
 
 The result: a 5-file project with 10 schemas all using `z.email()` and
 `z.uuid()` produces a bundle where each shared regex appears exactly **once**.

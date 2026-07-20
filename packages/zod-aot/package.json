@@ -86,6 +86,12 @@
       "source": "./src/unplugin/farm.ts",
       "import": "./dist/unplugin/farm.js",
       "default": "./dist/unplugin/farm.js"
+    },
+    "./rsbuild": {
+      "types": "./dist/unplugin/rsbuild.d.ts",
+      "source": "./src/unplugin/rsbuild.ts",
+      "import": "./dist/unplugin/rsbuild.js",
+      "default": "./dist/unplugin/rsbuild.js"
     }
   },
   "scripts": {

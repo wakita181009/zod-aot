@@ -14,8 +14,9 @@ import {
 /**
  * Frameworks whose resolveId/load hooks receive any import specifier, including
  * `virtual:` URIs and bare specifiers, so lean-mode cross-file dedup works.
- * webpack / rspack reject the `virtual:` URI scheme but accept bare specifiers,
- * so they use WP_RUNTIME_ID (`__zod-aot-runtime__`) instead of VIRTUAL_RUNTIME_ID.
+ * webpack / rspack / rsbuild reject the `virtual:` URI scheme but accept bare
+ * specifiers, so they use WP_RUNTIME_ID (`__zod-aot-runtime__`) instead of
+ * VIRTUAL_RUNTIME_ID.
  */
 const VIRTUAL_MODULE_FRAMEWORKS = new Set([
   "vite",
@@ -26,10 +27,15 @@ const VIRTUAL_MODULE_FRAMEWORKS = new Set([
   "bun",
   "rspack",
   "webpack",
+  "rsbuild",
 ]);
 
-/** Frameworks that need the bare-specifier runtime ID instead of `virtual:`. */
-const WP_FRAMEWORKS = new Set(["rspack", "webpack"]);
+/**
+ * Frameworks that need the bare-specifier runtime ID instead of `virtual:`.
+ * rsbuild is included because it wraps the rspack plugin internally, inheriting
+ * rspack's rejection of the `virtual:` URI scheme.
+ */
+const WP_FRAMEWORKS = new Set(["rspack", "webpack", "rsbuild"]);
 
 export const unplugin = createUnplugin(
   (options: ZodAotPluginOptions | undefined, meta: UnpluginContextMeta) => {
