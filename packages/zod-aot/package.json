@@ -1,6 +1,6 @@
 {
   "name": "zod-aot",
-  "version": "0.20.5",
+  "version": "0.21.0",
   "description": "Compile Zod schemas into zero-overhead validation functions at build time",
   "type": "module",
   "keywords": [
