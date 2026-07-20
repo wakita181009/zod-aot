@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.0](https://github.com/wakita181009/zod-aot/compare/v0.20.5...v0.21.0) (2026-07-20)
+
+
+### Features
+
+* **unplugin:** add rsbuild support ([#220](https://github.com/wakita181009/zod-aot/issues/220)) ([f0832f6](https://github.com/wakita181009/zod-aot/commit/f0832f6324ac6d303b465cd59446b7729cffa3bd))
+
 ## [0.20.5](https://github.com/wakita181009/zod-aot/compare/v0.20.4...v0.20.5) (2026-07-15)
 
 
