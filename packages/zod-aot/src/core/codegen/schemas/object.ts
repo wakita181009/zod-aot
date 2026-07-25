@@ -60,7 +60,7 @@ export function fastObject(ir: ObjectIR, g: FastGen): string | null {
   if (ir.unknownKeys === "strip") {
     const knownKeys = Object.keys(ir.properties);
     if (knownKeys.length === 0) {
-      parts.push(`Object.keys(${x}).length===0`);
+      parts.splice(3, 0, `Object.keys(${x}).length===0`);
     } else {
       const knownKeysFunction = g.temp("ok");
       g.ctx.preamble.push(
@@ -68,7 +68,7 @@ export function fastObject(ir: ObjectIR, g: FastGen): string | null {
           .map((key) => `k===${escapeString(key)}`)
           .join("||")}))return false;}return true;}`,
       );
-      parts.push(`${knownKeysFunction}(${x})`);
+      parts.splice(3, 0, `${knownKeysFunction}(${x})`);
     }
   }
 
