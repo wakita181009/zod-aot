@@ -54,7 +54,7 @@ describe("well-known-regex", () => {
         const ir = extractSchema(schema, []);
         if (ir.type !== "string") throw new Error("not a string IR");
         const check = ir.checks[0];
-        if (!check || check.kind !== "string_format") throw new Error("no string_format check");
+        if (check?.kind !== "string_format") throw new Error("no string_format check");
         const pattern = (check as { pattern?: string }).pattern;
         expect(pattern).toBeDefined();
         const actual = lookupWellKnownRegex(pattern as string);

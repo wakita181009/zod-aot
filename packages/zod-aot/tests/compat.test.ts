@@ -580,8 +580,9 @@ describe("ZodError parity — basics", () => {
     const safeParse = compileForErrorTest(z.string(), "str");
     const result = safeParse(42);
     if (!result.success) {
-      expect(typeof result.error?.message).toBe("string");
-      expect((result.error?.message as string).length).toBeGreaterThan(0);
+      const message = result.error?.message;
+      expect(typeof message).toBe("string");
+      expect((message as string).length).toBeGreaterThan(0);
     }
   });
 
