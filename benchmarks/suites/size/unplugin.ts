@@ -51,7 +51,7 @@ async function bundle(plugins: ZodAotPlugin[]): Promise<BundleResult> {
     throw new Error("Unexpected build output shape");
   }
   const chunk = output.output.find((o) => o.type === "chunk");
-  if (!chunk || chunk.type !== "chunk") {
+  if (chunk?.type !== "chunk") {
     throw new Error("No code chunk in bundle output");
   }
 

@@ -106,7 +106,8 @@ describe("slow-path — record", () => {
     expect(result.success).toBe(false);
     // Zod only reports the key error (short-circuits)
     expect(result.error?.issues.length).toBe(1);
-    expect((result.error?.issues[0] as Record<string, unknown>)["code"]).toBe("invalid_key");
+    const issue = result.error?.issues[0] as Record<string, unknown>;
+    expect(issue["code"]).toBe("invalid_key");
   });
 });
 
