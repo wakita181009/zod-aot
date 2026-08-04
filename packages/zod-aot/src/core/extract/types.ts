@@ -30,6 +30,7 @@ export interface ZodDef {
   format: string;
   pattern: RegExp | string;
   shape: Record<string, ZodSchema>;
+  catchall?: ZodSchema;
   element: ZodSchema;
   options: ZodSchema[];
   innerType: ZodSchema;

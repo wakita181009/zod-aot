@@ -26,6 +26,7 @@ describe("dispatch", () => {
     const ir = dispatch(z.object({ name: z.string() }), "", undefined, new Set());
     expect(ir).toEqual({
       type: "object",
+      unknownKeys: "strip",
       properties: { name: { type: "string", checks: [] } },
     });
   });
@@ -63,9 +64,11 @@ describe("dispatch", () => {
     );
     expect(ir).toEqual({
       type: "object",
+      unknownKeys: "strip",
       properties: {
         user: {
           type: "object",
+          unknownKeys: "strip",
           properties: { name: { type: "string", checks: [] } },
         },
       },
