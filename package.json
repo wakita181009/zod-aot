@@ -17,7 +17,7 @@
     "pack": "pnpm --filter zod-aot pack"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.0",
+    "@biomejs/biome": "^2.5.6",
     "@vitest/coverage-v8": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",
