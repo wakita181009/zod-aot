@@ -203,8 +203,8 @@ importers:
         specifier: ^3.0.1
         version: 3.0.1(ajv@8.20.0)
       typia:
-        specifier: ^13.1.0
-        version: 13.1.0(@types/node@26.0.0)
+        specifier: ^13.2.0
+        version: 13.2.0(@types/node@26.0.0)
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -220,7 +220,7 @@ importers:
         version: 26.0.0
       '@typia/unplugin':
         specifier: ^12.1.1
-        version: 12.1.1(typia@13.1.0(@types/node@26.0.0))(vite@8.1.4(@types/node@26.0.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.23.0))
+        version: 12.1.1(typia@13.2.0(@types/node@26.0.0))(vite@8.1.4(@types/node@26.0.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.23.0))
       vite:
         specifier: 'catalog:'
         version: 8.1.4(@types/node@26.0.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.23.0)
@@ -1570,8 +1570,8 @@ packages:
   '@types/react@19.2.17':
     resolution: {integrity: sha512-MXfmqaVPEVgkBT/aY0aGCkRWWtByiYQXo3xdQ8r5RzuFrPiRn8Gar2tQdXSUQ2GKV3bkXckek89V8wQBY2Q/Aw==}
 
-  '@typia/interface@13.1.0':
-    resolution: {integrity: sha512-pIAYjesALXauxLGOcuM/su7sIknBnrdQdgQpFhvNt/wf+sQOM/bXEebf62rH5kBrZ88m0x49HHSSQEC6X6ua+Q==}
+  '@typia/interface@13.2.0':
+    resolution: {integrity: sha512-F0SM5T7d4w8pyfsvQ0Wd8fR41iUwKjzpj/0+z7T87Ue+IS78STBPps5gFgQgM4qfsteVP82S217reJmb1SZRBA==}
 
   '@typia/unplugin@12.1.1':
     resolution: {integrity: sha512-1u+4vOa5Md6mPw1Z6ijz9n5gDMrEifuGwI0Z3/lCF42Glvoc17B7Hbh0FC11tT53Snw7D96LimdZwGUl59c1+A==}
@@ -1585,8 +1585,8 @@ packages:
       vite:
         optional: true
 
-  '@typia/utils@13.1.0':
-    resolution: {integrity: sha512-T+RFuzGic/Ppbgtm7670MrkFWIkv2Hq0UFkcWKWqnMg7mK/8zuEPCKBvHZTo+2qrD1kUxZzjTnLwJuGO69cd5Q==}
+  '@typia/utils@13.2.0':
+    resolution: {integrity: sha512-Hi/04+FY5tf9sHQihl0XWsb9QoISiHTbu6/gucUta9iT0/yakofMajRaCSwomRg43ekNNve7L9Hvb/6u5JDkuQ==}
 
   '@vitest/browser-preview@4.1.10':
     resolution: {integrity: sha512-14MJrL59ZFkqXLjwfSk6RzTDy5Czf9UG4+8q8L6Gxjs2aPjEce/cVNYV14bXAc2BvMjUNu904+ZEZA1Xc1wtvQ==}
@@ -2780,9 +2780,14 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
-  typia@13.1.0:
-    resolution: {integrity: sha512-NIGBei56aXhV8gL1esJdm9YtJLLqKmwdaWJIee80TDP7WDKifoDe8tQH4y+uDdBCjpDoBkAjSo47FoQ1oG4Kdg==}
+  typia@13.2.0:
+    resolution: {integrity: sha512-2zZxQF6HBWXUz86rdNtyPbcY43PFAflivVNiSZM2cfVVmFz2u4h7eA6eD/AnSp0l+wzayBG/mYxmJlUdMmc3uQ==}
     hasBin: true
+    peerDependencies:
+      ttsc: '>=0.19.2'
+    peerDependenciesMeta:
+      ttsc:
+        optional: true
 
   unconfig-core@7.5.0:
     resolution: {integrity: sha512-Su3FauozOGP44ZmKdHy2oE6LPjk51M/TRRjHv2HNCWiDvfvCoxC2lno6jevMA91MYAdCdwP05QnWdWpSbncX/w==}
@@ -3860,9 +3865,9 @@ snapshots:
     dependencies:
       csstype: 3.2.3
 
-  '@typia/interface@13.1.0': {}
+  '@typia/interface@13.2.0': {}
 
-  '@typia/unplugin@12.1.1(typia@13.1.0(@types/node@26.0.0))(vite@8.1.4(@types/node@26.0.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.23.0))':
+  '@typia/unplugin@12.1.1(typia@13.2.0(@types/node@26.0.0))(vite@8.1.4(@types/node@26.0.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.23.0))':
     dependencies:
       '@rollup/pluginutils': 5.4.0
       bun-only: 0.0.1
@@ -3874,16 +3879,16 @@ snapshots:
       pathe: 2.0.3
       pkg-types: 2.3.1
       type-fest: 4.41.0
-      typia: 13.1.0(@types/node@26.0.0)
+      typia: 13.2.0(@types/node@26.0.0)
       unplugin: 2.3.11
     optionalDependencies:
       vite: 8.1.4(@types/node@26.0.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.23.0)
     transitivePeerDependencies:
       - rollup
 
-  '@typia/utils@13.1.0':
+  '@typia/utils@13.2.0':
     dependencies:
-      '@typia/interface': 13.1.0
+      '@typia/interface': 13.2.0
 
   '@vitest/browser-preview@4.1.10(vite@8.1.4(@types/node@26.0.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.23.0))(vitest@4.1.10)':
     dependencies:
@@ -4964,11 +4969,11 @@ snapshots:
 
   typescript@6.0.3: {}
 
-  typia@13.1.0(@types/node@26.0.0):
+  typia@13.2.0(@types/node@26.0.0):
     dependencies:
       '@standard-schema/spec': 1.1.0
-      '@typia/interface': 13.1.0
-      '@typia/utils': 13.1.0
+      '@typia/interface': 13.2.0
+      '@typia/utils': 13.2.0
       commander: 10.0.1
       inquirer: 8.2.7(@types/node@26.0.0)
       randexp: 0.5.3
