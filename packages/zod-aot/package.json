@@ -102,7 +102,7 @@
     "acorn": "^8.17.0",
     "get-tsconfig": "^4.14.0",
     "jiti": "^2.7.0",
-    "picomatch": "^4.0.4",
+    "picomatch": "^4.0.5",
     "unplugin": "^3.3.0"
   },
   "peerDependencies": {
