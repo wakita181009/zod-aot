@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.1](https://github.com/wakita181009/zod-aot/compare/v0.21.0...v0.21.1) (2026-08-20)
+
+
+### Bug Fixes
+
+* **deps:** bump picomatch to ^4.0.5 and rebuild with TypeScript 7 ([#248](https://github.com/wakita181009/zod-aot/issues/248)) ([1056705](https://github.com/wakita181009/zod-aot/commit/1056705ed3f2d9f164642220ee37f97626586c42))
+
 ## [0.21.0](https://github.com/wakita181009/zod-aot/compare/v0.20.5...v0.21.0) (2026-07-20)
 
 
