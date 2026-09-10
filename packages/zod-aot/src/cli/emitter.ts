@@ -28,9 +28,11 @@ export function generateCompiledFileContent(
   // Emit an explicit runtime extension (.js/.mjs/.cjs) instead of an
   // extensionless specifier: Node ESM ("moduleResolution": "nodenext") requires
   // relative imports to carry the extension of the emitted JS file.
-  let importPath = sourceRelPath.replace(/\.([cm]?)[jt]sx?$/, (_match, flavor: string) =>
-    flavor === "" ? ".js" : `.${flavor}js`,
-  );
+  let importPath = sourceRelPath.endsWith(".js")
+    ? sourceRelPath
+    : sourceRelPath.replace(/\.([cm]?)[jt]sx?$/, (_match, flavor: string) =>
+        flavor === "" ? ".js" : `.${flavor}js`,
+      );
   if (!importPath.startsWith(".")) {
     importPath = `./${importPath}`;
   }
