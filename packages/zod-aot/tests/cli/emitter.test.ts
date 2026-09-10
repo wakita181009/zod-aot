@@ -23,7 +23,7 @@ describe("generateCompiledFileContent()", () => {
     // Uses __mkv factory for Zod compatibility (Object.create inside __mkv)
     expect(content).toContain("__mkv(safeParse_test,(__src_validateTest as any).schema)");
     // Imports source schema (needed for zodCompat Object.create)
-    expect(content).toContain('import { validateTest as __src_validateTest } from "./test"');
+    expect(content).toContain('import { validateTest as __src_validateTest } from "./test.js"');
   });
 
   it("generates multiple schemas in one file", () => {
@@ -90,7 +90,32 @@ describe("generateCompiledFileContent()", () => {
     );
 
     // Source schemas are always imported now (for Object.create)
-    expect(content).toContain('import { validateTest as __src_validateTest } from "./test"');
+    expect(content).toContain('import { validateTest as __src_validateTest } from "./test.js"');
+  });
+
+  it("maps the source extension to its runtime import extension", () => {
+    const result: CodeGenResult = {
+      code: "/* zod-aot */",
+      functionDef: "function safeParse_test(input){\nreturn{success:true,data:input};\n}",
+      refCount: 0,
+      usedHelpers: new Set(),
+    };
+    const importPathFor = (source: string) => {
+      const content = generateCompiledFileContent(
+        [{ exportName: "validateTest", codegenResult: result, refEntries: [] }],
+        source,
+      );
+      return content.match(/from "([^"]+)"/g)?.at(-1);
+    };
+
+    // NodeNext ESM requires explicit extensions on relative imports.
+    expect(importPathFor("./test.ts")).toBe('from "./test.js"');
+    expect(importPathFor("./test.tsx")).toBe('from "./test.js"');
+    expect(importPathFor("./test.js")).toBe('from "./test.js"');
+    expect(importPathFor("./test.mts")).toBe('from "./test.mjs"');
+    expect(importPathFor("./test.mjs")).toBe('from "./test.mjs"');
+    expect(importPathFor("./test.cts")).toBe('from "./test.cjs"');
+    expect(importPathFor("./test.cjs")).toBe('from "./test.cjs"');
   });
 });
 
@@ -110,7 +135,7 @@ describe("generateCompiledFileContent() — zodCompat: false", () => {
     );
 
     expect(content).not.toContain("__src_validateTest");
-    expect(content).not.toContain('from "./test"');
+    expect(content).not.toContain('from "./test.js"');
   });
 
   it("still imports source schemas when fallbacks exist", () => {
@@ -134,7 +159,7 @@ describe("generateCompiledFileContent() — zodCompat: false", () => {
       { zodCompat: false },
     );
 
-    expect(content).toContain('import { validateUser as __src_validateUser } from "./schemas"');
+    expect(content).toContain('import { validateUser as __src_validateUser } from "./schemas.js"');
     expect(content).toContain("export const validateUser = /* @__PURE__ */");
     expect(content).toContain("__mkv(safeParse_test,null)");
   });
