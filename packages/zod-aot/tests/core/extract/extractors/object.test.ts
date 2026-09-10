@@ -7,7 +7,7 @@ import type { FallbackIR, ObjectIR } from "#src/core/types.js";
 describe("extractObject", () => {
   it("extracts empty object", () => {
     const ir = extractSchema(z.object({})) as ObjectIR;
-    expect(ir).toEqual({ type: "object", properties: {} });
+    expect(ir).toEqual({ type: "object", properties: {}, unknownKeys: "strip" });
   });
 
   it("extracts object with multiple properties", () => {

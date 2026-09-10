@@ -203,7 +203,7 @@ export function hasMutation(ir: SchemaIR): boolean {
     case "stringBool":
       return true;
     case "object":
-      return Object.values(ir.properties).some(hasMutation);
+      return ir.unknownKeys === "strip" || Object.values(ir.properties).some(hasMutation);
     case "array":
       return hasMutation(ir.element);
     case "tuple":

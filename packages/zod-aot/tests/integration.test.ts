@@ -2324,13 +2324,36 @@ describe("integration — composite schema patterns match Zod", () => {
 describe("integration — edge cases match Zod", () => {
   it("empty object z.object({})", () => {
     const schema = z.object({});
-    // Note: Zod strips unknown keys, AOT passes through — compare success only
     const safeParse = compileZodSchema(schema, "emptyObj");
     for (const input of [{}, { extra: "ignored" }, null, "string", 42, undefined]) {
       const zodResult = schema.safeParse(input);
       const aotResult = safeParse(input);
       expect(aotResult.success).toBe(zodResult.success);
+      if (zodResult.success && aotResult.success) {
+        expect(aotResult.data).toEqual(zodResult.data);
+      }
     }
+  });
+
+  it("objects strip unknown keys recursively without mutating input", () => {
+    const schema = z.object({
+      name: z.string(),
+      optional: z.string().optional(),
+      nested: z.object({ value: z.coerce.number() }),
+    });
+    const safeParse = compileZodSchema(schema, "stripUnknownKeys");
+    const input = {
+      name: "Alice",
+      extra: "ignored",
+      nested: { value: "42", nestedExtra: true },
+    };
+
+    expect(safeParse(input)).toEqual(schema.safeParse(input));
+    expect(input).toEqual({
+      name: "Alice",
+      extra: "ignored",
+      nested: { value: "42", nestedExtra: true },
+    });
   });
 
   it("deeply nested objects (5 levels)", () => {
