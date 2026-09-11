@@ -1,6 +1,6 @@
 import type { DiscriminatedUnionIR, SchemaIR } from "../../types.js";
 import type { FastGen, SlowGen } from "../context.js";
-import { escapeString } from "../context.js";
+import { escapeString, hasMutation } from "../context.js";
 import { emit } from "../emit.js";
 import { invalidType } from "../emit-issue.js";
 
@@ -15,6 +15,9 @@ export function slowDiscriminatedUnion(
       ${invalidType(g, "object")}
     }else{`;
 
+  // Options that mutate (default/catch/coerce/effect) write their result into
+  // objVar; without this it would never reach the caller's output.
+  const needsOutputPropagation = ir.options.some(hasMutation);
   const objVar = g.temp("du");
   code += `var ${objVar}=${g.input};switch(${objVar}[${discKey}]){`;
 
@@ -23,6 +26,7 @@ export function slowDiscriminatedUnion(
     code += emit`
       case ${escapeString(value)}:
         ${g.visit(option, { input: objVar, output: objVar })}
+        ${needsOutputPropagation ? `${g.output}=${objVar};` : ""}
         break;`;
   }
 
