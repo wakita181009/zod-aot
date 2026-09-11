@@ -723,6 +723,35 @@ describe("integration — discriminatedUnion match Zod", () => {
       assertSameResult(schema, input, "discUnion3");
     }
   });
+
+  it("propagates output when a matched option applies default/catch", () => {
+    const schema = z.discriminatedUnion("type", [
+      z.object({ type: z.literal("a"), n: z.number().default(5) }),
+      z.object({ type: z.literal("b"), s: z.string().catch("fallback") }),
+      z.object({ type: z.literal("c"), v: z.string() }),
+    ]);
+    const safeParse = compileWithRefs(schema, "discUnionMutation");
+    for (const input of [
+      { type: "a" },
+      { type: "a", n: 1 },
+      { type: "b", s: 42 },
+      { type: "c", v: "plain" },
+    ]) {
+      expect(safeParse(input)).toEqual(schema.safeParse(input));
+    }
+  });
+
+  it("propagates output when nested inside an object", () => {
+    const schema = z.object({
+      event: z.discriminatedUnion("type", [
+        z.object({ type: z.literal("a"), n: z.number().default(5) }),
+        z.object({ type: z.literal("b") }),
+      ]),
+    });
+    const safeParse = compileWithRefs(schema, "nestedDiscUnionMutation");
+    const input = { event: { type: "a" } };
+    expect(safeParse(input)).toEqual(schema.safeParse(input));
+  });
 });
 
 describe("integration — intersection match Zod", () => {
