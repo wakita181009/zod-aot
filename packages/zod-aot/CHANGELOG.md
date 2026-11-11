@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.3](https://github.com/wakita181009/zod-aot/compare/v0.21.2...v0.21.3) (2026-11-11)
+
+
+### Bug Fixes
+
+* **cli:** keep pre-converted .js import paths in CLI output; add webpack demo app ([#260](https://github.com/wakita181009/zod-aot/issues/260)) ([0b688ba](https://github.com/wakita181009/zod-aot/commit/0b688ba92e42baedf6688a57045e9e3f6e40d749))
+
 ## [0.21.2](https://github.com/wakita181009/zod-aot/compare/v0.21.1...v0.21.2) (2026-09-11)
 
 
