@@ -45,6 +45,12 @@ jobs:
       - name: CLI smoke test (standalone)
         run: pnpm run test:smoke
 
+      # The first install runs before zod-aot's dist/ exists, so pnpm skips the `zod-aot`
+      # bin link in apps/. Relink now that the build produced it.
+      - name: Relink workspace bins
+        if: matrix.node-version == 24
+        run: pnpm install --frozen-lockfile --offline --config.optimistic-repeat-install=false
+
       - name: Test apps
         if: matrix.node-version == 24
         run: pnpm --filter './apps/*' --filter '!@zod-aot/nextjs' --filter '!@zod-aot/viteplus' test
