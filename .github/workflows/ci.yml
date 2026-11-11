@@ -48,7 +48,6 @@ jobs:
       # Build only proves bundling succeeds; app tests run the bundled output.
       # nextjs/viteplus have no test files yet, so `vitest run` would fail.
       - name: Test apps
-        if: matrix.node-version == 24
         run: pnpm --filter './apps/*' --filter '!@zod-aot/nextjs' --filter '!@zod-aot/viteplus' test
 
   bun-check:
