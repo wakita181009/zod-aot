@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.2](https://github.com/wakita181009/zod-aot/compare/v0.21.1...v0.21.2) (2026-09-11)
+
+
+### Bug Fixes
+
+* propagate discriminatedUnion output when an option mutates ([#261](https://github.com/wakita181009/zod-aot/issues/261)) ([e8c2b1a](https://github.com/wakita181009/zod-aot/commit/e8c2b1a61c418c0774579e35bc761e5724c301d8))
+
 ## [0.21.1](https://github.com/wakita181009/zod-aot/compare/v0.21.0...v0.21.1) (2026-08-20)
 
 

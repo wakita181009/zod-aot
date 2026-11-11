@@ -724,24 +724,33 @@ describe("integration — discriminatedUnion match Zod", () => {
     }
   });
 
-  it("propagates default applied inside a matched option to the output", () => {
+  it("propagates output when a matched option applies default/catch", () => {
     const schema = z.discriminatedUnion("type", [
-      z.object({ type: z.literal("a"), value: z.string().default("dv") }),
-      z.object({ type: z.literal("b"), count: z.number() }),
+      z.object({ type: z.literal("a"), n: z.number().default(5) }),
+      z.object({ type: z.literal("b"), s: z.string().catch("fallback") }),
+      z.object({ type: z.literal("c"), v: z.string() }),
     ]);
-    const safeParse = compileWithRefs(schema, "duDefault");
+    const safeParse = compileWithRefs(schema, "discUnionMutation");
     for (const input of [
       { type: "a" },
-      { type: "a", value: "explicit" },
-      { type: "b", count: 1 },
+      { type: "a", n: 1 },
+      { type: "b", s: 42 },
+      { type: "c", v: "plain" },
     ]) {
-      const zodResult = schema.safeParse(input);
-      const aotResult = safeParse(input);
-      expect(aotResult.success).toBe(zodResult.success);
-      if (zodResult.success && aotResult.success) {
-        expect(aotResult.data).toEqual(zodResult.data);
-      }
+      expect(safeParse(input)).toEqual(schema.safeParse(input));
     }
+  });
+
+  it("propagates output when nested inside an object", () => {
+    const schema = z.object({
+      event: z.discriminatedUnion("type", [
+        z.object({ type: z.literal("a"), n: z.number().default(5) }),
+        z.object({ type: z.literal("b") }),
+      ]),
+    });
+    const safeParse = compileWithRefs(schema, "nestedDiscUnionMutation");
+    const input = { event: { type: "a" } };
+    expect(safeParse(input)).toEqual(schema.safeParse(input));
   });
 
   it("propagates transform applied inside a matched option to the output", () => {
@@ -767,22 +776,6 @@ describe("integration — discriminatedUnion match Zod", () => {
     const zodResult = schema.safeParse({ type: "a", n: "42" });
     const aotResult = safeParse({ type: "a", n: "42" });
     expect(aotResult.success).toBe(zodResult.success);
-    if (zodResult.success && aotResult.success) {
-      expect(aotResult.data).toEqual(zodResult.data);
-    }
-  });
-
-  it("nested discriminatedUnion propagates inner defaults to the output", () => {
-    const inner = z.discriminatedUnion("action", [
-      z.object({ action: z.literal("set"), value: z.string().default("dv") }),
-      z.object({ action: z.literal("clear") }),
-    ]);
-    const schema = z.object({ event: inner });
-    const safeParse = compileWithRefs(schema, "duNestedDefault");
-    const input = { event: { action: "set" } };
-    const zodResult = schema.safeParse(input);
-    const aotResult = safeParse(input);
-    expect(aotResult.success).toBe(true);
     if (zodResult.success && aotResult.success) {
       expect(aotResult.data).toEqual(zodResult.data);
     }

@@ -15,21 +15,18 @@ export function slowDiscriminatedUnion(
       ${invalidType(g, "object")}
     }else{`;
 
+  // Options that mutate (default/catch/coerce/effect) write their result into
+  // objVar; without this it would never reach the caller's output.
+  const needsOutputPropagation = ir.options.some(hasMutation);
   const objVar = g.temp("du");
   code += `var ${objVar}=${g.input};switch(${objVar}[${discKey}]){`;
 
-  // Options run with objVar as their output target, so a mutating option
-  // (default, coerce, effect, ...) rebinds objVar to its rewritten value.
-  // That rebinding must be propagated to the parent's output expression.
-  const needsOutputPropagation = ir.options.some(hasMutation);
-
   for (const [value, index] of Object.entries(ir.mapping)) {
     const option = ir.options[index] as SchemaIR;
-    const writeBack = needsOutputPropagation ? `${g.output}=${objVar};` : "";
     code += emit`
       case ${escapeString(value)}:
         ${g.visit(option, { input: objVar, output: objVar })}
-        ${writeBack}
+        ${needsOutputPropagation ? `${g.output}=${objVar};` : ""}
         break;`;
   }
 
