@@ -13,6 +13,8 @@ pnpm bench
 pnpm size:cli | size:unplugin
 ```
 
+`git commit` runs `pnpm typecheck` + `pnpm check` via husky (`.husky/pre-commit`).
+
 ## Architecture (non-obvious parts)
 
 - One pipeline for every entry point: `compileSchemas()` (`core/pipeline.ts`) →
