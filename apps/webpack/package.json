@@ -1,0 +1,23 @@
+{
+  "name": "@zod-aot/webpack",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "webpack --env mode=unplugin",
+    "generate": "zod-aot generate src/schemas.ts -o src/schemas.compiled.ts",
+    "build:cli": "pnpm generate && webpack --env mode=cli",
+    "start": "node dist/main.js",
+    "test": "pnpm build && node dist/main.js && pnpm build:cli && node dist/main-cli.js"
+  },
+  "dependencies": {
+    "zod": "catalog:",
+    "zod-aot": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "esbuild-loader": "^4.5.0",
+    "typescript": "catalog:",
+    "webpack": "^5.112.2",
+    "webpack-cli": "^7.3.1"
+  }
+}

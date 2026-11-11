@@ -92,6 +92,30 @@ describe("generateCompiledFileContent()", () => {
     // Source schemas are always imported now (for Object.create)
     expect(content).toContain('import { validateTest as __src_validateTest } from "./test"');
   });
+
+  it("strips TS/JS source extensions but keeps an explicit .js path", () => {
+    const result: CodeGenResult = {
+      code: "/* zod-aot */",
+      functionDef: "function safeParse_test(input){\nreturn{success:true,data:input};\n}",
+      refCount: 0,
+      usedHelpers: new Set(),
+    };
+    const importPathFor = (source: string) => {
+      const content = generateCompiledFileContent(
+        [{ exportName: "validateTest", codegenResult: result, refEntries: [] }],
+        source,
+      );
+      return content.match(/from "([^"]+)"/g)?.at(-1);
+    };
+
+    // Rewriting .ts to .js would break webpack/rspack without extensionAlias.
+    for (const ext of [".ts", ".tsx", ".mts", ".cts", ".jsx", ".mjs", ".cjs"]) {
+      expect(importPathFor(`./test${ext}`)).toBe('from "./test"');
+    }
+    // A caller that pre-converts to .js (e.g. for Node ESM) gets it verbatim.
+    expect(importPathFor("./test.js")).toBe('from "./test.js"');
+    expect(importPathFor("../gen/test.js")).toBe('from "../gen/test.js"');
+  });
 });
 
 describe("generateCompiledFileContent() — zodCompat: false", () => {

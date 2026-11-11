@@ -58,6 +58,46 @@ describe("slow-path — discriminatedUnion", () => {
     expect(result.functionDef).toContain("switch");
     expect(result.functionDef).not.toContain("__u_");
   });
+
+  it("propagates a mutated option output (default) to the parent output", () => {
+    const duIr: DiscriminatedUnionIR = {
+      type: "discriminatedUnion",
+      discriminator: "type",
+      options: [
+        {
+          type: "object",
+          properties: {
+            type: { type: "literal", values: ["a"] },
+            value: { type: "default", inner: { type: "string", checks: [] }, refIndex: 0 },
+          },
+        },
+        {
+          type: "object",
+          properties: {
+            type: { type: "literal", values: ["b"] },
+            count: { type: "number", checks: [] },
+          },
+        },
+      ],
+      mapping: { a: 0, b: 1 },
+    };
+    const refSchema = { _zod: { def: { defaultValue: "dv" } } };
+    const safeParse = compileIR(duIr, "duDefault", [refSchema]);
+
+    const applied = safeParse({ type: "a" });
+    expect(applied.success).toBe(true);
+    expect(applied.data).toEqual({ type: "a", value: "dv" });
+
+    const explicit = safeParse({ type: "a", value: "explicit" });
+    expect(explicit.success).toBe(true);
+    expect(explicit.data).toEqual({ type: "a", value: "explicit" });
+  });
+
+  it("does not emit write-back for pure (non-mutating) options", () => {
+    const result = generateValidator(ir, "duPure");
+    // No option can mutate its output, so the case bodies stay assignment-free.
+    expect(result.functionDef).not.toMatch(/_d=__du_\d+;/);
+  });
 });
 
 describe("fast-path — DiscriminatedUnion", () => {

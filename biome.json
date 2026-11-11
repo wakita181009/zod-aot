@@ -171,8 +171,8 @@
       "!dist",
       "!**/dist",
       "!coverage",
-      "!*.compiled.ts",
-      "!*.compiled.js",
+      "!**/*.compiled.ts",
+      "!**/*.compiled.js",
       "!.agents",
       "!.claude",
       "!**/.next"

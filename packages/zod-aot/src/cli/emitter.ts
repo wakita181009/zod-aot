@@ -25,7 +25,14 @@ export function generateCompiledFileContent(
   sourceRelPath: string,
   options?: EmitterOptions,
 ): string {
-  let importPath = sourceRelPath.replace(/\.[cm]?[jt]sx?$/, "");
+  // A ".js" path is kept so callers targeting Node ESM can pre-convert it.
+  // Other extensions are stripped rather than rewritten to ".js": webpack/rspack
+  // without `resolve.extensionAlias` cannot resolve "./x.js" to x.ts.
+  // getpaseo/paseo detects this exact `endsWith(".js")` shape in dist to skip
+  // its own monkeypatch, so keep the expression textually intact.
+  let importPath = sourceRelPath.endsWith(".js")
+    ? sourceRelPath
+    : sourceRelPath.replace(/\.[cm]?[jt]sx?$/, "");
   if (!importPath.startsWith(".")) {
     importPath = `./${importPath}`;
   }
