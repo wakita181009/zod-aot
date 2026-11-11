@@ -759,11 +759,11 @@ describe("integration — discriminatedUnion match Zod", () => {
       z.object({ type: z.literal("b"), count: z.number() }),
     ]);
     const safeParse = compileWithRefs(schema, "duTransform");
-    const zodResult = schema.safeParse({ type: "a", slug: "HELLO" });
-    const aotResult = safeParse({ type: "a", slug: "HELLO" });
-    expect(aotResult.success).toBe(true);
-    if (zodResult.success && aotResult.success) {
-      expect(aotResult.data).toEqual(zodResult.data);
+    for (const input of [
+      { type: "a", slug: "HELLO" },
+      { type: "b", count: 1 },
+    ]) {
+      expect(safeParse(input)).toEqual(schema.safeParse(input));
     }
   });
 
@@ -773,11 +773,11 @@ describe("integration — discriminatedUnion match Zod", () => {
       z.object({ type: z.literal("b"), count: z.number() }),
     ]);
     const safeParse = compileWithRefs(schema, "duCoerce");
-    const zodResult = schema.safeParse({ type: "a", n: "42" });
-    const aotResult = safeParse({ type: "a", n: "42" });
-    expect(aotResult.success).toBe(zodResult.success);
-    if (zodResult.success && aotResult.success) {
-      expect(aotResult.data).toEqual(zodResult.data);
+    for (const input of [
+      { type: "a", n: "42" },
+      { type: "b", count: 1 },
+    ]) {
+      expect(safeParse(input)).toEqual(schema.safeParse(input));
     }
   });
 });

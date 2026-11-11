@@ -49,5 +49,3 @@ jobs:
         run: pnpm test
       - name: Publish to npm
         run: pnpm --filter zod-aot publish --provenance --access public --no-git-checks
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
