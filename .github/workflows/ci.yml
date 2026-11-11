@@ -45,6 +45,10 @@ jobs:
       - name: CLI smoke test (standalone)
         run: pnpm run test:smoke
 
+      - name: Test apps
+        if: matrix.node-version == 24
+        run: pnpm --filter './apps/*' --filter '!@zod-aot/nextjs' --filter '!@zod-aot/viteplus' test
+
   bun-check:
     runs-on: ubuntu-latest
     steps:
