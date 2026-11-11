@@ -173,7 +173,6 @@
       "!coverage",
       "!**/*.compiled.ts",
       "!**/*.compiled.js",
-      "!.agents",
       "!.claude",
       "!**/.next"
     ]

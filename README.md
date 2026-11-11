@@ -251,7 +251,7 @@ Additional optimizations:
 pnpm install
 pnpm test
 pnpm bench
-pnpm lint
+pnpm check
 ```
 
 ## License
