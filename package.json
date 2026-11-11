@@ -14,11 +14,13 @@
     "check:fix": "biome check --fix .",
     "format": "biome format --write .",
     "typecheck": "pnpm -r typecheck",
-    "pack": "pnpm --filter zod-aot pack"
+    "pack": "pnpm --filter zod-aot pack",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.7",
     "@vitest/coverage-v8": "catalog:",
+    "husky": "^9.1.7",
     "tsx": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:",

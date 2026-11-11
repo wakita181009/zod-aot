@@ -152,7 +152,8 @@ Biome (`biome.json`): errors on `noExplicitAny`, unused vars/imports,
 `useImportType` / `useExportType`, floating/misused promises, and
 `noRestrictedImports` (module boundaries); `noConsole` warns. Formatter: 2-space
 indent, width 100, semicolons, trailing commas. A PostToolUse hook auto-runs
-`typecheck` + `lint` after `.ts`/`.tsx` edits.
+`typecheck` + `lint` after `.ts`/`.tsx` edits. A husky pre-commit hook
+(`.husky/pre-commit`, installed via `prepare`) runs `pnpm typecheck` + `pnpm check`.
 
 CI (`ci.yml`): lint → typecheck → build → test across the runtime + Zod-version
 matrix. Release via release-please → npm publish with provenance.
