@@ -5,8 +5,9 @@ import zodAot from "zod-aot/webpack";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Deliberately the stock webpack + TypeScript setup: extensionless imports and
-// no `resolve.extensionAlias`, so CLI output that imports "./schemas.js" is
-// exercised against webpack's default resolver.
+// no `resolve.extensionAlias`, so the build fails if the CLI output ever emits
+// an import webpack's default resolver can't map back to the .ts source
+// (e.g. "./schemas.js" for schemas.ts).
 const ENTRIES = {
   unplugin: { entry: "./src/main.ts", filename: "main.js", plugins: [zodAot({ verbose: true })] },
   cli: { entry: "./src/main-cli.ts", filename: "main-cli.js", plugins: [] },
