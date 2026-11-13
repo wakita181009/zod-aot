@@ -235,6 +235,8 @@ export interface EnumIR {
 export interface ObjectIR {
   type: "object";
   properties: Record<string, SchemaIR>;
+  /** Default Zod object semantics: construct output from declared keys and strip extras. */
+  unknownKeys?: "strip";
   /** Object-level refine effects from z.object({...}).refine(fn) */
   checks?: RefineEffectCheckIR[];
 }

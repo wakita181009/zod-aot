@@ -133,6 +133,16 @@ describe("slow-path — object", () => {
 });
 
 describe("fast-path — Object", () => {
+  it("keeps the fast path for strip objects when no unknown keys are present", () => {
+    const fn = compileFastCheck({
+      type: "object",
+      unknownKeys: "strip",
+      properties: { name: { type: "string", checks: [] } },
+    });
+    expect(fn?.({ name: "Alice" })).toBe(true);
+    expect(fn?.({ name: "Alice", extra: true })).toBe(false);
+  });
+
   it("simple object: {name: string} accepts {name: 'a'}, rejects {name: 42}", () => {
     const fn = compileFastCheck({
       type: "object",
