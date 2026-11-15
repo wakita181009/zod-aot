@@ -294,8 +294,12 @@ describe("review follow-ups", () => {
       z.object({ a: z.string().trim() }),
       z.object({ b: z.string().default("d") }),
     );
-    // No unknown keys in the inputs: compiled objects don't strip them yet (#228).
-    const ir = expectParity(disjoint, [{ a: " x " }, { a: " x ", b: "y" }, { a: 1 }]);
+    const ir = expectParity(disjoint, [
+      { a: " x " },
+      { a: " x ", b: "y" },
+      { a: " x ", extra: 1 },
+      { a: 1 },
+    ]);
     expect(ir.type).toBe("intersection");
 
     const shared = z.intersection(z.object({ a: z.string().trim() }), z.object({ a: z.string() }));

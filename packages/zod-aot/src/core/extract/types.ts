@@ -40,6 +40,8 @@ export interface ZodDef {
   format: string;
   pattern: RegExp | string;
   shape: Record<string, ZodSchema>;
+  /** Unknown-key policy of an object: absent (strip), never (strict), unknown (loose), or a schema. */
+  catchall?: ZodSchema;
   element: ZodSchema;
   options: ZodSchema[];
   innerType: ZodSchema;
@@ -79,6 +81,8 @@ export interface ZodSchema {
     version?: { major: number; minor: number };
     /** Set when an object may omit the key holding this schema (optional, default, catch, ...). */
     optin?: "optional" | "defaulted";
+    /** Set when the parsed value may be undefined (optional, ...). */
+    optout?: "optional";
   };
 }
 

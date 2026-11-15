@@ -81,6 +81,7 @@ function* iterChildren(ir: SchemaIR, parentPath: string): Generator<[string, Sch
       for (const [key, child] of Object.entries(ir.properties)) {
         yield [`${parentPath}.${key}`, child];
       }
+      if (ir.catchall) yield [`${parentPath}[catchall]`, ir.catchall];
       break;
     case "array":
       yield [`${parentPath}[]`, ir.element];

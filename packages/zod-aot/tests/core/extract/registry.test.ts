@@ -28,7 +28,8 @@ describe("dispatch", () => {
 
   it("dispatches to the correct extractor for a nested schema", () => {
     const ir = dispatch(z.object({ name: z.string() }), "", undefined, new Set());
-    expect(ir).toEqual({
+    // toMatchObject: version-specific object fields (e.g. absentWrittenKeys on Zod 4.0) are out of scope here.
+    expect(ir).toMatchObject({
       type: "object",
       properties: { name: { type: "string", checks: [] } },
     });
@@ -65,7 +66,7 @@ describe("dispatch", () => {
       undefined,
       new Set(),
     );
-    expect(ir).toEqual({
+    expect(ir).toMatchObject({
       type: "object",
       properties: {
         user: {

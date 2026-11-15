@@ -142,3 +142,61 @@ describe("mayAcceptUndefined", () => {
     expect(mayAcceptUndefined(ir)).toBe(expected);
   });
 });
+
+describe("extractObject — unknown-key policy", () => {
+  it.each([
+    ["z.object", z.object({ a: z.string() }), undefined],
+    ["z.strictObject", z.strictObject({ a: z.string() }), "never"],
+    ["z.looseObject", z.looseObject({ a: z.string() }), "unknown"],
+    ["catchall", z.object({ a: z.string() }).catchall(z.number()), "number"],
+  ])("%s → catchall %s", (_name, schema, expected) => {
+    expect((extractSchema(schema) as ObjectIR).catchall?.type).toBe(expected);
+  });
+});
+
+describe("extractObject — absentWrittenKeys", () => {
+  function withVersion(version: { major: number; minor: number }) {
+    const s = z.object({
+      req: z.unknown(),
+      opt: z.string().optional(),
+      def: z.string().default("d"),
+    });
+    (s._zod as { version?: unknown }).version = version;
+    return extractSchema(s, []) as ObjectIR;
+  }
+
+  it("lists every key but optional ones on Zod 4.0", () => {
+    // default has optin "optional" but no optout, so Zod 4.0 writes it too.
+    expect(withVersion({ major: 4, minor: 0 }).absentWrittenKeys).toEqual(["req", "def"]);
+  });
+
+  it("is omitted from Zod 4.1", () => {
+    expect(withVersion({ major: 4, minor: 1 })).not.toHaveProperty("absentWrittenKeys");
+  });
+});
+
+describe("extractIntersection — object sides", () => {
+  const a = z.object({ a: z.string() });
+  it.each([
+    ["strip & strip", z.intersection(a, z.object({ b: z.string() })), "intersection"],
+    ["strip & loose", z.intersection(a, z.looseObject({ b: z.string() })), "intersection"],
+    ["strict side", z.intersection(z.strictObject({ a: z.string() }), a), "fallback"],
+    [
+      "catchall side",
+      z.intersection(a, z.object({ b: z.string() }).catchall(z.number())),
+      "fallback",
+    ],
+    ["shared nested object", z.intersection(z.object({ o: a }), z.object({ o: a })), "fallback"],
+    ["object & non-object", z.intersection(a, z.record(z.string(), z.unknown())), "fallback"],
+  ])("%s → %s", (_name, schema, expected) => {
+    expect(extractSchema(schema, []).type).toBe(expected);
+  });
+});
+
+describe("extractIntersection — non-object sides", () => {
+  it("compiles when neither side rewrites the value", () => {
+    expect(extractSchema(z.intersection(z.string().min(1), z.string().max(3))).type).toBe(
+      "intersection",
+    );
+  });
+});
