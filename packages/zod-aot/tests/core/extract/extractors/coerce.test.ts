@@ -53,7 +53,9 @@ describe("extractSchema — coerce", () => {
     expect(ir.type).toBe("number");
     expect(ir.coerce).toBe(true);
     expect(ir.checks.length).toBeGreaterThanOrEqual(2);
-    expect(ir.checks).toContainEqual({ kind: "number_format", format: "safeint" });
+    expect(ir.checks).toContainEqual(
+      expect.objectContaining({ kind: "number_format", format: "safeint" }),
+    );
     expect(ir.checks).toContainEqual({ kind: "greater_than", value: 0, inclusive: false });
   });
 

@@ -1,4 +1,4 @@
-import type { CheckOrEffectIR, FallbackIR } from "../types.js";
+import type { CheckNumberFormat, CheckOrEffectIR, FallbackIR } from "../types.js";
 import { tryCompileEffect } from "./effects.js";
 import type { ZodCheckDef, ZodCheckSchema } from "./types.js";
 
@@ -80,7 +80,7 @@ export function extractChecks(
     if (def.check !== "custom" && !kinds.has(def.check)) {
       return { checkIRs, fallback: "unsupported" };
     }
-    const ir = extractCheck(def);
+    const ir = extractCheck(def, check);
     if (typeof ir === "string") return { checkIRs, fallback: ir };
     checkIRs.push(ir);
   }
@@ -88,7 +88,10 @@ export function extractChecks(
   return { checkIRs, fallback: null };
 }
 
-function extractCheck(def: ZodCheckDef): CheckOrEffectIR | CheckFallbackReason {
+function extractCheck(
+  def: ZodCheckDef,
+  check: ZodCheckSchema,
+): CheckOrEffectIR | CheckFallbackReason {
   switch (def.check) {
     case "min_length":
       return { kind: "min_length", minimum: def.minimum };
@@ -106,11 +109,14 @@ function extractCheck(def: ZodCheckDef): CheckOrEffectIR | CheckFallbackReason {
       // only integer steps — where both agree with `%` — are compiled.
       if (!Number.isInteger(def.value)) return "unsupported";
       return { kind: "multiple_of", value: def.value };
-    case "number_format":
+    case "number_format": {
+      const format = def.format as CheckNumberFormat["format"];
       return {
         kind: "number_format",
-        format: def.format as "safeint" | "int32" | "uint32" | "float32" | "float64",
+        format,
+        ...(isLegacyNumberFormat(check, format) ? { legacy: true as const } : {}),
       };
+    }
     case "string_format":
       return extractStringFormat(def);
     case "overwrite": {
@@ -128,6 +134,35 @@ function extractCheck(def: ZodCheckDef): CheckOrEffectIR | CheckFallbackReason {
   }
 }
 
+/** Out-of-range probe values that hit the issue shapes that changed in Zod 4.3. */
+const LEGACY_PROBES: Partial<Record<CheckNumberFormat["format"], number>> = {
+  safeint: 2 ** 60, // unsafe-integer too_big: `inclusive` added in 4.3
+  int32: 2 ** 40, // range too_big: `inclusive` and `continue` added in 4.3
+  uint32: 2 ** 40,
+  float32: 1e39,
+};
+
+/**
+ * Detect the pre-4.3 number format issue shape by running the live check: core
+ * never imports zod, so the installed version is only observable this way.
+ */
+function isLegacyNumberFormat(check: ZodCheckSchema, format: CheckNumberFormat["format"]): boolean {
+  const probe = LEGACY_PROBES[format];
+  const run = check._zod?.check;
+  if (probe === undefined || typeof run !== "function") return false;
+  const payload: { value: unknown; issues: Record<string, unknown>[] } = {
+    value: probe,
+    issues: [],
+  };
+  try {
+    run(payload);
+  } catch {
+    return false;
+  }
+  const issue = payload.issues[0];
+  return issue !== undefined && (issue["inclusive"] !== true || issue["continue"] !== true);
+}
+
 function extractStringFormat(def: ZodCheckDef): CheckOrEffectIR | CheckFallbackReason {
   if (def.format === "includes" && typeof def.includes === "string") {
     return {
@@ -142,6 +177,9 @@ function extractStringFormat(def: ZodCheckDef): CheckOrEffectIR | CheckFallbackR
   if (def.format === "ends_with" && typeof def.suffix === "string") {
     return { kind: "ends_with", suffix: def.suffix };
   }
+  // z.stringFormat(name, fnOrRegex) validates via `fn` and reports a different
+  // issue shape, even when `name` matches a built-in format.
+  if (typeof def.fn === "function") return "unsupported";
   if (def.format === "url") {
     if (def.hostname || def.protocol || def.normalize) return "unsupported";
     return { kind: "string_format", format: "url" };

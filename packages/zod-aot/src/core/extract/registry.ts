@@ -1,5 +1,4 @@
 import type { FallbackIR, SchemaIR } from "../types.js";
-import { unsupportedCheckReason } from "./checks.js";
 import { extractAny } from "./extractors/any.js";
 import { extractArray } from "./extractors/array.js";
 import { extractBigint } from "./extractors/bigint.js";
@@ -151,14 +150,18 @@ export function dispatch(
     const type = def.type as SupportedZodDefType;
     const extractor = extractRegistry[type];
     if (!extractor) return makeFallback("unsupported", zodSchema, refs, path);
+    // `abort: true` makes Zod skip every later check without a `when` guard;
+    // codegen only models that for integer formats.
+    if (def.checks?.some((c) => c._zod?.def?.abort === true) || def.abort === true) {
+      return makeFallback("unsupported", zodSchema, refs, path);
+    }
     // Format schemas (z.int64(), ...) carry their own check on the def itself.
     if (def.check && !SELF_CHECK_AWARE_TYPES.has(type)) {
       return makeFallback("unsupported", zodSchema, refs, path);
     }
     if (def.checks && def.checks.length > 0 && !CHECK_AWARE_TYPES.has(type)) {
-      const firstCheck = def.checks[0]?._zod?.def;
-      const reason = firstCheck ? unsupportedCheckReason(firstCheck) : "unsupported";
-      return makeFallback(reason, zodSchema, refs, path);
+      const onlyRefines = def.checks.every((c) => c._zod?.def?.check === "custom");
+      return makeFallback(onlyRefines ? "refine" : "unsupported", zodSchema, refs, path);
     }
     return extractor(def, createExtractorContext(zodSchema, path, refs, visiting));
   } finally {

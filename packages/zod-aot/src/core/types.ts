@@ -40,6 +40,8 @@ export interface CheckMultipleOf {
 export interface CheckNumberFormat {
   kind: "number_format";
   format: "safeint" | "int32" | "uint32" | "float32" | "float64";
+  /** Zod < 4.3 issue shape: no `inclusive` on range issues, and the range too_big aborts. */
+  legacy?: true;
 }
 
 export interface CheckStringFormat {

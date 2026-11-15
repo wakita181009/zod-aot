@@ -1,6 +1,6 @@
-import type { CheckIR, NumberIR } from "../../types.js";
+import type { CheckIR, CheckNumberFormat, NumberIR } from "../../types.js";
 import type { FastGen, SlowGen } from "../context.js";
-import { checkPriority, sortChecksPreservingEffects } from "../context.js";
+import { checkPriority, escapeString, sortChecksPreservingEffects } from "../context.js";
 import { emit } from "../emit.js";
 import { invalidType, tooBig, tooSmall } from "../emit-issue.js";
 import { refineCheck } from "./effect.js";
@@ -21,6 +21,7 @@ export function slowNumber(ir: NumberIR, g: SlowGen): string {
 
   if (ir.checks.length > 0) {
     code += `else{`;
+    let openBlocks = 0;
     for (const check of sortChecksPreservingEffects([...ir.checks])) {
       switch (check.kind) {
         case "greater_than":
@@ -49,40 +50,15 @@ export function slowNumber(ir: NumberIR, g: SlowGen): string {
               }`;
           }
           break;
-        case "number_format":
-          if (check.format === "safeint") {
-            code += emit`
-              if(!Number.isSafeInteger(${g.input})){
-                ${invalidType(g, "int", { extra: 'format:"safeint"' })}
-              }`;
-          } else if (check.format === "int32") {
-            code += emit`
-              if(!Number.isInteger(${g.input})){
-                ${invalidType(g, "int", { extra: 'format:"int32"' })}
-              }else if(${g.input}<-2147483648){
-                ${tooSmall(g, -2147483648, "number", true)}
-              }else if(${g.input}>2147483647){
-                ${tooBig(g, 2147483647, "number", true)}
-              }`;
-          } else if (check.format === "uint32") {
-            code += emit`
-              if(!Number.isInteger(${g.input})){
-                ${invalidType(g, "int", { extra: 'format:"uint32"' })}
-              }else if(${g.input}<0){
-                ${tooSmall(g, 0, "number", true)}
-              }else if(${g.input}>4294967295){
-                ${tooBig(g, 4294967295, "number", true)}
-              }`;
-          } else if (check.format === "float32") {
-            code += emit`
-              if(${g.input}<-3.4028234663852886e+38){
-                ${tooSmall(g, "-3.4028234663852886e+38", "number", true)}
-              }else if(${g.input}>3.4028234663852886e+38){
-                ${tooBig(g, "3.4028234663852886e+38", "number", true)}
-              }`;
-          }
-          // float64 range is [-Number.MAX_VALUE, Number.MAX_VALUE], already covered by the isFinite check above
+        case "number_format": {
+          // Checks after a format check that Zod aborts on (non-integer, and the
+          // range too_big before Zod 4.3) must not run, so they are emitted
+          // inside `if(!abort){` (closed below).
+          const abortVar = g.temp("ab");
+          code += `var ${abortVar}=false;${numberFormatCheck(check, g, abortVar)}if(!${abortVar}){`;
+          openBlocks++;
           break;
+        }
         case "multiple_of":
           code += emit`
             if(${g.input}%${check.value}!==0){
@@ -94,10 +70,46 @@ export function slowNumber(ir: NumberIR, g: SlowGen): string {
           break;
       }
     }
-    code += `}`;
+    code += "}".repeat(openBlocks + 1);
   }
 
   return `${code}\n`;
+}
+
+const FORMAT_RANGES: Record<"int32" | "uint32" | "float32", [string, string]> = {
+  int32: ["-2147483648", "2147483647"],
+  uint32: ["0", "4294967295"],
+  float32: ["-3.4028234663852886e+38", "3.4028234663852886e+38"],
+};
+
+/**
+ * Mirrors Zod's `$ZodCheckNumberFormat`. Assigns `abortVar=true` wherever Zod's
+ * issue has `continue` unset, which makes Zod skip the remaining checks.
+ * `check.legacy` (Zod < 4.3) omits `inclusive` and aborts on the range too_big.
+ */
+function numberFormatCheck(check: CheckNumberFormat, g: SlowGen, abortVar: string): string {
+  const x = g.input;
+  const inclusive = check.legacy ? "" : "inclusive:true,";
+  const issue = (code: string, key: string, bound: string, origin: string, note = "") =>
+    `${g.issues}.push({code:"${code}",${key}:${bound},origin:"${origin}",${inclusive}${note}input:${x},path:${g.path}});`;
+  const range = (format: "int32" | "uint32" | "float32") => {
+    const [min, max] = FORMAT_RANGES[format];
+    return emit`
+      if(${x}<${min}){${tooSmall(g, min, "number", true)}}
+      if(${x}>${max}){${issue("too_big", "maximum", max, "number")}${check.legacy ? `${abortVar}=true;` : ""}}`;
+  };
+
+  if (check.format === "float64") return "";
+  if (check.format === "float32") return range("float32");
+
+  const note = 'note:"Integers must be within the safe integer range.",';
+  return emit`
+    if(!Number.isInteger(${x})){
+      ${invalidType(g, "int", { extra: `format:${escapeString(check.format)}` })}${abortVar}=true;
+    }else if(!Number.isSafeInteger(${x})){
+      if(${x}>0){${issue("too_big", "maximum", "Number.MAX_SAFE_INTEGER", "int", note)}}
+      else{${issue("too_small", "minimum", "Number.MIN_SAFE_INTEGER", "int", note)}}
+    }${check.format === "safeint" ? "" : `else{${range(check.format)}}`}`;
 }
 
 export function fastNumber(ir: NumberIR, g: FastGen): string | null {

@@ -15,6 +15,8 @@ export interface ZodCheckDef {
   fn: unknown;
   /** Overwrite transform (`check: "overwrite"`), e.g. the function behind `.trim()`. */
   tx?: unknown;
+  /** `{ abort: true }` check option. */
+  abort?: boolean;
   /** URL format options. */
   hostname?: RegExp;
   protocol?: RegExp;
@@ -26,6 +28,8 @@ export interface ZodCheckDef {
 export interface ZodCheckSchema {
   _zod?: {
     def: ZodCheckDef;
+    /** Zod's runtime check; only probed, never relied on for codegen semantics. */
+    check?: (payload: { value: unknown; issues: Record<string, unknown>[] }) => void;
   };
 }
 
@@ -50,6 +54,8 @@ export interface ZodDef {
   left: ZodSchema;
   right: ZodSchema;
   discriminator: string;
+  /** `{ abort: true }` on format schemas such as z.email({ abort: true }). */
+  abort?: boolean;
   /** `false` for exclusive unions (z.xor). */
   inclusive?: boolean;
   defaultValue: unknown;

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { extractNumber } from "#src/core/extract/extractors/number.js";
 import { extractSchema } from "#src/core/extract/index.js";
 import type { FallbackIR, NumberIR } from "#src/core/types.js";
+import { zodAtLeast } from "../../../zod-version.js";
 
 describe("extractSchema — number checks", () => {
   it("extracts min (inclusive) check", () => {
@@ -37,7 +38,9 @@ describe("extractSchema — number checks", () => {
 
   it("extracts int (safeint format) check", () => {
     const ir = extractSchema(z.number().int()) as NumberIR;
-    expect(ir.checks).toContainEqual({ kind: "number_format", format: "safeint" });
+    expect(ir.checks).toContainEqual(
+      expect.objectContaining({ kind: "number_format", format: "safeint" }),
+    );
   });
 
   it("extracts multipleOf check", () => {
@@ -47,27 +50,37 @@ describe("extractSchema — number checks", () => {
 
   it("extracts int32 format check", () => {
     const ir = extractSchema(z.int32()) as NumberIR;
-    expect(ir.checks).toContainEqual({ kind: "number_format", format: "int32" });
+    expect(ir.checks).toContainEqual(
+      expect.objectContaining({ kind: "number_format", format: "int32" }),
+    );
   });
 
   it("extracts uint32 format check", () => {
     const ir = extractSchema(z.uint32()) as NumberIR;
-    expect(ir.checks).toContainEqual({ kind: "number_format", format: "uint32" });
+    expect(ir.checks).toContainEqual(
+      expect.objectContaining({ kind: "number_format", format: "uint32" }),
+    );
   });
 
   it("extracts float32 format check", () => {
     const ir = extractSchema(z.float32()) as NumberIR;
-    expect(ir.checks).toContainEqual({ kind: "number_format", format: "float32" });
+    expect(ir.checks).toContainEqual(
+      expect.objectContaining({ kind: "number_format", format: "float32" }),
+    );
   });
 
   it("extracts float64 format check", () => {
     const ir = extractSchema(z.float64()) as NumberIR;
-    expect(ir.checks).toContainEqual({ kind: "number_format", format: "float64" });
+    expect(ir.checks).toContainEqual(
+      expect.objectContaining({ kind: "number_format", format: "float64" }),
+    );
   });
 
   it("extracts combined int + positive checks", () => {
     const ir = extractSchema(z.number().int().positive()) as NumberIR;
-    expect(ir.checks).toContainEqual({ kind: "number_format", format: "safeint" });
+    expect(ir.checks).toContainEqual(
+      expect.objectContaining({ kind: "number_format", format: "safeint" }),
+    );
     expect(ir.checks).toContainEqual({ kind: "greater_than", value: 0, inclusive: false });
   });
 
@@ -115,7 +128,9 @@ describe("extractNumber — branch coverage", () => {
     ) as NumberIR;
     expect(ir.type).toBe("number");
     expect(ir.coerce).toBe(true);
-    expect(ir.checks).toContainEqual({ kind: "number_format", format: "int32" });
+    expect(ir.checks).toContainEqual(
+      expect.objectContaining({ kind: "number_format", format: "int32" }),
+    );
   });
 
   it("returns empty checks when def.checks is undefined", () => {
@@ -132,5 +147,27 @@ describe("extractNumber — branch coverage", () => {
       { fallback: () => ({ type: "fallback" }) } as never,
     ) as NumberIR;
     expect(ir).toEqual({ type: "number", checks: [] });
+  });
+});
+
+describe("extractSchema — number format legacy probe", () => {
+  // Zod < 4.3 omits `inclusive` on range issues and aborts on the range too_big.
+  const legacy = !zodAtLeast("4.3");
+  for (const [name, schema] of [
+    ["int", z.int()],
+    ["int32", z.int32()],
+    ["uint32", z.uint32()],
+    ["float32", z.float32()],
+  ] as const) {
+    it(`${name} legacy flag matches the installed Zod`, () => {
+      const ir = extractSchema(schema) as NumberIR;
+      expect(ir.checks[0]).toMatchObject({ kind: "number_format" });
+      expect((ir.checks[0] as { legacy?: true }).legacy === true).toBe(legacy);
+    });
+  }
+
+  it("float64 is never legacy", () => {
+    const ir = extractSchema(z.float64()) as NumberIR;
+    expect(ir.checks[0]).toEqual({ kind: "number_format", format: "float64" });
   });
 });

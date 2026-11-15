@@ -120,7 +120,8 @@ export function emitRegex(
       return wellKnown;
     }
   }
-  const key = flags === "" ? pattern : `/${pattern}/${flags}`;
+  // Flags never contain "/", so this key is injective across (flags, pattern).
+  const key = `${flags}/${pattern}`;
   const cached = ctx.regexCache.get(key);
   if (cached) return cached;
   const name = `__re_${prefix}_${ctx.counter++}`;
@@ -258,8 +259,9 @@ export function checkPriority(
  * Zod preserves insertion order for checks. Compilable checks (typeof, length,
  * regex) are reordered for performance, but refine_effect entries stay at their
  * original index to maintain semantic parity with Zod. Value-rewriting checks
- * (see isValueRewritingCheck) are hard barriers: no check moves across one,
- * because the checks after it validate a different value.
+ * and number formats are hard barriers: no check moves across one, because the
+ * checks after a rewrite validate a different value and the checks after a
+ * failed number format may be aborted by Zod.
  */
 export function sortChecksPreservingEffects<
   T extends CheckIR | CheckOrEffectIR | BigIntCheckIR | DateCheckIR,
@@ -267,7 +269,7 @@ export function sortChecksPreservingEffects<
   const result: T[] = [];
   let segment: T[] = [];
   for (const check of checks) {
-    if (isValueRewritingCheck(check as CheckOrEffectIR)) {
+    if (isOrderingBarrier(check as CheckOrEffectIR)) {
       result.push(...sortSegment(segment), check);
       segment = [];
     } else {
@@ -319,4 +321,10 @@ export function isValueRewritingCheck(check: CheckOrEffectIR): boolean {
   return (
     check.kind === "overwrite_effect" || (check.kind === "string_format" && check.format === "url")
   );
+}
+
+/** Checks that no other check may be reordered across (see sortChecksPreservingEffects). */
+function isOrderingBarrier(check: CheckOrEffectIR): boolean {
+  // Number formats can abort the checks after them (see numberFormatCheck).
+  return isValueRewritingCheck(check) || check.kind === "number_format";
 }

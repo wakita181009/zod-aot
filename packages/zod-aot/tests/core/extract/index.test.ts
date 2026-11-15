@@ -496,7 +496,9 @@ describe("extractSchema — complex real-world schemas", () => {
 
     // Verify nested checks
     const idIR = ir.properties["id"] as NumberIR;
-    expect(idIR.checks).toContainEqual({ kind: "number_format", format: "safeint" });
+    expect(idIR.checks).toContainEqual(
+      expect.objectContaining({ kind: "number_format", format: "safeint" }),
+    );
     expect(idIR.checks).toContainEqual({ kind: "greater_than", value: 0, inclusive: false });
 
     const nameIR = ir.properties["name"] as StringIR;

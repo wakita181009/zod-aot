@@ -237,3 +237,80 @@ describe("checks attached to the wrong type via .check() fall back", () => {
     });
   }
 });
+
+describe("review follow-ups", () => {
+  it("integer formats abort later checks like Zod", () => {
+    expectParity(z.int().positive(), [-1.5, 2.5, -1]);
+    expectParity(z.int().min(5), [2.5, 3, 6]);
+    expectParity(z.number().positive().int(), [-1.5]);
+    expectParity(z.int32().max(10), [1.5, 2 ** 40, 11]);
+    expectParity(
+      z.uint32().refine((n) => n !== 3),
+      [1.5, 3, -1],
+    );
+  });
+
+  it("number format issues match Zod exactly", () => {
+    const strip = (issues: object[]) =>
+      issues.map((i) => {
+        const { message: _m, input: _i, ...rest } = i as Record<string, unknown>;
+        return rest;
+      });
+    const cases: [z.ZodType, unknown[]][] = [
+      [z.int(), [2 ** 60, -(2 ** 60), 1.5]],
+      [z.int32(), [2 ** 40, -(2 ** 40), 2 ** 60]],
+      [z.uint32(), [2 ** 40, -1]],
+      [z.float32(), [1e39, -1e39]],
+      [z.int32().max(10), [2 ** 40]],
+      [z.float32().min(0), [1e39]],
+    ];
+    for (const [schema, inputs] of cases) {
+      const { safeParse } = compile(schema);
+      for (const input of inputs) {
+        const expected = schema.safeParse(input);
+        const actual = safeParse(input);
+        if (expected.success || actual.success) throw new Error(`expected failure for ${input}`);
+        expect(strip(actual.error.issues)).toEqual(strip(expected.error.issues));
+      }
+    }
+  });
+
+  it("abort: true falls back", () => {
+    const ir = expectParity(z.string().min(3, { abort: true }).email(), ["ab", "abc"]);
+    expect(ir.type).toBe("fallback");
+  });
+
+  it("intersections with a rewriting side fall back", () => {
+    const schema = z.intersection(z.string().trim(), z.string());
+    const { ir, safeParse } = compile(schema);
+    expect(ir.type).toBe("fallback");
+    expect(() => schema.safeParse(" a ")).toThrow();
+    expect(() => safeParse(" a ")).toThrow();
+    expectParity(z.intersection(z.string().trim(), z.string()), ["a"]);
+  });
+
+  it("object intersections compile unless a shared key is rewritten", () => {
+    const disjoint = z.intersection(
+      z.object({ a: z.string().trim() }),
+      z.object({ b: z.string().default("d") }),
+    );
+    // No unknown keys in the inputs: compiled objects don't strip them yet (#228).
+    const ir = expectParity(disjoint, [{ a: " x " }, { a: " x ", b: "y" }, { a: 1 }]);
+    expect(ir.type).toBe("intersection");
+
+    const shared = z.intersection(z.object({ a: z.string().trim() }), z.object({ a: z.string() }));
+    expect(compile(shared).ir.type).toBe("fallback");
+  });
+
+  it("z.stringFormat named after a built-in falls back", () => {
+    const ir = expectParity(z.stringFormat("email", /^x$/), ["x", "a@b.co"]);
+    expect(ir.type).toBe("fallback");
+  });
+
+  it("distinct (pattern, flags) pairs get distinct regexes", () => {
+    expectParity(z.object({ a: z.string().regex(/abc/i), b: z.string().regex(/abc/) }), [
+      { a: "ABC", b: "ABC" },
+      { a: "ABC", b: "abc" },
+    ]);
+  });
+});
