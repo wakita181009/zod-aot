@@ -71,6 +71,30 @@ describe("slow-path — recursiveRef", () => {
     expect(code).toContain("input=__rec_r0.data");
   });
 
+  it("does not mutate the input when the recursive schema rewrites values", () => {
+    // The ref writes the recursive call's output back, so containers holding it
+    // must clone instead of writing into the caller's array.
+    const ir: ObjectIR = {
+      type: "object",
+      properties: {
+        n: { type: "number", checks: [], coerce: true },
+        children: { type: "array", element: { type: "recursiveRef" }, checks: [] },
+      },
+    };
+    const safeParse = compileIR(ir, "test");
+    const child = { n: "2", children: [] };
+    const input = { n: "1", children: [child] };
+
+    const result = safeParse(input);
+
+    expect(result).toEqual({
+      success: true,
+      data: { n: 1, children: [{ n: 2, children: [] }] },
+    });
+    expect(input.children[0]).toBe(child);
+    expect(child).toEqual({ n: "2", children: [] });
+  });
+
   it("validates tree node recursively at runtime", () => {
     const ir: ObjectIR = {
       type: "object",
