@@ -21,7 +21,6 @@
     "@biomejs/biome": "^2.5.7",
     "@vitest/coverage-v8": "catalog:",
     "husky": "^9.1.7",
-    "tsx": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:",
     "zod": "catalog:"

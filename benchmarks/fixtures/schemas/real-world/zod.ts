@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DiscriminatedUnionSchema } from "../unions/zod.js";
+import { DiscriminatedUnionSchema } from "../unions/zod.ts";
 
 // ─── Event Log (multi-feature realistic scenario) ───────────────────────────
 

@@ -10,7 +10,6 @@ allowBuilds:
 catalog:
   "@types/node": ^26.6.6
   "@vitest/coverage-v8": ^4.1.4
-  tsx: ^4.23.0
   typescript: ^7.0.2
   vite: ^8.2.2
   vitest: ^4.1.4
