@@ -1,12 +1,12 @@
 import { TRPCError } from "@trpc/server";
 import { beforeEach, describe, expect, it } from "vitest";
-import { createCaller, resetStore } from "../src/router.js";
+import { createCaller, resetStore } from "../src/router.ts";
 import {
   CreateUserSchema,
   ListUsersSchema,
   UpdateUserSchema,
   UserIdSchema,
-} from "../src/schemas.js";
+} from "../src/schemas.ts";
 
 const caller = createCaller({});
 

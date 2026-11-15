@@ -12,7 +12,7 @@ import {
   validateTreeNode,
   validateUser,
   validateWallet,
-} from "./schemas.js";
+} from "./schemas.ts";
 
 // biome-ignore lint/suspicious/noConsole: sample app output
 const log = console.log;
