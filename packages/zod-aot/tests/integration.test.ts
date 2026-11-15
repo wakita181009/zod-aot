@@ -2198,6 +2198,83 @@ describe("integration — object error issues match Zod", () => {
   });
 });
 
+// Zod >= 4.4 rejects an absent required key even when its schema accepts
+// undefined; older versions accept it. Comparing against the installed Zod
+// covers both behaviors across the compat matrix.
+describe("integration — absent required keys match Zod", () => {
+  // compileWithRefs so fallback and default properties can run.
+  function assertSame(schema: z.ZodType, input: unknown) {
+    const zodResult = schema.safeParse(input);
+    const aotResult = compileWithRefs(schema)(input);
+    expect(aotResult.success).toBe(zodResult.success);
+    if (zodResult.success && aotResult.success) {
+      expect(aotResult.data).toEqual(zodResult.data);
+    }
+    if (!zodResult.success && !aotResult.success) {
+      const zodIssues = zodResult.error.issues.map((i) =>
+        stripMessage(i as unknown as Record<string, unknown>),
+      );
+      const aotIssues = aotResult.error.issues.map((i) =>
+        stripInput(i as unknown as Record<string, unknown>),
+      );
+      expect(aotIssues).toMatchObject(zodIssues);
+    }
+  }
+
+  const cases: [string, z.ZodType][] = [
+    ["unknown", z.object({ a: z.unknown() })],
+    ["any", z.object({ a: z.any() })],
+    ["undefined", z.object({ a: z.undefined() })],
+    ["void", z.object({ a: z.void() })],
+    ["union with undefined", z.object({ a: z.union([z.string(), z.undefined()]) })],
+    ["literal undefined", z.object({ a: z.literal(undefined) })],
+    ["literal list with undefined", z.object({ a: z.literal(["x", undefined]) })],
+    ["nullable unknown", z.object({ a: z.unknown().nullable() })],
+    ["readonly any", z.object({ a: z.any().readonly() })],
+    ["fallback property", z.object({ a: z.unknown().superRefine(() => undefined) })],
+    ["optional", z.object({ a: z.unknown().optional() })],
+    ["default", z.object({ a: z.unknown().default("d") })],
+    ["catch", z.object({ a: z.undefined().catch(undefined) })],
+  ];
+
+  for (const [name, schema] of cases) {
+    it(`${name}: absent key`, () => {
+      assertSame(schema, {});
+    });
+
+    it(`${name}: key present with undefined`, () => {
+      assertSame(schema, { a: undefined });
+    });
+  }
+
+  it("absent key in a nested object", () => {
+    assertSame(z.object({ o: z.object({ a: z.unknown() }) }), { o: {} });
+  });
+
+  it("absent key in a discriminated union option", () => {
+    const schema = z.discriminatedUnion("k", [z.object({ k: z.literal("a"), v: z.unknown() })]);
+    assertSame(schema, { k: "a" });
+  });
+
+  it("absent key decides whether a union option matches", () => {
+    // Zod < 4.4 matches the first option; Zod >= 4.4 rejects both. Only success
+    // is compared: this harness does not fill messages nested in union errors.
+    const schema = z.union([
+      z.object({ a: z.unknown(), b: z.number() }),
+      z.object({ b: z.string() }),
+    ]);
+    expect(compileWithRefs(schema)({ b: 1 }).success).toBe(schema.safeParse({ b: 1 }).success);
+  });
+
+  it("absent key in array elements", () => {
+    assertSame(z.array(z.object({ a: z.any() })), [{ a: 1 }, {}]);
+  });
+
+  it("absent key alongside other property issues", () => {
+    assertSame(z.object({ a: z.string(), b: z.unknown(), c: z.number() }), { a: 1, c: "x" });
+  });
+});
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Error Issue Comparison — Array
 // ═══════════════════════════════════════════════════════════════════════════════

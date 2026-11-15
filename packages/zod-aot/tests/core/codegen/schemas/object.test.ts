@@ -130,6 +130,61 @@ describe("slow-path — object", () => {
     expect(result.success).toBe(false);
     expect(result.error?.issues.length).toBe(3);
   });
+
+  it("rejects an absent presence key with a nonoptional issue", () => {
+    const ir: ObjectIR = {
+      type: "object",
+      properties: { a: { type: "unknown" } },
+      presenceKeys: ["a"],
+    };
+    const safeParse = compileIR(ir);
+    expect(safeParse({}).error?.issues).toEqual([
+      { code: "invalid_type", expected: "nonoptional", input: undefined, path: ["a"] },
+    ]);
+  });
+
+  it("accepts a presence key that is present with an undefined value", () => {
+    const ir: ObjectIR = {
+      type: "object",
+      properties: { a: { type: "unknown" } },
+      presenceKeys: ["a"],
+    };
+    expect(compileIR(ir)({ a: undefined })).toEqual({ success: true, data: { a: undefined } });
+  });
+
+  it("reports the property's own issue instead of nonoptional", () => {
+    const ir: ObjectIR = {
+      type: "object",
+      properties: {
+        a: {
+          type: "union",
+          options: [{ type: "undefined" }, { type: "string", checks: [] }],
+        },
+      },
+      presenceKeys: ["a"],
+    };
+    const result = compileIR(ir)({ a: 1 });
+    expect(result.error?.issues).toHaveLength(1);
+    expect(result.error?.issues[0]).toMatchObject({ code: "invalid_union", path: ["a"] });
+  });
+
+  it("keeps nonoptional issues in key order with other issues", () => {
+    const ir: ObjectIR = {
+      type: "object",
+      properties: {
+        a: { type: "string", checks: [] },
+        b: { type: "any" },
+        c: { type: "number", checks: [] },
+      },
+      presenceKeys: ["b"],
+    };
+    const result = compileIR(ir)({ a: 1, c: "x" });
+    expect(result.error?.issues.map((i) => [i.code, i.path])).toEqual([
+      ["invalid_type", ["a"]],
+      ["invalid_type", ["b"]],
+      ["invalid_type", ["c"]],
+    ]);
+  });
 });
 
 describe("fast-path — Object", () => {
@@ -166,6 +221,16 @@ describe("fast-path — Object", () => {
     });
     expect(fn?.({ inner: { x: 1 } })).toBe(true);
     expect(fn?.({ inner: { x: "a" } })).toBe(false);
+  });
+
+  it("presence key: rejects an absent key, accepts an explicit undefined", () => {
+    const fn = compileFastCheck({
+      type: "object",
+      properties: { a: { type: "unknown" } },
+      presenceKeys: ["a"],
+    });
+    expect(fn?.({})).toBe(false);
+    expect(fn?.({ a: undefined })).toBe(true);
   });
 
   it("ineligible property → returns null", () => {
