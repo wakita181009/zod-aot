@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { generateCompiledFileContent, resolveOutputPath } from "#src/cli/emitter.js";
+import {
+  generateCompiledFileContent,
+  isTypeScriptOutput,
+  resolveOutputPath,
+} from "#src/cli/emitter.js";
 import type { CodeGenResult } from "#src/core/codegen/index.js";
 
 describe("generateCompiledFileContent()", () => {
@@ -179,5 +183,16 @@ describe("resolveOutputPath()", () => {
     const result = resolveOutputPath("src/schemas.ts", "out/");
     expect(result).toContain("out/");
     expect(result).toContain("schemas.compiled.ts");
+  });
+});
+
+describe("isTypeScriptOutput()", () => {
+  it("detects TypeScript extensions", () => {
+    for (const p of ["a.ts", "a.mts", "a.cts", "a.tsx", "dir/a.compiled.ts"]) {
+      expect(isTypeScriptOutput(p)).toBe(true);
+    }
+    for (const p of ["a.js", "a.mjs", "a.cjs", "a.jsx", "a.d"]) {
+      expect(isTypeScriptOutput(p)).toBe(false);
+    }
   });
 });
