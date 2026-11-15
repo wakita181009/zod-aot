@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.21.7](https://github.com/wakita181009/zod-aot/compare/v0.21.6...v0.21.7) (2026-11-15)
+
+
+### Bug Fixes
+
+* match Zod's tuple length and missing-item handling per version ([#314](https://github.com/wakita181009/zod-aot/issues/314)) ([697c111](https://github.com/wakita181009/zod-aot/commit/697c111ca5089904057fd0d5e9bf5c4fbb18db14))
+* match Zod's unknown-key handling for compiled objects ([#228](https://github.com/wakita181009/zod-aot/issues/228)) ([#312](https://github.com/wakita181009/zod-aot/issues/312)) ([e06e13f](https://github.com/wakita181009/zod-aot/commit/e06e13f0ef9dc9d6fdabd84cd47d561eb9d9b295))
+
 ## [0.21.6](https://github.com/wakita181009/zod-aot/compare/v0.21.5...v0.21.6) (2026-11-15)
 
 
