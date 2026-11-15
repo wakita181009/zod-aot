@@ -12,12 +12,13 @@
     "ajv-formats": "^3.0.1",
     "typia": "^15.4.0",
     "zod": "catalog:",
-    "zod3": "npm:zod@3.23.8",
-    "zod-aot": "workspace:*"
+    "zod-aot": "workspace:*",
+    "zod3": "npm:zod@3.23.8"
   },
   "devDependencies": {
+    "@ttsc/unplugin": "^0.37.1",
     "@types/node": "catalog:",
-    "@typia/unplugin": "^12.1.1",
+    "ttsc": "^0.37.1",
     "vite": "catalog:"
   }
 }
