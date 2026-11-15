@@ -210,6 +210,8 @@ export function hasMutation(ir: SchemaIR): boolean {
     case "effect":
     case "fallback":
     case "stringBool":
+    // The ref writes the recursive call's output back into its slot.
+    case "recursiveRef":
       return true;
     case "object":
       return Object.values(ir.properties).some(hasMutation);

@@ -3162,3 +3162,20 @@ describe.skipIf(!zodAtLeast("4.2"))("integration — z.xor falls back to Zod", (
     expect(safeParse("abc").success).toBe(false);
   });
 });
+
+describe("integration — recursive schema with defaults", () => {
+  it("matches Zod and leaves the input untouched", () => {
+    type Node = { name: string; children: Node[] };
+    const Node: z.ZodType<Node> = z.object({
+      name: z.string().default("x"),
+      children: z.array(z.lazy(() => Node)),
+    });
+    const input = { name: "root", children: [{ children: [] }] };
+    const snapshot = structuredClone(input);
+
+    const result = compileWithRefs(Node, "recDefault")(input);
+
+    expect(result).toEqual(Node.safeParse(snapshot));
+    expect(input).toEqual(snapshot);
+  });
+});
