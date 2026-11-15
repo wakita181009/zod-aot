@@ -6,7 +6,7 @@ import { invalidType } from "../emit-issue.js";
 
 export function slowRecord(ir: SchemaIR & { type: "record" }, g: SlowGen): string {
   let code = emit`
-    if(typeof ${g.input}!=="object"||${g.input}===null||Array.isArray(${g.input})){
+    if(!${isPlainObject(g.input)}){
       ${invalidType(g, "record")}
     }else{`;
 
@@ -39,7 +39,7 @@ export function slowRecord(ir: SchemaIR & { type: "record" }, g: SlowGen): strin
 
 export function fastRecord(ir: RecordIR, g: FastGen): string | null {
   const x = g.input;
-  const parts: string[] = [`typeof ${x}==="object"`, `${x}!==null`, `!Array.isArray(${x})`];
+  const parts: string[] = [isPlainObject(x)];
 
   const kv = g.temp("rk");
   const keyCheck = g.visit(ir.keyType, { input: kv });
@@ -59,4 +59,14 @@ export function fastRecord(ir: RecordIR, g: FastGen): string | null {
   }
 
   return parts.join("&&");
+}
+
+/**
+ * Inline equivalent of Zod's `util.isPlainObject` (4.1+): rejects arrays, class
+ * instances, Set/Map, etc., while accepting null-prototype objects.
+ */
+function isPlainObject(x: string): string {
+  const ctor = `${x}.constructor`;
+  const prot = `${ctor}.prototype`;
+  return `(typeof ${x}==="object"&&${x}!==null&&!Array.isArray(${x})&&(${ctor}===undefined||typeof ${ctor}!=="function"||(typeof ${prot}==="object"&&${prot}!==null&&!Array.isArray(${prot})&&Object.prototype.hasOwnProperty.call(${prot},"isPrototypeOf"))))`;
 }

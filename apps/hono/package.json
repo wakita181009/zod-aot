@@ -11,8 +11,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@hono/zod-validator": "^0.8.0",
-    "hono": "^4.13.17",
+    "@hono/zod-validator": "^0.9.1",
+    "hono": "^4.13.18",
     "zod": "catalog:",
     "zod-aot": "workspace:*"
   },

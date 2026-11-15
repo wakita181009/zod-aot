@@ -101,6 +101,10 @@ function extractCheck(def: ZodCheckDef): CheckOrEffectIR | CheckFallbackReason {
     case "less_than":
       return { kind: "less_than", value: def.value, inclusive: def.inclusive };
     case "multiple_of":
+      // Zod's remainder for fractional steps is float-tolerant and its algorithm
+      // differs across versions (toFixed-based before 4.6, ratio-based since), so
+      // only integer steps — where both agree with `%` — are compiled.
+      if (!Number.isInteger(def.value)) return "unsupported";
       return { kind: "multiple_of", value: def.value };
     case "number_format":
       return {

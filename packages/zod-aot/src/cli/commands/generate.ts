@@ -4,7 +4,12 @@ import process from "node:process";
 import { compileSchemas } from "#src/core/pipeline.js";
 import type { DiscoveredSchema } from "#src/core/types.js";
 import { discoverSchemas } from "#src/discovery.js";
-import { generateCompiledFileContent, resolveOutputPath, writeCompiledFile } from "../emitter.js";
+import {
+  generateCompiledFileContent,
+  isTypeScriptOutput,
+  resolveOutputPath,
+  writeCompiledFile,
+} from "../emitter.js";
 import { getErrorMessage } from "../errors.js";
 import { logger } from "../logger.js";
 
@@ -120,6 +125,7 @@ export async function generateFile(
   const sourceRelPath = path.relative(path.dirname(outputPath), filePath);
   const content = generateCompiledFileContent(codegenResults, sourceRelPath, {
     zodCompat: options?.zodCompat,
+    typescript: isTypeScriptOutput(outputPath),
   });
 
   await writeCompiledFile(outputPath, content);

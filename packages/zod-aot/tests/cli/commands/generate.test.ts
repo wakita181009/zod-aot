@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { parse } from "acorn";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import { ZodRealError, type z } from "zod";
 import { FIN_DECL } from "#src/core/iife.js";
@@ -178,6 +179,32 @@ describe("generateFile", () => {
     outputFiles.push(result.outputPath);
 
     expect(result.outputPath).toBe(customOutput);
+  });
+
+  it.each(["out.compiled.js", "out.compiled.mjs", "out.compiled.cjs"])(
+    "emits plain JavaScript for %s output",
+    async (name) => {
+      const filePath = path.join(fixturesDir, "simple-schema.ts");
+      const result = await generateFile(filePath, path.join(tmpOutputDir, name));
+      expect(result).not.toBeNull();
+      if (!result) return;
+      outputFiles.push(result.outputPath);
+
+      const content = await fs.promises.readFile(result.outputPath, "utf-8");
+      expect(content).not.toContain(" as any");
+      expect(() => parse(content, { ecmaVersion: "latest", sourceType: "module" })).not.toThrow();
+    },
+  );
+
+  it("keeps the type assertion for TypeScript output", async () => {
+    const filePath = path.join(fixturesDir, "simple-schema.ts");
+    const result = await generateFile(filePath, path.join(tmpOutputDir, "out.compiled.mts"));
+    expect(result).not.toBeNull();
+    if (!result) return;
+    outputFiles.push(result.outputPath);
+
+    const content = await fs.promises.readFile(result.outputPath, "utf-8");
+    expect(content).toContain("(__src_validateUser as any).schema");
   });
 
   it("throws on non-loadable file", async () => {

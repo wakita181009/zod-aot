@@ -18,6 +18,18 @@ export interface EmitterOptions {
    * When false, produces a minimal plain object (smaller bundle).
    */
   zodCompat?: boolean | undefined;
+  /**
+   * When true (default), emits TypeScript-only syntax (`as any`). Set to false
+   * for .js/.mjs/.cjs output, which runtimes would fail to parse otherwise.
+   */
+  typescript?: boolean | undefined;
+}
+
+const TS_OUTPUT_RE = /\.[cm]?tsx?$/;
+
+/** Whether an output path is a TypeScript file. */
+export function isTypeScriptOutput(outputPath: string): boolean {
+  return TS_OUTPUT_RE.test(outputPath);
 }
 
 export function generateCompiledFileContent(
@@ -38,6 +50,7 @@ export function generateCompiledFileContent(
   }
 
   const zodCompat = options?.zodCompat !== false;
+  const typescript = options?.typescript !== false;
 
   // A schema needs the source import when:
   //   - zodCompat: true (uses Object.create(schema))
@@ -46,7 +59,10 @@ export function generateCompiledFileContent(
 
   const exports = schemas.map((schema) => {
     const needsImport = zodCompat || schema.refEntries.length > 0;
-    const schemaExpr = needsImport ? `(__src_${schema.exportName} as any).schema` : "";
+    const srcRef = typescript
+      ? `(__src_${schema.exportName} as any)`
+      : `__src_${schema.exportName}`;
+    const schemaExpr = needsImport ? `${srcRef}.schema` : "";
     return `export const ${schema.exportName} = ${generateIIFE(schemaExpr, schema, { zodCompat })};`;
   });
 
