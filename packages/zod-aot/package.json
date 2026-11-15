@@ -103,7 +103,7 @@
     "get-tsconfig": "^4.14.3",
     "jiti": "^2.7.0",
     "picomatch": "^4.0.7",
-    "unplugin": "^3.3.0"
+    "unplugin": "^3.7.0"
   },
   "peerDependencies": {
     "zod": "^4.0.0"
