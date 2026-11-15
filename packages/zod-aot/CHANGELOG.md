@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.5](https://github.com/wakita181009/zod-aot/compare/v0.21.4...v0.21.5) (2026-11-15)
+
+
+### Bug Fixes
+
+* stop recursive schemas from mutating the caller's input ([#292](https://github.com/wakita181009/zod-aot/issues/292)) ([22d9297](https://github.com/wakita181009/zod-aot/commit/22d929703f00a8c1655e18f4a03b60d822d16ebd))
+
 ## [0.21.4](https://github.com/wakita181009/zod-aot/compare/v0.21.3...v0.21.4) (2026-11-15)
 
 
