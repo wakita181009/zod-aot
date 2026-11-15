@@ -44,6 +44,8 @@ export interface ZodDef {
   left: ZodSchema;
   right: ZodSchema;
   discriminator: string;
+  /** `false` for exclusive unions (z.xor). */
+  inclusive?: boolean;
   defaultValue: unknown;
   coerce?: boolean;
   catchValue?: (ctx: unknown) => unknown;

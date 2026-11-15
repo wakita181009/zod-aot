@@ -3,6 +3,7 @@ import { z } from "zod";
 import { extractUnion } from "#src/core/extract/extractors/union.js";
 import { extractSchema } from "#src/core/extract/index.js";
 import type { DiscriminatedUnionIR, UnionIR } from "#src/core/types.js";
+import { zodAtLeast } from "../../../zod-version.js";
 
 describe("extractSchema — union", () => {
   it("extracts a string | number union", () => {
@@ -127,5 +128,14 @@ describe("extractSchema — discriminatedUnion", () => {
     ) as UnionIR;
     expect(ir.type).toBe("union");
     expect(ir.options).toHaveLength(2);
+  });
+});
+
+describe.skipIf(!zodAtLeast("4.2"))("extractSchema — xor", () => {
+  it("falls back for exclusive unions", () => {
+    // biome-ignore lint/suspicious/noExplicitAny: z.xor is missing from older Zod typings
+    const xor = (z as any).xor([z.string(), z.string().min(3)]);
+    const ir = extractSchema(xor);
+    expect(ir).toMatchObject({ type: "fallback", reason: "unsupported" });
   });
 });
