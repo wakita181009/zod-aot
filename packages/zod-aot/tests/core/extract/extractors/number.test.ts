@@ -164,3 +164,41 @@ describe("extractSchema — number format legacy probe", () => {
     expect(ir.checks[0]).toEqual({ kind: "number_format", format: "float64" });
   });
 });
+
+describe("extractSchema — number format probe on the live check", () => {
+  type Payload = { value: unknown; issues: Record<string, unknown>[] };
+  const withCheck = (check: (p: Payload) => void) => ({
+    _zod: { def: { type: "number", check: "number_format", format: "int32" }, check },
+  });
+
+  it("marks legacy when the range issue lacks inclusive/continue", () => {
+    const ir = extractSchema(
+      withCheck((p) => {
+        p.issues.push({ code: "too_big" });
+      }),
+    ) as NumberIR;
+    expect(ir.checks).toEqual([{ kind: "number_format", format: "int32", legacy: true }]);
+  });
+
+  it("is not legacy when the issue has inclusive and continue", () => {
+    const ir = extractSchema(
+      withCheck((p) => {
+        p.issues.push({ code: "too_big", inclusive: true, continue: true });
+      }),
+    ) as NumberIR;
+    expect(ir.checks).toEqual([{ kind: "number_format", format: "int32" }]);
+  });
+
+  it("is not legacy when the probe throws or reports nothing", () => {
+    for (const check of [
+      () => {
+        throw new Error("boom");
+      },
+      () => undefined,
+    ]) {
+      expect((extractSchema(withCheck(check)) as NumberIR).checks).toEqual([
+        { kind: "number_format", format: "int32" },
+      ]);
+    }
+  });
+});

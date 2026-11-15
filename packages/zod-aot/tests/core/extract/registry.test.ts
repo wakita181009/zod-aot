@@ -94,3 +94,19 @@ describe("dispatch — check fallback ordering", () => {
     expect(refs[0]?.schema).toBe(schema);
   });
 });
+
+describe("dispatch — types without check codegen", () => {
+  it("reports refine when every check is a refine", () => {
+    const n = 1;
+    expect(extractSchema(z.boolean().refine((b) => b !== Boolean(n)))).toEqual({
+      type: "fallback",
+      reason: "refine",
+    });
+  });
+
+  it("reports unsupported when any check is not a refine", () => {
+    // biome-ignore lint/suspicious/noExplicitAny: cross-type check on a boolean
+    const schema = z.boolean().check(z.minLength(1) as any);
+    expect(extractSchema(schema)).toEqual({ type: "fallback", reason: "unsupported" });
+  });
+});

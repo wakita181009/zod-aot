@@ -1,12 +1,7 @@
 import { assertNever } from "../../assert-never.js";
 import type { CheckStringFormat, StringIR } from "../../types.js";
 import type { FastGen, SlowGen } from "../context.js";
-import {
-  checkPriority,
-  escapeString,
-  hasMutation,
-  sortChecksPreservingEffects,
-} from "../context.js";
+import { checkPriority, escapeString, sortChecksPreservingEffects } from "../context.js";
 import { emit } from "../emit.js";
 import { invalidFormat, invalidType, tooBig, tooSmall } from "../emit-issue.js";
 import { EMAIL_REGEX_SOURCE, UUID_REGEX_SOURCE } from "../well-known-regex.js";
@@ -115,9 +110,9 @@ function formatRegex(check: CheckStringFormat, g: SlowGen | FastGen): string | n
 }
 
 export function fastString(ir: StringIR, g: FastGen): string | null {
-  // The fast path returns the input as-is, so coerce and value-rewriting checks
-  // (overwrite effects, url trimming) are ineligible.
-  if (hasMutation(ir)) return null;
+  // The fast path returns the input as-is, so anything that rewrites the value
+  // (coerce here, overwrite effects and url trimming below) is ineligible.
+  if (ir.coerce) return null;
 
   const x = g.input;
   const parts: string[] = [`typeof ${x}==="string"`];
@@ -148,6 +143,7 @@ export function fastString(ir: StringIR, g: FastGen): string | null {
         parts.push(`${x}.endsWith(${escapeString(check.suffix)})`);
         break;
       case "string_format": {
+        if (check.format === "url") return null;
         const v = formatRegex(check, g);
         if (v === null) return null;
         parts.push(`${v}.test(${x})`);
@@ -157,7 +153,6 @@ export function fastString(ir: StringIR, g: FastGen): string | null {
         parts.push(`(${check.source})(${x})`);
         break;
       case "overwrite_effect":
-        // Unreachable: hasMutation() above already rejected it.
         return null;
       default:
         assertNever(check);
