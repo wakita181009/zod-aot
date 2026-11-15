@@ -63,6 +63,11 @@
       "bracketSpacing": true
     }
   },
+  "markdown": {
+    "formatter": {
+      "enabled": false
+    }
+  },
   "overrides": [
     {
       "includes": ["packages/**"],

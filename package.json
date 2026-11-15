@@ -18,7 +18,7 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.7",
+    "@biomejs/biome": "^2.6.7",
     "@vitest/coverage-v8": "catalog:",
     "husky": "^9.1.7",
     "typescript": "catalog:",
