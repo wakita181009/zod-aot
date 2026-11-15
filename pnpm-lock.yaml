@@ -126,8 +126,8 @@ importers:
         version: link:../../packages/zod-aot
     devDependencies:
       '@rspack/cli':
-        specifier: ^2.2.2
-        version: 2.2.2(@rspack/core@2.3.2(@swc/helpers@0.5.23))
+        specifier: ^2.3.2
+        version: 2.3.2(@rspack/core@2.3.2(@swc/helpers@0.5.23))
       '@rspack/core':
         specifier: ^2.3.2
         version: 2.3.2(@swc/helpers@0.5.23)
@@ -1673,11 +1673,11 @@ packages:
   '@rspack/binding@2.3.2':
     resolution: {integrity: sha512-JlzyN4N6sRykZVwEFz3Kb8IsrTg8mlbNd/AqVmVyqr35Pg7OvxelTcYRL/Dpb2IMhmfpbzYbFigHyXS2CzibVQ==}
 
-  '@rspack/cli@2.2.2':
-    resolution: {integrity: sha512-4fViBJqInw3v43sbgJv1NVVXs0IbjzGFg76jbVECUcbJuO/L104Fwa0wrYQrGI6Fb922sq7zFR0C0XbssUOUtA==}
+  '@rspack/cli@2.3.2':
+    resolution: {integrity: sha512-LtM2th2PuOi17YoTLfqKlVaqzjEjQ8N6a4O6u3D7Oe6LwL+HdYrx0R3D346DsQf5xFKZElcWQfUGneOOUppUCw==}
     hasBin: true
     peerDependencies:
-      '@rspack/core': ^2.0.0-0
+      '@rspack/core': ^2.3.0-0
       '@rspack/dev-server': ^2.0.0-0
     peerDependenciesMeta:
       '@rspack/dev-server':
@@ -4332,7 +4332,7 @@ snapshots:
       '@rspack/binding-win32-ia32-msvc': 2.3.2
       '@rspack/binding-win32-x64-msvc': 2.3.2
 
-  '@rspack/cli@2.2.2(@rspack/core@2.3.2(@swc/helpers@0.5.23))':
+  '@rspack/cli@2.3.2(@rspack/core@2.3.2(@swc/helpers@0.5.23))':
     dependencies:
       '@rspack/core': 2.3.2(@swc/helpers@0.5.23)
 
