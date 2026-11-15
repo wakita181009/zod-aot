@@ -40,12 +40,16 @@ export interface CheckMultipleOf {
 export interface CheckNumberFormat {
   kind: "number_format";
   format: "safeint" | "int32" | "uint32" | "float32" | "float64";
+  /** Zod < 4.3 issue shape: no `inclusive` on range issues, and the range too_big aborts. */
+  legacy?: true;
 }
 
 export interface CheckStringFormat {
   kind: "string_format";
   format: string;
   pattern?: string;
+  /** RegExp flags of `pattern` (e.g. "i", "u"). Omitted when empty. */
+  flags?: string;
 }
 
 export interface CheckIncludes {
@@ -89,8 +93,18 @@ export interface RefineEffectCheckIR {
   message?: string;
 }
 
-/** A check entry that may be a compiled check or an inline refine effect. */
-export type CheckOrEffectIR = CheckIR | RefineEffectCheckIR;
+/**
+ * Inline value rewrite compiled from a zero-capture `.overwrite(fn)` (also backs
+ * `.trim()`, `.toLowerCase()`, `.toUpperCase()`). Later checks see the rewritten value.
+ */
+export interface OverwriteEffectCheckIR {
+  kind: "overwrite_effect";
+  /** fn.toString() result, e.g. "(input) => input.trim()" */
+  source: string;
+}
+
+/** A check entry that may be a compiled check or an inline effect. */
+export type CheckOrEffectIR = CheckIR | RefineEffectCheckIR | OverwriteEffectCheckIR;
 
 // ─── Date Check IR ──────────────────────────────────────────────────────────
 

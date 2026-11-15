@@ -62,7 +62,7 @@ export interface SlowGen {
   temp(prefix: string): string;
 
   /** Add a regex to preamble and return the variable name. */
-  regex(prefix: string, pattern: string): string;
+  regex(prefix: string, pattern: string, flags?: string): string;
 
   /** Add a Set to preamble and return the variable name. */
   set(prefix: string, values: readonly unknown[]): string;
@@ -88,7 +88,7 @@ export interface FastGen {
   temp(prefix: string): string;
 
   /** Add a regex to preamble and return the variable name. */
-  regex(prefix: string, pattern: string): string;
+  regex(prefix: string, pattern: string, flags?: string): string;
 }
 
 /** Fast-path generator function signature — registered in fastRegistry. */
@@ -107,19 +107,27 @@ export function emitTemp(ctx: CodeGenContext, prefix: string): string {
  * bundler can dedup across files; everything else is cached + declared in the
  * per-IIFE preamble exactly once per pattern.
  */
-export function emitRegex(ctx: CodeGenContext, prefix: string, pattern: string): string {
-  if (ctx.mode === "lean") {
+export function emitRegex(
+  ctx: CodeGenContext,
+  prefix: string,
+  pattern: string,
+  flags = "",
+): string {
+  if (ctx.mode === "lean" && flags === "") {
     const wellKnown = lookupWellKnownRegex(pattern);
     if (wellKnown !== null) {
       ctx.usedHelpers.add(wellKnown);
       return wellKnown;
     }
   }
-  const cached = ctx.regexCache.get(pattern);
+  // Flags never contain "/", so this key is injective across (flags, pattern).
+  const key = `${flags}/${pattern}`;
+  const cached = ctx.regexCache.get(key);
   if (cached) return cached;
   const name = `__re_${prefix}_${ctx.counter++}`;
-  ctx.preamble.push(`var ${name}=new RegExp(${escapeString(pattern)});`);
-  ctx.regexCache.set(pattern, name);
+  const flagsArg = flags === "" ? "" : `,${escapeString(flags)}`;
+  ctx.preamble.push(`var ${name}=new RegExp(${escapeString(pattern)}${flagsArg});`);
+  ctx.regexCache.set(key, name);
   return name;
 }
 
@@ -191,6 +199,7 @@ export function extendStaticPathIndex(parentPath: string, index: number): string
 export function hasMutation(ir: SchemaIR): boolean {
   switch (ir.type) {
     case "string":
+      return ir.coerce === true || ir.checks.some(isValueRewritingCheck);
     case "number":
     case "boolean":
     case "bigint":
@@ -249,11 +258,31 @@ export function checkPriority(
  *
  * Zod preserves insertion order for checks. Compilable checks (typeof, length,
  * regex) are reordered for performance, but refine_effect entries stay at their
- * original index to maintain semantic parity with Zod.
+ * original index to maintain semantic parity with Zod. Value-rewriting checks
+ * and number formats are hard barriers: no check moves across one, because the
+ * checks after a rewrite validate a different value and the checks after a
+ * failed number format may be aborted by Zod.
  */
 export function sortChecksPreservingEffects<
   T extends CheckIR | CheckOrEffectIR | BigIntCheckIR | DateCheckIR,
 >(checks: T[]): T[] {
+  const result: T[] = [];
+  let segment: T[] = [];
+  for (const check of checks) {
+    if (isOrderingBarrier(check as CheckOrEffectIR)) {
+      result.push(...sortSegment(segment), check);
+      segment = [];
+    } else {
+      segment.push(check);
+    }
+  }
+  result.push(...sortSegment(segment));
+  return result;
+}
+
+function sortSegment<T extends CheckIR | CheckOrEffectIR | BigIntCheckIR | DateCheckIR>(
+  checks: T[],
+): T[] {
   const result: T[] = new Array(checks.length);
   const compilable: { check: T; originalIndex: number }[] = [];
 
@@ -282,4 +311,20 @@ export function sortChecksPreservingEffects<
   }
 
   return result;
+}
+
+/**
+ * Checks that replace the value seen by later checks and returned as output
+ * (overwrite effects such as `.trim()`, and `url`, which trims on success).
+ */
+export function isValueRewritingCheck(check: CheckOrEffectIR): boolean {
+  return (
+    check.kind === "overwrite_effect" || (check.kind === "string_format" && check.format === "url")
+  );
+}
+
+/** Checks that no other check may be reordered across (see sortChecksPreservingEffects). */
+function isOrderingBarrier(check: CheckOrEffectIR): boolean {
+  // Number formats can abort the checks after them (see numberFormatCheck).
+  return isValueRewritingCheck(check) || check.kind === "number_format";
 }

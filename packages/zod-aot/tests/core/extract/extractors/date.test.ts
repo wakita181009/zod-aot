@@ -4,6 +4,8 @@ import { extractDate } from "#src/core/extract/extractors/date.js";
 import { extractSchema } from "#src/core/extract/index.js";
 import type { DateIR } from "#src/core/types.js";
 
+const ctx = { fallback: (reason: string) => ({ type: "fallback", reason }) } as never;
+
 describe("extractSchema — date", () => {
   it("extracts plain date", () => {
     const ir = extractSchema(z.date());
@@ -46,29 +48,38 @@ describe("extractSchema — date", () => {
   });
 
   it("skips checks without _zod.def", () => {
-    const ir = extractDate({
-      type: "date",
-      checks: [{ _zod: undefined }],
-    } as never) as DateIR;
+    const ir = extractDate(
+      {
+        type: "date",
+        checks: [{ _zod: undefined }],
+      } as never,
+      ctx,
+    ) as DateIR;
     expect(ir).toEqual({ type: "date", checks: [] });
   });
 
-  it("skips greater_than check with NaN timestamp", () => {
-    const ir = extractDate({
-      type: "date",
-      checks: [
-        { _zod: { def: { check: "greater_than", value: "invalid-date", inclusive: true } } },
-      ],
-    } as never) as DateIR;
-    expect(ir).toEqual({ type: "date", checks: [] });
+  it("falls back on greater_than check with NaN timestamp", () => {
+    const ir = extractDate(
+      {
+        type: "date",
+        checks: [
+          { _zod: { def: { check: "greater_than", value: "invalid-date", inclusive: true } } },
+        ],
+      } as never,
+      ctx,
+    );
+    expect(ir).toEqual({ type: "fallback", reason: "unsupported" });
   });
 
-  it("skips less_than check with NaN timestamp", () => {
-    const ir = extractDate({
-      type: "date",
-      checks: [{ _zod: { def: { check: "less_than", value: "invalid-date", inclusive: true } } }],
-    } as never) as DateIR;
-    expect(ir).toEqual({ type: "date", checks: [] });
+  it("falls back on less_than check with NaN timestamp", () => {
+    const ir = extractDate(
+      {
+        type: "date",
+        checks: [{ _zod: { def: { check: "less_than", value: "invalid-date", inclusive: true } } }],
+      } as never,
+      ctx,
+    );
+    expect(ir).toEqual({ type: "fallback", reason: "unsupported" });
   });
 
   it("extracts coerce flag", () => {
@@ -77,11 +88,20 @@ describe("extractSchema — date", () => {
     expect(ir.coerce).toBe(true);
   });
 
-  it("skips unrecognized check types", () => {
-    const ir = extractDate({
-      type: "date",
-      checks: [{ _zod: { def: { check: "unknown_check" } } }],
-    } as never) as DateIR;
-    expect(ir).toEqual({ type: "date", checks: [] });
+  it("falls back on unrecognized check types", () => {
+    const ir = extractDate(
+      {
+        type: "date",
+        checks: [{ _zod: { def: { check: "unknown_check" } } }],
+      } as never,
+      ctx,
+    );
+    expect(ir).toEqual({ type: "fallback", reason: "unsupported" });
+  });
+
+  it("falls back on refine", () => {
+    const n = 0;
+    const ir = extractSchema(z.date().refine((d) => d.getTime() > n));
+    expect(ir).toMatchObject({ type: "fallback", reason: "refine" });
   });
 });

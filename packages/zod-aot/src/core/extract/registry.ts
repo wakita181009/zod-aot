@@ -86,6 +86,25 @@ export const extractRegistry = {
   file: extractFile,
 } satisfies Record<SupportedZodDefType, Extractor>;
 
+/**
+ * Extractors that read `def.checks` themselves. Any other type that carries checks
+ * (e.g. `z.boolean().refine(fn)`, `z.string().optional().refine(fn)`) falls back,
+ * since its codegen would otherwise silently drop them.
+ */
+const CHECK_AWARE_TYPES: ReadonlySet<SupportedZodDefType> = new Set([
+  "string",
+  "number",
+  "bigint",
+  "date",
+  "object",
+  "array",
+  "set",
+  "file",
+]);
+
+/** Extractors that compile a format check stored on the schema def itself. */
+const SELF_CHECK_AWARE_TYPES: ReadonlySet<SupportedZodDefType> = new Set(["string", "number"]);
+
 // ─── Factory ────────────────────────────────────────────────────────────────
 // Lives here (not in types.ts) to avoid circular imports:
 // visit() → dispatch() → imports from types.ts
@@ -128,9 +147,23 @@ export function dispatch(
 
   visiting.add(zodSchema);
   try {
-    const extractor = extractRegistry[def.type as SupportedZodDefType];
-    const ctx = createExtractorContext(zodSchema, path, refs, visiting);
-    return extractor ? extractor(def, ctx) : makeFallback("unsupported", zodSchema, refs, path);
+    const type = def.type as SupportedZodDefType;
+    const extractor = extractRegistry[type];
+    if (!extractor) return makeFallback("unsupported", zodSchema, refs, path);
+    // `abort: true` makes Zod skip every later check without a `when` guard;
+    // codegen only models that for integer formats.
+    if (def.checks?.some((c) => c._zod?.def?.abort === true) || def.abort === true) {
+      return makeFallback("unsupported", zodSchema, refs, path);
+    }
+    // Format schemas (z.int64(), ...) carry their own check on the def itself.
+    if (def.check && !SELF_CHECK_AWARE_TYPES.has(type)) {
+      return makeFallback("unsupported", zodSchema, refs, path);
+    }
+    if (def.checks && def.checks.length > 0 && !CHECK_AWARE_TYPES.has(type)) {
+      const onlyRefines = def.checks.every((c) => c._zod?.def?.check === "custom");
+      return makeFallback(onlyRefines ? "refine" : "unsupported", zodSchema, refs, path);
+    }
+    return extractor(def, createExtractorContext(zodSchema, path, refs, visiting));
   } finally {
     visiting.delete(zodSchema);
   }

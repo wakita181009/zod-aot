@@ -120,7 +120,7 @@ export function createSlowGen(
       );
     },
     temp: (prefix) => emitTemp(ctx, prefix),
-    regex: (prefix, pattern) => emitRegex(ctx, prefix, pattern),
+    regex: (prefix, pattern, flags) => emitRegex(ctx, prefix, pattern, flags),
     set: (prefix, values) => emitSet(ctx, prefix, values),
   };
 }

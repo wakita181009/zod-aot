@@ -38,11 +38,9 @@ describe("extractSchema — set", () => {
     expect(ir.checks).toContainEqual({ kind: "max_size", maximum: 100 });
   });
 
-  it("does not extract unsupported size_equals check", () => {
-    // z.set().size() produces a size_equals check which the extractor does not handle yet
-    const ir = extractSchema(z.set(z.string()).size(5)) as SetIR;
-    expect(ir.type).toBe("set");
-    expect(ir.checks).toBeUndefined();
+  it("falls back on unsupported size_equals check", () => {
+    const ir = extractSchema(z.set(z.string()).size(5));
+    expect(ir).toMatchObject({ type: "fallback", reason: "unsupported" });
   });
 
   it("recursively extracts inner value type", () => {

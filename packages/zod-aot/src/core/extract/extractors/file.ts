@@ -1,4 +1,5 @@
 import type { FileCheckIR, SchemaIR } from "../../types.js";
+import { unsupportedCheckReason } from "../checks.js";
 import type { ExtractorContext, ZodDef } from "../types.js";
 
 export function extractFile(def: ZodDef, ctx: ExtractorContext): SchemaIR {
@@ -14,7 +15,7 @@ export function extractFile(def: ZodDef, ctx: ExtractorContext): SchemaIR {
       } else if (checkDef.check === "mime_type") {
         fileChecks.push({ kind: "mime_type", mime: [...checkDef.mime] });
       } else {
-        return ctx.fallback("refine");
+        return ctx.fallback(unsupportedCheckReason(checkDef));
       }
     }
   }
