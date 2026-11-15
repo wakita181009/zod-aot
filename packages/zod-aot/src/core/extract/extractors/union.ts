@@ -16,6 +16,10 @@ function discriminatorValues(
 }
 
 export function extractUnion(def: ZodDef, ctx: ExtractorContext): SchemaIR {
+  // z.xor(): exactly one option must match. Union codegen stops at the first
+  // match, so exclusive unions fall back. Discriminated unions also set
+  // `inclusive: false`, but the discriminator already selects one option.
+  if (def.inclusive === false && !def.discriminator) return ctx.fallback("unsupported");
   if (def.discriminator) {
     const mapping: Record<string, number> = {};
     let fullyMapped = true;

@@ -3150,3 +3150,15 @@ describe("integration — ctx-aware effects fall back to Zod", () => {
     }
   });
 });
+
+describe.skipIf(!zodAtLeast("4.2"))("integration — z.xor falls back to Zod", () => {
+  it("rejects input matching more than one option", () => {
+    // biome-ignore lint/suspicious/noExplicitAny: z.xor is missing from older Zod typings
+    const schema = (z as any).xor([z.string(), z.string().min(3)]) as z.ZodType;
+    const safeParse = compileWithRefs(schema, "xor");
+    for (const input of ["abc", "ab", 1]) {
+      expect(safeParse(input).success).toBe(schema.safeParse(input).success);
+    }
+    expect(safeParse("abc").success).toBe(false);
+  });
+});
