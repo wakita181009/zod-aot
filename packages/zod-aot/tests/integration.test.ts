@@ -281,6 +281,63 @@ describe("integration — readonly match Zod", () => {
   });
 });
 
+describe("integration — optional wrapping a default matches Zod", () => {
+  // Zod runs the inner default on undefined, so .optional() does not hide it.
+  const schemas: [string, z.ZodType][] = [
+    ["default.optional", z.string().default("d").optional()],
+    ["default.optional.optional", z.string().default("d").optional().optional()],
+    ["default.nullable.optional", z.string().default("d").nullable().optional()],
+    ["default.readonly.optional", z.string().default("d").readonly().optional()],
+    ["union(default).optional", z.union([z.string().default("d"), z.number()]).optional()],
+    ["default.pipe.optional", z.string().default("d").pipe(z.string()).optional()],
+    [
+      "default.transform.optional",
+      z
+        .string()
+        .default("d")
+        .transform((s) => `${s}!`)
+        .optional(),
+    ],
+    ["prefault.optional", z.string().prefault("p").optional()],
+    ["failing prefault.optional", z.string().min(5).prefault("p").optional()],
+    ["catch.optional", z.string().catch("c").optional()],
+  ];
+
+  for (const [name, schema] of schemas) {
+    it(`${name}: top level`, () => {
+      const safeParse = compileWithRefs(schema, "optDefault");
+      for (const input of [undefined, "x", 1]) {
+        const zodResult = schema.safeParse(input);
+        const aotResult = safeParse(input);
+        expect(aotResult.success).toBe(zodResult.success);
+        if (zodResult.success && aotResult.success) {
+          expect(aotResult.data).toEqual(zodResult.data);
+        }
+      }
+    });
+  }
+
+  it("object property: absent key and explicit undefined", () => {
+    const schema = z.object({ a: z.string().default("d").optional(), b: z.number() });
+    const safeParse = compileWithRefs(schema, "optDefaultObj");
+    for (const input of [{ b: 1 }, { a: undefined, b: 1 }, { a: "x", b: 1 }, { b: "no" }]) {
+      const zodResult = schema.safeParse(input);
+      const aotResult = safeParse(input);
+      expect(aotResult.success).toBe(zodResult.success);
+      if (zodResult.success && aotResult.success) {
+        expect(aotResult.data).toEqual(zodResult.data);
+      }
+    }
+  });
+
+  it("does not mutate the input object", () => {
+    const schema = z.object({ a: z.string().default("d").optional() });
+    const input = {};
+    compileWithRefs(schema, "optDefaultNoMutate")(input);
+    expect(input).toEqual({});
+  });
+});
+
 describe("integration — default match Zod", () => {
   it("standalone default", () => {
     const schema = z.string().default("fallback");

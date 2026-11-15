@@ -31,6 +31,24 @@ describe("slow-path — optional", () => {
     expect(safeParse(undefined).success).toBe(true);
     expect(safeParse("ab").success).toBe(false);
   });
+
+  describe("wrapping a default", () => {
+    const ir: OptionalIR = {
+      type: "optional",
+      inner: { type: "default", inner: { type: "string", checks: [] }, refIndex: 0 },
+    };
+    const refs = [{ _zod: { def: { defaultValue: "d" } } }];
+
+    it("substitutes the default for undefined", () => {
+      expect(compileIR(ir, "test", refs)(undefined)).toEqual({ success: true, data: "d" });
+    });
+
+    it("validates a present value against the inner type", () => {
+      const safeParse = compileIR(ir, "test", refs);
+      expect(safeParse("x")).toEqual({ success: true, data: "x" });
+      expect(safeParse(1).success).toBe(false);
+    });
+  });
 });
 
 describe("fast-path — Optional", () => {
@@ -39,6 +57,15 @@ describe("fast-path — Optional", () => {
     expect(fn?.("a")).toBe(true);
     expect(fn?.(undefined)).toBe(true);
     expect(fn?.(42)).toBe(false);
+  });
+
+  it("wrapping a default: rejects undefined so the slow path substitutes it", () => {
+    const fn = compileFastCheck({
+      type: "optional",
+      inner: { type: "default", inner: { type: "string", checks: [] }, refIndex: 0 },
+    });
+    expect(fn?.(undefined)).toBe(false);
+    expect(fn?.("a")).toBe(true);
   });
 
   it("ineligible inner → returns null", () => {
