@@ -126,6 +126,22 @@ export function invalidFormat(
   );
 }
 
+/**
+ * A length issue without the `inclusive` field, as Zod < 4.3 tuples (and
+ * < 4.4 tuple too_small) emit it. Rare enough that lean mode inlines it too.
+ */
+export function lengthIssueWithoutInclusive(
+  g: IssueGen,
+  code: "too_small" | "too_big",
+  bound: number,
+): string {
+  const key = code === "too_small" ? "minimum" : "maximum";
+  return pushIssue(
+    g,
+    `{code:"${code}",${key}:${bound},origin:"array",input:${g.input},path:${g.path}}`,
+  );
+}
+
 export function invalidValue(
   g: IssueGen,
   valuesExpr: string,

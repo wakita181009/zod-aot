@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { mayAcceptUndefined } from "#src/core/extract/extractors/object.js";
+import { mayAcceptUndefined } from "#src/core/codegen/context.js";
 import { extractSchema } from "#src/core/extract/index.js";
 import type { FallbackIR, ObjectIR, SchemaIR } from "#src/core/types.js";
 import { zodAtLeast } from "../../../zod-version.js";

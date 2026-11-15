@@ -622,6 +622,45 @@ describe("integration — tuple match Zod", () => {
       assertSameResult(schema, input, "tupleRest");
     }
   });
+
+  // Tuple length handling changed in Zod 4.4 and again in 4.5; every case
+  // compares data (holes included) and issues against the installed Zod.
+  const N = z.number();
+  const S = z.string();
+  const cases: [string, z.ZodType, unknown[][]][] = [
+    ["[n, s]", z.tuple([N, S]), [[], [1], [1, "a"], [1, "a", "x"], ["x", "a", 2], [1, "a", 2, 3]]],
+    ["[n, s?]", z.tuple([N, S.optional()]), [[], [1], [1, undefined], [1, 2], [1, "a"]]],
+    ["[n, s?, n?]", z.tuple([N, S.optional(), N.optional()]), [[1], [1, "a"], [1, "a", 2]]],
+    ["[s?, s?]", z.tuple([S.optional(), S.optional()]), [[], ["a"], ["a", "b"]]],
+    ["[n, s.default]", z.tuple([N, S.default("d")]), [[1], [1, "x"]]],
+    ["[n, s?, s.default]", z.tuple([N, S.optional(), S.default("d")]), [[1], [1, "a"]]],
+    ["[n, s.default.optional]", z.tuple([N, S.default("d").optional()]), [[1]]],
+    ["[n, s.catch]", z.tuple([N, S.catch("c")]), [[1], [1, 2]]],
+    ["[n, unknown]", z.tuple([N, z.unknown()]), [[1], [1, undefined]]],
+    ["[n, unknown?]", z.tuple([N, z.unknown().optional()]), [[1]]],
+    ["[n, s | undefined]", z.tuple([N, z.union([S, z.undefined()])]), [[1], [1, undefined]]],
+    ["[n] + rest(s)", z.tuple([N], S), [[1], [1, "a", "b"], [1, 2], ["x", 2]]],
+    ["[n, s] + rest(s)", z.tuple([N, S], S), [[], [1], [1, "a", "b"]]],
+    ["[n, s?] + rest(s)", z.tuple([N, S.optional()], S), [[1], [1, "a", "b"]]],
+    ["[]", z.tuple([]), [[], [1]]],
+  ];
+  for (const [name, schema, inputs] of cases) {
+    it(`${name}: short, exact, and long inputs`, () => {
+      for (const input of inputs) assertSame(schema, input);
+    });
+  }
+
+  it("tuples inside objects and arrays", () => {
+    assertSame(z.object({ t: z.tuple([N, S.optional()]) }), { t: [1] });
+    assertSame(z.array(z.tuple([N, S.default("d")])), [[1], [2, "x"]]);
+  });
+
+  it("never mutates a short input when filling items", () => {
+    const schema = z.array(z.tuple([N, z.unknown(), S.default("d")]));
+    const input = [[1]];
+    compileWithRefs(schema)(input);
+    expect(input).toStrictEqual([[1]]);
+  });
 });
 
 describe("integration — record match Zod", () => {

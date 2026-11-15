@@ -78,7 +78,7 @@ export interface ZodSchema {
     /** Pre-compiled pattern for templateLiteral schemas. */
     pattern?: RegExp;
     /** Version of the Zod build that created this schema. */
-    version?: { major: number; minor: number };
+    version?: { major: number; minor: number; patch?: number };
     /** Set when an object may omit the key holding this schema (optional, default, catch, ...). */
     optin?: "optional" | "defaulted";
     /** Set when the parsed value may be undefined (optional, ...). */
