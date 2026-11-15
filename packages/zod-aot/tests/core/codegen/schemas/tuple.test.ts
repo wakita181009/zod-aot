@@ -126,9 +126,126 @@ describe("slow-path — tuple", () => {
       rest: { type: "boolean" },
     };
     const safeParse = compileIR(ir);
-    // Even with rest, the required items must be present
+    // With rest there is no length check: the missing item is parsed as undefined.
     const result = safeParse(["hello"]);
-    expect(result.success).toBe(false);
+    expect(result.error?.issues).toMatchObject([
+      { code: "invalid_type", expected: "number", path: [1] },
+    ]);
+  });
+});
+
+describe("slow-path — tuple absence (Zod >= 4.4 rules)", () => {
+  const n = { type: "number", checks: [] } as const;
+  const optStr = { type: "optional", inner: { type: "string", checks: [] } } as const;
+
+  it("too_small reports optinStart, and too_big does not stop item checks", () => {
+    const ir: TupleIR = {
+      type: "tuple",
+      items: [n, optStr],
+      rest: null,
+      absence: {
+        mode: "current",
+        optinStart: 1,
+        optoutStart: 1,
+        skipAbsent: [false, true],
+        trimUndefined: [false, true],
+      },
+    };
+    const safeParse = compileIR(ir);
+    expect(safeParse([1])).toEqual({ success: true, data: [1] });
+    expect(safeParse([]).error?.issues).toMatchObject([{ code: "too_small", minimum: 1 }]);
+    expect(safeParse(["x", "a", 2]).error?.issues).toMatchObject([
+      { code: "too_big", maximum: 2 },
+      { code: "invalid_type", path: [0] },
+    ]);
+  });
+
+  it("fills an absent item before optoutStart and trims a trailing undefined after it", () => {
+    const ir: TupleIR = {
+      type: "tuple",
+      items: [n, optStr, { type: "unknown" }],
+      rest: null,
+      absence: {
+        mode: "current",
+        optinStart: 1,
+        optoutStart: 3,
+        skipAbsent: [false, false, false],
+        trimUndefined: [false, true, false],
+      },
+    };
+    const data = compileIR(ir)([1]).data as unknown[];
+    expect(data).toHaveLength(3);
+    expect(1 in data && 2 in data).toBe(true);
+  });
+
+  it("drops the issues of an absent item past optoutStart and ends the output", () => {
+    const ir: TupleIR = {
+      type: "tuple",
+      items: [n, { type: "string", checks: [] }],
+      rest: null,
+      absence: {
+        mode: "current",
+        optinStart: 1,
+        optoutStart: 1,
+        skipAbsent: [false, false],
+        trimUndefined: [false, true],
+      },
+    };
+    const safeParse = compileIR(ir);
+    expect(safeParse([1])).toEqual({ success: true, data: [1] });
+    expect(safeParse([1, 2]).error?.issues).toMatchObject([{ code: "invalid_type", path: [1] }]);
+  });
+
+  it("reports rest issues before item issues", () => {
+    const ir: TupleIR = { type: "tuple", items: [n], rest: { type: "string", checks: [] } };
+    expect(compileIR(ir)(["x", 2]).error?.issues).toMatchObject([
+      { code: "invalid_type", path: [1] },
+      { code: "invalid_type", path: [0] },
+    ]);
+  });
+});
+
+describe("slow-path — tuple absence (Zod < 4.4 rules)", () => {
+  const n = { type: "number", checks: [] } as const;
+  const str = { type: "string", checks: [] } as const;
+
+  it("lets an input one short through and parses the missing item as undefined", () => {
+    const ir: TupleIR = {
+      type: "tuple",
+      items: [n, str],
+      rest: null,
+      absence: { mode: "legacy", optStart: 2, tooBigInclusive: true },
+    };
+    const safeParse = compileIR(ir);
+    expect(safeParse([1]).error?.issues).toMatchObject([{ code: "invalid_type", path: [1] }]);
+    expect(safeParse([]).error?.issues).toEqual([
+      { code: "too_small", minimum: 2, origin: "array", input: undefined, path: [] },
+    ]);
+  });
+
+  it("stops on too_big, with or without inclusive", () => {
+    for (const tooBigInclusive of [true, false]) {
+      const ir: TupleIR = {
+        type: "tuple",
+        items: [n],
+        rest: null,
+        absence: { mode: "legacy", optStart: 1, tooBigInclusive },
+      };
+      const issues = compileIR(ir)(["x", 2]).error?.issues;
+      expect(issues).toHaveLength(1);
+      expect(issues?.[0]).toMatchObject({ code: "too_big", maximum: 1 });
+      expect(Object.hasOwn(issues?.[0] as object, "inclusive")).toBe(tooBigInclusive);
+    }
+  });
+
+  it("skips absent items from optStart on", () => {
+    const ir: TupleIR = {
+      type: "tuple",
+      items: [n, { type: "optional", inner: str }],
+      rest: null,
+      absence: { mode: "legacy", optStart: 1, tooBigInclusive: true },
+    };
+    expect(compileIR(ir)([1])).toEqual({ success: true, data: [1] });
   });
 });
 
@@ -204,5 +321,80 @@ describe("fast-path — Tuple", () => {
         rest: null,
       }),
     ).toBeNull();
+  });
+});
+
+describe("fast-path — tuple absence", () => {
+  const n = { type: "number", checks: [] } as const;
+  const optStr = { type: "optional", inner: { type: "string", checks: [] } } as const;
+
+  it("accepts a short input whose missing items are skipped", () => {
+    const fn = compileFastCheck({
+      type: "tuple",
+      items: [n, optStr],
+      rest: null,
+      absence: {
+        mode: "current",
+        optinStart: 1,
+        optoutStart: 1,
+        skipAbsent: [false, true],
+        trimUndefined: [false, true],
+      },
+    });
+    expect(fn?.([1])).toBe(true);
+    expect(fn?.([1, "a"])).toBe(true);
+    expect(fn?.([1, 2])).toBe(false);
+    expect(fn?.([])).toBe(false);
+  });
+
+  it("sends short inputs whose missing items would be filled to the slow path", () => {
+    const fn = compileFastCheck({
+      type: "tuple",
+      items: [n, optStr],
+      rest: null,
+      absence: {
+        mode: "current",
+        optinStart: 1,
+        optoutStart: 2,
+        skipAbsent: [false, false],
+        trimUndefined: [false, true],
+      },
+    });
+    expect(fn?.([1])).toBe(false);
+    expect(fn?.([1, "a"])).toBe(true);
+  });
+
+  it("legacy rules: accepts inputs from optStart on", () => {
+    const fn = compileFastCheck({
+      type: "tuple",
+      items: [n, optStr],
+      rest: null,
+      absence: { mode: "legacy", optStart: 1, tooBigInclusive: true },
+    });
+    expect(fn?.([1])).toBe(true);
+    expect(fn?.([])).toBe(false);
+  });
+});
+
+describe("slow-path — tuple absence with a copied output", () => {
+  it("ends the copied output at a skipped absent item", () => {
+    const ir: TupleIR = {
+      type: "tuple",
+      items: [
+        { type: "number", checks: [], coerce: true },
+        { type: "optional", inner: { type: "string", checks: [] } },
+      ],
+      rest: null,
+      absence: {
+        mode: "current",
+        optinStart: 1,
+        optoutStart: 1,
+        skipAbsent: [false, true],
+        trimUndefined: [false, true],
+      },
+    };
+    const input = ["1"];
+    expect(compileIR(ir)(input)).toEqual({ success: true, data: [1] });
+    expect(input).toEqual(["1"]);
   });
 });

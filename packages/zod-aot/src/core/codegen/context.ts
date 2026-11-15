@@ -1,5 +1,5 @@
 import { assertNever } from "../assert-never.js";
-import type { AnyCheckIR, SchemaIR } from "../types.js";
+import type { AnyCheckIR, SchemaIR, TupleAbsenceIR, TupleIR } from "../types.js";
 import { lookupWellKnownRegex } from "./well-known-regex.js";
 
 /** Codegen output mode. "inline" emits self-contained code (CLI .compiled.ts). "lean" emits references to imports from "virtual:zod-aot/runtime" (unplugin). */
@@ -186,6 +186,90 @@ export function extendStaticPathIndex(parentPath: string, index: number): string
 }
 
 /**
+ * Whether a schema may succeed on `undefined`. Unsure cases answer true, so
+ * callers only ever do extra work, never skip needed work.
+ */
+export function mayAcceptUndefined(ir: SchemaIR): boolean {
+  switch (ir.type) {
+    case "string":
+    case "number":
+    case "boolean":
+    case "bigint":
+    case "date":
+      return ir.coerce === true;
+    case "undefined":
+    case "void":
+    case "any":
+    case "unknown":
+    case "optional":
+    case "default":
+    case "catch":
+    case "fallback":
+    case "recursiveRef":
+      return true;
+    case "nullable":
+    case "readonly":
+    case "effect":
+      return mayAcceptUndefined(ir.inner);
+    case "pipe":
+      return mayAcceptUndefined(ir.in);
+    case "literal":
+      // LiteralIR's type omits undefined, but z.literal(undefined) passes it through.
+      return (ir.values as unknown[]).includes(undefined);
+    case "union":
+      return ir.options.some(mayAcceptUndefined);
+    case "intersection":
+      return mayAcceptUndefined(ir.left) && mayAcceptUndefined(ir.right);
+    case "symbol":
+    case "null":
+    case "nan":
+    case "never":
+    case "enum":
+    case "templateLiteral":
+    case "stringBool":
+    case "object":
+    case "array":
+    case "tuple":
+    case "record":
+    case "set":
+    case "map":
+    case "file":
+    case "discriminatedUnion":
+      return false;
+    default:
+      return assertNever(ir);
+  }
+}
+
+/** A tuple's absence rules; without any, every item is required (Zod >= 4.4). */
+export function tupleAbsence(ir: TupleIR): TupleAbsenceIR {
+  if (ir.absence) return ir.absence;
+  const n = ir.items.length;
+  const none = ir.items.map(() => false);
+  return { mode: "current", optinStart: n, optoutStart: n, skipAbsent: none, trimUndefined: none };
+}
+
+/**
+ * Item indices a short input may leave absent while Zod still runs the item on
+ * undefined and keeps a result, so the output gains a slot the input lacks.
+ */
+export function tupleFilledIndices(ir: TupleIR): number[] {
+  const a = tupleAbsence(ir);
+  const n = ir.items.length;
+  const indices: number[] = [];
+  if (a.mode === "current") {
+    for (let i = ir.rest ? 0 : a.optinStart; i < n; i++) {
+      if (!(i >= a.optoutStart && a.skipAbsent[i])) indices.push(i);
+    }
+  } else {
+    for (let i = ir.rest ? 0 : Math.max(0, a.optStart - 1); i < Math.min(a.optStart, n); i++) {
+      indices.push(i);
+    }
+  }
+  return indices.filter((i) => mayAcceptUndefined(ir.items[i] as SchemaIR));
+}
+
+/**
  * Check if a SchemaIR tree contains any value-mutating operations
  * (coerce, default, catch, transforms, value-rewriting checks, fallbacks) that
  * would write back to the input expression. Container generators use it to
@@ -215,7 +299,11 @@ export function hasMutation(ir: SchemaIR): boolean {
     case "array":
       return hasMutation(ir.element);
     case "tuple":
-      return ir.items.some(hasMutation) || (ir.rest !== null && hasMutation(ir.rest));
+      return (
+        ir.items.some(hasMutation) ||
+        (ir.rest !== null && hasMutation(ir.rest)) ||
+        tupleFilledIndices(ir).length > 0
+      );
     case "record":
       return hasMutation(ir.valueType);
     case "optional":

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ZodSchema } from "#src/core/extract/types.js";
 import { zodAtLeast } from "#src/core/extract/zod-version.js";
 
-function schemaAt(version?: { major: number; minor: number }): ZodSchema {
+function schemaAt(version?: { major: number; minor: number; patch?: number }): ZodSchema {
   return { _zod: { def: {} as ZodSchema["_zod"]["def"], ...(version ? { version } : {}) } };
 }
 
@@ -15,6 +15,15 @@ describe("zodAtLeast", () => {
     [{ major: 3, minor: 25 }, 4, 0, false],
   ])("%o >= %d.%d → %s", (version, major, minor, expected) => {
     expect(zodAtLeast(schemaAt(version), major, minor)).toBe(expected);
+  });
+
+  it.each([
+    [{ major: 4, minor: 1, patch: 13 }, true],
+    [{ major: 4, minor: 1, patch: 12 }, false],
+    [{ major: 4, minor: 2, patch: 0 }, true],
+    [{ major: 4, minor: 1 }, false],
+  ])("%o >= 4.1.13 → %s", (version, expected) => {
+    expect(zodAtLeast(schemaAt(version), 4, 1, 13)).toBe(expected);
   });
 
   it("is undefined when the schema carries no version", () => {

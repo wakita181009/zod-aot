@@ -287,7 +287,35 @@ export interface TupleIR {
   type: "tuple";
   items: SchemaIR[];
   rest: SchemaIR | null;
+  /** How Zod treats missing trailing items; absent means every item is required (Zod >= 4.4 rules). */
+  absence?: TupleAbsenceIR;
 }
+
+/**
+ * Zod's rules for a tuple input shorter than its items, computed from each
+ * item's optin/optout at extraction because they changed in Zod 4.4.
+ */
+export type TupleAbsenceIR =
+  | {
+      /** Zod >= 4.4. */
+      mode: "current";
+      /** Shorter inputs fail with too_small (minimum: optinStart). */
+      optinStart: number;
+      /** From here on an absent item may end the output instead of filling it. */
+      optoutStart: number;
+      /** Per item: optin is "optional" (Zod >= 4.5), so an absent one past optoutStart ends the output. */
+      skipAbsent: boolean[];
+      /** Per item: optout is "optional", so a trailing absent undefined is dropped. */
+      trimUndefined: boolean[];
+    }
+  | {
+      /** Zod < 4.4. */
+      mode: "legacy";
+      /** Items from here on are skipped when absent; shorter inputs by more than one fail. */
+      optStart: number;
+      /** Whether too_big carries inclusive: true (Zod 4.3). */
+      tooBigInclusive: boolean;
+    };
 
 export interface RecordIR {
   type: "record";
