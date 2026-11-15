@@ -271,24 +271,6 @@ describe("fast-path — Number", () => {
     expect(fn?.(10)).toBe(false);
   });
 
-  it("string-only checks on number schema are skipped", () => {
-    const fn = compileFastCheck({
-      type: "number",
-      checks: [
-        { kind: "min_length", minimum: 1 },
-        { kind: "max_length", maximum: 10 },
-        { kind: "length_equals", length: 5 },
-        { kind: "string_format", format: "email" },
-        { kind: "includes", includes: "foo" },
-        { kind: "starts_with", prefix: "bar" },
-        { kind: "ends_with", suffix: "baz" },
-      ],
-    });
-    // All string-only checks are skipped, only typeof/isNaN/isFinite remain
-    expect(fn?.(42)).toBe(true);
-    expect(fn?.("42")).toBe(false);
-  });
-
   it("multiple_of: accepts 6 for 3, rejects 7", () => {
     const fn = compileFastCheck({
       type: "number",
@@ -296,5 +278,86 @@ describe("fast-path — Number", () => {
     });
     expect(fn?.(6)).toBe(true);
     expect(fn?.(7)).toBe(false);
+  });
+});
+
+describe("slow-path — number_format issue shape and abort", () => {
+  const strip = (issues: unknown[] | undefined) =>
+    (issues ?? []).map((i) => {
+      const { input: _i, ...rest } = i as Record<string, unknown>;
+      return rest;
+    });
+  const note = "Integers must be within the safe integer range.";
+
+  it("Zod >= 4.3: range too_big is inclusive and later checks still run", () => {
+    const safeParse = compileIR({
+      type: "number",
+      checks: [
+        { kind: "number_format", format: "int32" },
+        { kind: "less_than", value: 10, inclusive: true },
+      ],
+    });
+    expect(strip(safeParse(2 ** 40).error?.issues)).toEqual([
+      { code: "too_big", maximum: 2147483647, origin: "number", inclusive: true, path: [] },
+      { code: "too_big", maximum: 10, origin: "number", inclusive: true, path: [] },
+    ]);
+  });
+
+  it("legacy (Zod < 4.3): range too_big has no inclusive and aborts later checks", () => {
+    const safeParse = compileIR({
+      type: "number",
+      checks: [
+        { kind: "number_format", format: "int32", legacy: true },
+        { kind: "less_than", value: 10, inclusive: true },
+      ],
+    });
+    expect(strip(safeParse(2 ** 40).error?.issues)).toEqual([
+      { code: "too_big", maximum: 2147483647, origin: "number", path: [] },
+    ]);
+  });
+
+  it("legacy: float32 range too_big aborts too", () => {
+    const safeParse = compileIR({
+      type: "number",
+      checks: [
+        { kind: "number_format", format: "float32", legacy: true },
+        { kind: "greater_than", value: 0, inclusive: true },
+      ],
+    });
+    expect(strip(safeParse(1e39).error?.issues)).toEqual([
+      { code: "too_big", maximum: 3.4028234663852886e38, origin: "number", path: [] },
+    ]);
+  });
+
+  it("legacy: unsafe integers omit inclusive but do not abort", () => {
+    const safeParse = compileIR({
+      type: "number",
+      checks: [
+        { kind: "number_format", format: "safeint", legacy: true },
+        { kind: "less_than", value: 10, inclusive: true },
+      ],
+    });
+    expect(strip(safeParse(-(2 ** 60)).error?.issues)).toEqual([
+      { code: "too_small", minimum: Number.MIN_SAFE_INTEGER, origin: "int", note, path: [] },
+    ]);
+    expect(strip(safeParse(2 ** 60).error?.issues)).toEqual([
+      { code: "too_big", maximum: Number.MAX_SAFE_INTEGER, origin: "int", note, path: [] },
+      { code: "too_big", maximum: 10, origin: "number", inclusive: true, path: [] },
+    ]);
+  });
+
+  it("a non-integer aborts later checks in both shapes", () => {
+    for (const legacy of [false, true]) {
+      const safeParse = compileIR({
+        type: "number",
+        checks: [
+          { kind: "number_format", format: "uint32", ...(legacy ? { legacy: true as const } : {}) },
+          { kind: "greater_than", value: 5, inclusive: true },
+        ],
+      });
+      expect(strip(safeParse(1.5).error?.issues)).toEqual([
+        { code: "invalid_type", expected: "int", format: "uint32", path: [] },
+      ]);
+    }
   });
 });

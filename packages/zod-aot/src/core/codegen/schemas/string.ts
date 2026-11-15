@@ -1,11 +1,7 @@
-import type { CheckIR, CheckStringFormat, StringIR } from "../../types.js";
+import { assertNever } from "../../assert-never.js";
+import type { CheckStringFormat, StringIR } from "../../types.js";
 import type { FastGen, SlowGen } from "../context.js";
-import {
-  checkPriority,
-  escapeString,
-  hasMutation,
-  sortChecksPreservingEffects,
-} from "../context.js";
+import { checkPriority, escapeString, sortChecksPreservingEffects } from "../context.js";
 import { emit } from "../emit.js";
 import { invalidFormat, invalidType, tooBig, tooSmall } from "../emit-issue.js";
 import { EMAIL_REGEX_SOURCE, UUID_REGEX_SOURCE } from "../well-known-regex.js";
@@ -90,6 +86,8 @@ export function slowString(ir: StringIR, g: SlowGen): string {
             }`;
           break;
         }
+        default:
+          assertNever(check);
       }
     }
     code += `}`;
@@ -112,17 +110,15 @@ function formatRegex(check: CheckStringFormat, g: SlowGen | FastGen): string | n
 }
 
 export function fastString(ir: StringIR, g: FastGen): string | null {
-  // The fast path returns the input as-is, so coerce and value-rewriting checks
-  // (overwrite effects, url trimming) are ineligible.
-  if (hasMutation(ir)) return null;
+  // The fast path returns the input as-is, so anything that rewrites the value
+  // (coerce here, overwrite effects and url trimming below) is ineligible.
+  if (ir.coerce) return null;
 
   const x = g.input;
   const parts: string[] = [`typeof ${x}==="string"`];
-  const checks = ir.checks.filter(
-    (c): c is CheckIR => c.kind !== "refine_effect" && c.kind !== "overwrite_effect",
-  );
 
-  for (const check of checks.sort(checkPriority)) {
+  // Effects have no priority, so refines sort last and run after cheap checks.
+  for (const check of [...ir.checks].sort(checkPriority)) {
     switch (check.kind) {
       case "min_length":
         parts.push(`${x}.length>=${check.minimum}`);
@@ -147,18 +143,19 @@ export function fastString(ir: StringIR, g: FastGen): string | null {
         parts.push(`${x}.endsWith(${escapeString(check.suffix)})`);
         break;
       case "string_format": {
+        if (check.format === "url") return null;
         const v = formatRegex(check, g);
         if (v === null) return null;
         parts.push(`${v}.test(${x})`);
         break;
       }
-    }
-  }
-
-  // Refine effect checks (appended last — run after cheap checks short-circuit)
-  for (const check of ir.checks) {
-    if (check.kind === "refine_effect") {
-      parts.push(`(${check.source})(${x})`);
+      case "refine_effect":
+        parts.push(`(${check.source})(${x})`);
+        break;
+      case "overwrite_effect":
+        return null;
+      default:
+        assertNever(check);
     }
   }
 

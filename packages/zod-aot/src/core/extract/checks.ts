@@ -1,97 +1,71 @@
-import type { CheckNumberFormat, CheckOrEffectIR, FallbackIR } from "../types.js";
+import type {
+  CheckMaxSize,
+  CheckMinSize,
+  FallbackIR,
+  LengthCheckIR,
+  RefineEffectCheckIR,
+  SchemaIR,
+} from "../types.js";
 import { tryCompileEffect } from "./effects.js";
-import type { ZodCheckDef, ZodCheckSchema } from "./types.js";
+import type {
+  CheckedExtractor,
+  ExtractorContext,
+  ZodCheckDef,
+  ZodCheckSchema,
+  ZodDef,
+} from "./types.js";
 
 export type CheckFallbackReason = Extract<FallbackIR["reason"], "refine" | "unsupported">;
 
 /**
- * String formats whose Zod check is exactly `def.pattern.test(value)` in every
- * supported Zod version (4.0–4.6). Other formats (ipv6, cidrv6, base64,
- * base64url, jwt, credit_card, iban, custom stringFormat, ...) override
- * `_zod.check` with logic a regex cannot reproduce, so they fall back.
- * Keep this an allowlist: a format Zod adds later must not compile by default.
+ * Maps one Zod check to the owning type's check IR, or to the reason the schema
+ * must fall back. Mappers return "unsupported" for every kind they don't
+ * implement: `.check()` can attach any check to any schema (e.g.
+ * `z.string().check(z.gte(1))`), and skipping one would silently drop it.
  */
-const PATTERN_ONLY_FORMATS = new Set([
-  "email",
-  "uuid",
-  "guid",
-  "emoji",
-  "nanoid",
-  "cuid",
-  "cuid2",
-  "ulid",
-  "xid",
-  "ksuid",
-  "datetime",
-  "date",
-  "time",
-  "duration",
-  "ipv4",
-  "cidrv4",
-  "e164",
-  "mac",
-  "lowercase",
-  "uppercase",
-  "regex",
-]);
-
-/** Fallback reason for a check that a type-specific extractor cannot compile. */
-export function unsupportedCheckReason(def: ZodCheckDef): CheckFallbackReason {
-  return def.check === "custom" ? "refine" : "unsupported";
-}
+export type CheckMapper<T> = (def: ZodCheckDef, check: ZodCheckSchema) => T | CheckFallbackReason;
 
 /**
- * Zod check kinds each type's codegen implements (`custom` is always accepted).
- * `.check()` can attach any check to any schema, e.g. `z.string().check(z.gte(1))`,
- * so kinds outside the owning type's set must fall back rather than be skipped.
+ * Pair a mapper with the extractor that consumes its output. `C` links the two
+ * at construction, so the registry can store the type-erased entry safely.
  */
-export const STRING_CHECK_KINDS: ReadonlySet<string> = new Set([
-  "min_length",
-  "max_length",
-  "length_equals",
-  "string_format",
-  "overwrite",
-]);
-export const NUMBER_CHECK_KINDS: ReadonlySet<string> = new Set([
-  "greater_than",
-  "less_than",
-  "multiple_of",
-  "number_format",
-]);
-export const ARRAY_CHECK_KINDS: ReadonlySet<string> = new Set([
-  "min_length",
-  "max_length",
-  "length_equals",
-]);
-export const OBJECT_CHECK_KINDS: ReadonlySet<string> = new Set();
+export function checkedExtractor<C>(
+  mapCheck: CheckMapper<C>,
+  extract: (def: ZodDef, ctx: ExtractorContext, checks: C[]) => SchemaIR,
+): CheckedExtractor<unknown> {
+  return { mapCheck, extract: (def, ctx, checks) => extract(def, ctx, checks as C[]) };
+}
 
-export function extractChecks(
-  checks: ZodCheckSchema[],
-  kinds: ReadonlySet<string>,
-): {
-  checkIRs: CheckOrEffectIR[];
-  fallback: CheckFallbackReason | null;
-} {
-  const checkIRs: CheckOrEffectIR[] = [];
-
+export function extractChecks<T>(
+  checks: readonly ZodCheckSchema[],
+  mapCheck: CheckMapper<T>,
+): { checkIRs: T[]; fallback: CheckFallbackReason | null } {
+  const checkIRs: T[] = [];
   for (const check of checks) {
     const def = check._zod?.def;
     if (!def) continue;
-    if (def.check !== "custom" && !kinds.has(def.check)) {
-      return { checkIRs, fallback: "unsupported" };
-    }
-    const ir = extractCheck(def, check);
-    if (typeof ir === "string") return { checkIRs, fallback: ir };
+    const ir = mapCheck(def, check);
+    if (isFallbackReason(ir)) return { checkIRs, fallback: ir };
     checkIRs.push(ir);
   }
-
   return { checkIRs, fallback: null };
 }
 
-function extractCheck(
-  def: ZodCheckDef,
-  check: ZodCheckSchema,
-): CheckOrEffectIR | CheckFallbackReason {
+function isFallbackReason(value: unknown): value is CheckFallbackReason {
+  return value === "refine" || value === "unsupported";
+}
+
+/** `.refine(fn)`: compiled when `fn` is zero-capture, otherwise a "refine" fallback. */
+export function mapRefineCheck(def: ZodCheckDef): RefineEffectCheckIR | CheckFallbackReason {
+  if (def.check !== "custom") return "unsupported";
+  const source = tryCompileEffect(def.fn);
+  if (!source) return "refine";
+  const message = typeof def.error === "function" ? extractRefineMessage(def.error) : undefined;
+  return { kind: "refine_effect", source, ...(message ? { message } : {}) };
+}
+
+/** `.min()` / `.max()` / `.length()` on strings and arrays. */
+export function mapLengthCheck(def: ZodCheckDef): LengthCheckIR | undefined {
   switch (def.check) {
     case "min_length":
       return { kind: "min_length", minimum: def.minimum };
@@ -99,104 +73,25 @@ function extractCheck(
       return { kind: "max_length", maximum: def.maximum };
     case "length_equals":
       return { kind: "length_equals", length: def.length };
-    case "greater_than":
-      return { kind: "greater_than", value: def.value, inclusive: def.inclusive };
-    case "less_than":
-      return { kind: "less_than", value: def.value, inclusive: def.inclusive };
-    case "multiple_of":
-      // Zod's remainder for fractional steps is float-tolerant and its algorithm
-      // differs across versions (toFixed-based before 4.6, ratio-based since), so
-      // only integer steps — where both agree with `%` — are compiled.
-      if (!Number.isInteger(def.value)) return "unsupported";
-      return { kind: "multiple_of", value: def.value };
-    case "number_format": {
-      const format = def.format as CheckNumberFormat["format"];
-      return {
-        kind: "number_format",
-        format,
-        ...(isLegacyNumberFormat(check, format) ? { legacy: true as const } : {}),
-      };
-    }
-    case "string_format":
-      return extractStringFormat(def);
-    case "overwrite": {
-      const source = tryCompileEffect(def.tx);
-      return source ? { kind: "overwrite_effect", source } : "unsupported";
-    }
-    case "custom": {
-      const source = tryCompileEffect(def.fn);
-      if (!source) return "refine";
-      const message = typeof def.error === "function" ? extractRefineMessage(def.error) : undefined;
-      return { kind: "refine_effect", source, ...(message ? { message } : {}) };
-    }
     default:
-      return "unsupported";
+      return undefined;
   }
 }
 
-/** Out-of-range probe values that hit the issue shapes that changed in Zod 4.3. */
-const LEGACY_PROBES: Partial<Record<CheckNumberFormat["format"], number>> = {
-  safeint: 2 ** 60, // unsafe-integer too_big: `inclusive` added in 4.3
-  int32: 2 ** 40, // range too_big: `inclusive` and `continue` added in 4.3
-  uint32: 2 ** 40,
-  float32: 1e39,
-};
+/** `.min()` / `.max()` on sets and files. */
+export function mapSizeCheck(def: ZodCheckDef): CheckMinSize | CheckMaxSize | undefined {
+  if (def.check === "min_size") return { kind: "min_size", minimum: def.minimum };
+  if (def.check === "max_size") return { kind: "max_size", maximum: def.maximum };
+  return undefined;
+}
 
 /**
- * Detect the pre-4.3 number format issue shape by running the live check: core
- * never imports zod, so the installed version is only observable this way.
+ * For types whose codegen has no refine support (bigint, date, set, file): a
+ * refine falls back as "refine" even when zero-capture, matching the reason a
+ * plain-extractor type reports.
  */
-function isLegacyNumberFormat(check: ZodCheckSchema, format: CheckNumberFormat["format"]): boolean {
-  const probe = LEGACY_PROBES[format];
-  const run = check._zod?.check;
-  if (probe === undefined || typeof run !== "function") return false;
-  const payload: { value: unknown; issues: Record<string, unknown>[] } = {
-    value: probe,
-    issues: [],
-  };
-  try {
-    run(payload);
-  } catch {
-    return false;
-  }
-  const issue = payload.issues[0];
-  return issue !== undefined && (issue["inclusive"] !== true || issue["continue"] !== true);
-}
-
-function extractStringFormat(def: ZodCheckDef): CheckOrEffectIR | CheckFallbackReason {
-  if (def.format === "includes" && typeof def.includes === "string") {
-    return {
-      kind: "includes",
-      includes: def.includes,
-      ...(typeof def.position === "number" ? { position: def.position } : {}),
-    };
-  }
-  if (def.format === "starts_with" && typeof def.prefix === "string") {
-    return { kind: "starts_with", prefix: def.prefix };
-  }
-  if (def.format === "ends_with" && typeof def.suffix === "string") {
-    return { kind: "ends_with", suffix: def.suffix };
-  }
-  // z.stringFormat(name, fnOrRegex) validates via `fn` and reports a different
-  // issue shape, even when `name` matches a built-in format.
-  if (typeof def.fn === "function") return "unsupported";
-  if (def.format === "url") {
-    if (def.hostname || def.protocol || def.normalize) return "unsupported";
-    return { kind: "string_format", format: "url" };
-  }
-  if (!PATTERN_ONLY_FORMATS.has(def.format)) return "unsupported";
-
-  const pattern = def.pattern;
-  if (typeof pattern === "string") return { kind: "string_format", format: def.format, pattern };
-  if (!(pattern instanceof RegExp)) return "unsupported";
-  // A stateful (g/y) regex reused across calls would carry lastIndex between inputs.
-  if (pattern.global || pattern.sticky) return "unsupported";
-  return {
-    kind: "string_format",
-    format: def.format,
-    pattern: pattern.source,
-    ...(pattern.flags ? { flags: pattern.flags } : {}),
-  };
+export function uncompiledCheckReason(def: ZodCheckDef): CheckFallbackReason {
+  return def.check === "custom" ? "refine" : "unsupported";
 }
 
 function extractRefineMessage(errorFn: (...args: unknown[]) => unknown): string | undefined {

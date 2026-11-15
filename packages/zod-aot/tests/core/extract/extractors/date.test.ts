@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { extractDate } from "#src/core/extract/extractors/date.js";
 import { extractSchema } from "#src/core/extract/index.js";
 import type { DateIR } from "#src/core/types.js";
 
-const ctx = { fallback: (reason: string) => ({ type: "fallback", reason }) } as never;
+/** A minimal schema object, for def shapes the public Zod API can't produce. */
+const fakeSchema = (def: Record<string, unknown>) => ({ _zod: { def } });
 
 describe("extractSchema — date", () => {
   it("extracts plain date", () => {
@@ -48,36 +48,28 @@ describe("extractSchema — date", () => {
   });
 
   it("skips checks without _zod.def", () => {
-    const ir = extractDate(
-      {
-        type: "date",
-        checks: [{ _zod: undefined }],
-      } as never,
-      ctx,
-    ) as DateIR;
+    const ir = extractSchema(fakeSchema({ type: "date", checks: [{ _zod: undefined }] }));
     expect(ir).toEqual({ type: "date", checks: [] });
   });
 
   it("falls back on greater_than check with NaN timestamp", () => {
-    const ir = extractDate(
-      {
+    const ir = extractSchema(
+      fakeSchema({
         type: "date",
         checks: [
           { _zod: { def: { check: "greater_than", value: "invalid-date", inclusive: true } } },
         ],
-      } as never,
-      ctx,
+      }),
     );
     expect(ir).toEqual({ type: "fallback", reason: "unsupported" });
   });
 
   it("falls back on less_than check with NaN timestamp", () => {
-    const ir = extractDate(
-      {
+    const ir = extractSchema(
+      fakeSchema({
         type: "date",
         checks: [{ _zod: { def: { check: "less_than", value: "invalid-date", inclusive: true } } }],
-      } as never,
-      ctx,
+      }),
     );
     expect(ir).toEqual({ type: "fallback", reason: "unsupported" });
   });
@@ -89,12 +81,8 @@ describe("extractSchema — date", () => {
   });
 
   it("falls back on unrecognized check types", () => {
-    const ir = extractDate(
-      {
-        type: "date",
-        checks: [{ _zod: { def: { check: "unknown_check" } } }],
-      } as never,
-      ctx,
+    const ir = extractSchema(
+      fakeSchema({ type: "date", checks: [{ _zod: { def: { check: "unknown_check" } } }] }),
     );
     expect(ir).toEqual({ type: "fallback", reason: "unsupported" });
   });

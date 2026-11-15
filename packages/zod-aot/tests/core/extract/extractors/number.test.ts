@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { extractNumber } from "#src/core/extract/extractors/number.js";
 import { extractSchema } from "#src/core/extract/index.js";
 import type { FallbackIR, NumberIR } from "#src/core/types.js";
 import { zodAtLeast } from "../../../zod-version.js";
+
+/** A minimal schema object, for def shapes the public Zod API can't produce. */
+const fakeSchema = (def: Record<string, unknown>) => ({ _zod: { def } });
 
 describe("extractSchema — number checks", () => {
   it("extracts min (inclusive) check", () => {
@@ -120,11 +122,9 @@ describe("extractNumber — branch coverage", () => {
     expect((ir as FallbackIR).reason).toBe("refine");
   });
 
-  it("number_format path with coerce via direct call", () => {
-    const def = { check: "number_format", format: "int32", coerce: true };
-    const ir = extractNumber(
-      def as never,
-      { schema: { _zod: { def } }, fallback: () => ({ type: "fallback" }) } as never,
+  it("treats a format schema's own def.check as its first check", () => {
+    const ir = extractSchema(
+      fakeSchema({ type: "number", check: "number_format", format: "int32", coerce: true }),
     ) as NumberIR;
     expect(ir.type).toBe("number");
     expect(ir.coerce).toBe(true);
@@ -133,20 +133,13 @@ describe("extractNumber — branch coverage", () => {
     );
   });
 
-  it("returns empty checks when def.checks is undefined", () => {
-    const ir = extractNumber(
-      { checks: undefined } as never,
-      { fallback: () => ({ type: "fallback" }) } as never,
-    ) as NumberIR;
-    expect(ir).toEqual({ type: "number", checks: [] });
-  });
-
-  it("returns empty checks when def.checks is empty array", () => {
-    const ir = extractNumber(
-      { checks: [] } as never,
-      { fallback: () => ({ type: "fallback" }) } as never,
-    ) as NumberIR;
-    expect(ir).toEqual({ type: "number", checks: [] });
+  it("returns empty checks when def.checks is undefined or empty", () => {
+    for (const checks of [undefined, []]) {
+      expect(extractSchema(fakeSchema({ type: "number", checks }))).toEqual({
+        type: "number",
+        checks: [],
+      });
+    }
   });
 });
 
@@ -169,5 +162,43 @@ describe("extractSchema — number format legacy probe", () => {
   it("float64 is never legacy", () => {
     const ir = extractSchema(z.float64()) as NumberIR;
     expect(ir.checks[0]).toEqual({ kind: "number_format", format: "float64" });
+  });
+});
+
+describe("extractSchema — number format probe on the live check", () => {
+  type Payload = { value: unknown; issues: Record<string, unknown>[] };
+  const withCheck = (check: (p: Payload) => void) => ({
+    _zod: { def: { type: "number", check: "number_format", format: "int32" }, check },
+  });
+
+  it("marks legacy when the range issue lacks inclusive/continue", () => {
+    const ir = extractSchema(
+      withCheck((p) => {
+        p.issues.push({ code: "too_big" });
+      }),
+    ) as NumberIR;
+    expect(ir.checks).toEqual([{ kind: "number_format", format: "int32", legacy: true }]);
+  });
+
+  it("is not legacy when the issue has inclusive and continue", () => {
+    const ir = extractSchema(
+      withCheck((p) => {
+        p.issues.push({ code: "too_big", inclusive: true, continue: true });
+      }),
+    ) as NumberIR;
+    expect(ir.checks).toEqual([{ kind: "number_format", format: "int32" }]);
+  });
+
+  it("is not legacy when the probe throws or reports nothing", () => {
+    for (const check of [
+      () => {
+        throw new Error("boom");
+      },
+      () => undefined,
+    ]) {
+      expect((extractSchema(withCheck(check)) as NumberIR).checks).toEqual([
+        { kind: "number_format", format: "int32" },
+      ]);
+    }
   });
 });

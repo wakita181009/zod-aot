@@ -68,18 +68,7 @@ export interface CheckEndsWith {
   suffix: string;
 }
 
-export type CheckIR =
-  | CheckMinLength
-  | CheckMaxLength
-  | CheckLengthEquals
-  | CheckGreaterThan
-  | CheckLessThan
-  | CheckMultipleOf
-  | CheckNumberFormat
-  | CheckStringFormat
-  | CheckIncludes
-  | CheckStartsWith
-  | CheckEndsWith;
+export type LengthCheckIR = CheckMinLength | CheckMaxLength | CheckLengthEquals;
 
 // ─── Refine Effect Check IR ────────────────────────────────────────────────
 // Inline refine effects compiled via fn.toString(). Inserted into checks[]
@@ -103,8 +92,27 @@ export interface OverwriteEffectCheckIR {
   source: string;
 }
 
-/** A check entry that may be a compiled check or an inline effect. */
-export type CheckOrEffectIR = CheckIR | RefineEffectCheckIR | OverwriteEffectCheckIR;
+// ─── Per-type check unions ─────────────────────────────────────────────────
+// Each schema type carries only the checks its codegen implements, so a codegen
+// switch that forgets one fails to compile instead of silently dropping it.
+
+export type StringCheckIR =
+  | LengthCheckIR
+  | CheckStringFormat
+  | CheckIncludes
+  | CheckStartsWith
+  | CheckEndsWith
+  | RefineEffectCheckIR
+  | OverwriteEffectCheckIR;
+
+export type NumberCheckIR =
+  | CheckGreaterThan
+  | CheckLessThan
+  | CheckMultipleOf
+  | CheckNumberFormat
+  | RefineEffectCheckIR;
+
+export type ArrayCheckIR = LengthCheckIR | RefineEffectCheckIR;
 
 // ─── Date Check IR ──────────────────────────────────────────────────────────
 
@@ -175,13 +183,13 @@ export type FileCheckIR = CheckMinSize | CheckMaxSize | CheckMimeType;
 
 export interface StringIR {
   type: "string";
-  checks: CheckOrEffectIR[];
+  checks: StringCheckIR[];
   coerce?: boolean;
 }
 
 export interface NumberIR {
   type: "number";
-  checks: CheckOrEffectIR[];
+  checks: NumberCheckIR[];
   coerce?: boolean;
 }
 
@@ -256,7 +264,7 @@ export interface ObjectIR {
 export interface ArrayIR {
   type: "array";
   element: SchemaIR;
-  checks: CheckOrEffectIR[];
+  checks: ArrayCheckIR[];
 }
 
 export interface TupleIR {
@@ -462,3 +470,13 @@ export interface CompiledSchema<T> {
   safeParse(input: unknown): SafeParseResult<T>;
   safeParseAsync(input: unknown): Promise<SafeParseResult<T>>;
 }
+
+/** Any check of any schema type (for type-agnostic helpers such as cost sorting). */
+export type AnyCheckIR =
+  | StringCheckIR
+  | NumberCheckIR
+  | ArrayCheckIR
+  | BigIntCheckIR
+  | DateCheckIR
+  | SetCheckIR
+  | FileCheckIR;

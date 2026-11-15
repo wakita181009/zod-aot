@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { extractObject } from "#src/core/extract/extractors/object.js";
 import { extractSchema } from "#src/core/extract/index.js";
 import type { FallbackIR, ObjectIR } from "#src/core/types.js";
 
@@ -34,39 +33,9 @@ describe("extractObject", () => {
     expect((ir as FallbackIR).reason).toBe("refine");
   });
 
-  it("handles object with compilable refine via direct call", () => {
-    // Use direct call with mock ctx to test the hasFallback=false + refine_effect path
-    const mockCtx = {
-      schema: {},
-      path: "",
-      refs: undefined,
-      visiting: new Set(),
-      visit: () => ({ type: "string" as const, checks: [] }),
-      fallback: (reason: string) => ({ type: "fallback" as const, reason }),
-    };
-    const ir = extractObject(
-      {
-        type: "object",
-        shape: {},
-        checks: [
-          {
-            _zod: {
-              def: {
-                check: "custom",
-                fn: (v: unknown) => !!v,
-              },
-            },
-          },
-        ],
-      } as never,
-      mockCtx as never,
-    );
-    // tryCompileEffect should compile the simple arrow; result has refine checks
-    if (ir.type === "object" && "checks" in ir) {
-      expect(ir.checks).toBeDefined();
-      expect(ir.checks?.length).toBeGreaterThan(0);
-    }
-    // If it fell back, that's also acceptable (depends on tryCompileEffect behavior)
-    expect(["object", "fallback"]).toContain(ir.type);
+  it("compiles a zero-capture object refine into object checks", () => {
+    const ir = extractSchema(z.object({ a: z.number() }).refine((v) => v.a > 0)) as ObjectIR;
+    expect(ir.type).toBe("object");
+    expect(ir.checks).toEqual([expect.objectContaining({ kind: "refine_effect" })]);
   });
 });

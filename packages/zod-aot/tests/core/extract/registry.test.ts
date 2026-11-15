@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
+import { extractSchema, type RefEntry } from "#src/core/extract/index.js";
 import { dispatch, extractRegistry } from "#src/core/extract/registry.js";
 import type { FallbackIR } from "#src/core/types.js";
 
@@ -9,9 +10,12 @@ describe("extractRegistry", () => {
     expect(Object.keys(extractRegistry).length).toBeGreaterThanOrEqual(1);
   });
 
-  it("every entry is a function", () => {
-    for (const [, extractor] of Object.entries(extractRegistry)) {
-      expect(typeof extractor).toBe("function");
+  it("every entry is an extractor or a checked extractor", () => {
+    for (const entry of Object.values(extractRegistry) as unknown[]) {
+      if (typeof entry === "function") continue;
+      const checked = entry as { mapCheck: unknown; extract: unknown };
+      expect(typeof checked.mapCheck).toBe("function");
+      expect(typeof checked.extract).toBe("function");
     }
   });
 });
@@ -70,5 +74,39 @@ describe("dispatch", () => {
         },
       },
     });
+  });
+});
+
+describe("dispatch — check fallback ordering", () => {
+  it("falls back on a parent check before visiting children, leaving no orphan refs", () => {
+    const captured = "x";
+    const schema = z
+      .array(z.string().refine((s) => s !== captured))
+      .check(z.minLength(1))
+      .check(
+        // biome-ignore lint/suspicious/noExplicitAny: cross-type check to force a parent fallback
+        z.gte(1) as any,
+      );
+    const refs: RefEntry[] = [];
+    const ir = extractSchema(schema, refs);
+    expect(ir).toEqual({ type: "fallback", reason: "unsupported", refIndex: 0 });
+    expect(refs).toHaveLength(1);
+    expect(refs[0]?.schema).toBe(schema);
+  });
+});
+
+describe("dispatch — types without check codegen", () => {
+  it("reports refine when every check is a refine", () => {
+    const n = 1;
+    expect(extractSchema(z.boolean().refine((b) => b !== Boolean(n)))).toEqual({
+      type: "fallback",
+      reason: "refine",
+    });
+  });
+
+  it("reports unsupported when any check is not a refine", () => {
+    // biome-ignore lint/suspicious/noExplicitAny: cross-type check on a boolean
+    const schema = z.boolean().check(z.minLength(1) as any);
+    expect(extractSchema(schema)).toEqual({ type: "fallback", reason: "unsupported" });
   });
 });

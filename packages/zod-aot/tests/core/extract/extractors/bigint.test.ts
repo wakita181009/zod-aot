@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { extractBigint } from "#src/core/extract/extractors/bigint.js";
 import { extractSchema } from "#src/core/extract/index.js";
 import type { BigIntIR } from "#src/core/types.js";
+
+/** A minimal schema object, for def shapes the public Zod API can't produce. */
+const fakeSchema = (def: Record<string, unknown>) => ({ _zod: { def } });
 
 describe("extractSchema — bigint checks", () => {
   it("extracts plain bigint with no checks", () => {
@@ -117,10 +119,7 @@ describe("extractSchema — bigint checks", () => {
   });
 
   it("skips checks without _zod.def", () => {
-    const ir = extractBigint({
-      type: "bigint",
-      checks: [{ _zod: undefined }],
-    } as never) as BigIntIR;
+    const ir = extractSchema(fakeSchema({ type: "bigint", checks: [{ _zod: undefined }] }));
     expect(ir).toEqual({ type: "bigint", checks: [] });
   });
 

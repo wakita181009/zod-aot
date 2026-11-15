@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { extractSet } from "#src/core/extract/extractors/set.js";
 import { extractSchema } from "#src/core/extract/index.js";
 import type { SetIR } from "#src/core/types.js";
+
+/** A minimal schema object, for def shapes the public Zod API can't produce. */
+const fakeSchema = (def: Record<string, unknown>) => ({ _zod: { def } });
 
 describe("extractSchema — set", () => {
   it("extracts plain set with no checks", () => {
@@ -50,20 +52,8 @@ describe("extractSchema — set", () => {
   });
 
   it("skips checks without _zod.def", () => {
-    const ir = extractSet(
-      {
-        type: "set",
-        checks: [{ _zod: undefined }],
-        valueType: {},
-      } as never,
-      {
-        schema: {},
-        path: "test",
-        refs: undefined,
-        visiting: new Set(),
-        visit: () => ({ type: "string", checks: [] }),
-        fallback: (reason) => ({ type: "fallback", reason }),
-      } as never,
+    const ir = extractSchema(
+      fakeSchema({ type: "set", checks: [{ _zod: undefined }], valueType: z.string() }),
     ) as SetIR;
     expect(ir.type).toBe("set");
     expect(ir.checks).toBeUndefined();

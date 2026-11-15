@@ -96,3 +96,23 @@ describe("extractSchema — string checks", () => {
     expect(ir.checks[2]?.kind).toBe("string_format");
   });
 });
+
+describe("extractSchema — string format patterns", () => {
+  const formatSchema = (pattern: unknown) => ({
+    _zod: { def: { type: "string", check: "string_format", format: "email", pattern } },
+  });
+
+  it("keeps a string pattern as-is", () => {
+    expect(extractSchema(formatSchema("^a$"))).toEqual({
+      type: "string",
+      checks: [{ kind: "string_format", format: "email", pattern: "^a$" }],
+    });
+  });
+
+  it("falls back when the pattern is neither a RegExp nor a string", () => {
+    expect(extractSchema(formatSchema(undefined))).toEqual({
+      type: "fallback",
+      reason: "unsupported",
+    });
+  });
+});

@@ -1,11 +1,5 @@
-import type {
-  BigIntCheckIR,
-  CheckIR,
-  CheckOrEffectIR,
-  DateCheckIR,
-  SchemaIR,
-  SetCheckIR,
-} from "../types.js";
+import { assertNever } from "../assert-never.js";
+import type { AnyCheckIR, SchemaIR } from "../types.js";
 import { lookupWellKnownRegex } from "./well-known-regex.js";
 
 /** Codegen output mode. "inline" emits self-contained code (CLI .compiled.ts). "lean" emits references to imports from "virtual:zod-aot/runtime" (unplugin). */
@@ -193,8 +187,10 @@ export function extendStaticPathIndex(parentPath: string, index: number): string
 
 /**
  * Check if a SchemaIR tree contains any value-mutating operations
- * (coerce, default, catch) that would write back to the input expression.
- * Used by container generators to decide whether to shallow-clone.
+ * (coerce, default, catch, transforms, value-rewriting checks, fallbacks) that
+ * would write back to the input expression. Container generators use it to
+ * decide whether to shallow-clone, so a missing case means mutated user input:
+ * the switch is exhaustive on purpose.
  */
 export function hasMutation(ir: SchemaIR): boolean {
   switch (ir.type) {
@@ -237,20 +233,28 @@ export function hasMutation(ir: SchemaIR): boolean {
     case "map":
       return hasMutation(ir.keyType) || hasMutation(ir.valueType);
     case "file":
+    case "symbol":
+    case "null":
+    case "undefined":
+    case "void":
+    case "nan":
+    case "never":
+    case "any":
+    case "unknown":
+    case "literal":
+    case "enum":
+    case "templateLiteral":
       return false;
     default:
-      return false;
+      return assertNever(ir);
   }
 }
 
 /**
- * Sort comparator for CheckIR: cheapest/most-discriminating checks first.
- * Used by fast-path generators after filtering out refine_effect entries.
+ * Sort comparator for checks: cheapest/most-discriminating first.
+ * Used by fast-path generators; effects have no priority and sort last.
  */
-export function checkPriority(
-  a: CheckIR | BigIntCheckIR | DateCheckIR | SetCheckIR,
-  b: CheckIR | BigIntCheckIR | DateCheckIR | SetCheckIR,
-): number {
+export function checkPriority(a: AnyCheckIR, b: AnyCheckIR): number {
   return (CHECK_PRIORITY[a.kind] ?? 99) - (CHECK_PRIORITY[b.kind] ?? 99);
 }
 
@@ -265,13 +269,11 @@ export function checkPriority(
  * checks after a rewrite validate a different value and the checks after a
  * failed number format may be aborted by Zod.
  */
-export function sortChecksPreservingEffects<
-  T extends CheckIR | CheckOrEffectIR | BigIntCheckIR | DateCheckIR,
->(checks: T[]): T[] {
+export function sortChecksPreservingEffects<T extends AnyCheckIR>(checks: T[]): T[] {
   const result: T[] = [];
   let segment: T[] = [];
   for (const check of checks) {
-    if (isOrderingBarrier(check as CheckOrEffectIR)) {
+    if (isOrderingBarrier(check)) {
       result.push(...sortSegment(segment), check);
       segment = [];
     } else {
@@ -282,9 +284,7 @@ export function sortChecksPreservingEffects<
   return result;
 }
 
-function sortSegment<T extends CheckIR | CheckOrEffectIR | BigIntCheckIR | DateCheckIR>(
-  checks: T[],
-): T[] {
+function sortSegment<T extends AnyCheckIR>(checks: T[]): T[] {
   const result: T[] = new Array(checks.length);
   const compilable: { check: T; originalIndex: number }[] = [];
 
@@ -319,14 +319,14 @@ function sortSegment<T extends CheckIR | CheckOrEffectIR | BigIntCheckIR | DateC
  * Checks that replace the value seen by later checks and returned as output
  * (overwrite effects such as `.trim()`, and `url`, which trims on success).
  */
-export function isValueRewritingCheck(check: CheckOrEffectIR): boolean {
+export function isValueRewritingCheck(check: AnyCheckIR): boolean {
   return (
     check.kind === "overwrite_effect" || (check.kind === "string_format" && check.format === "url")
   );
 }
 
 /** Checks that no other check may be reordered across (see sortChecksPreservingEffects). */
-function isOrderingBarrier(check: CheckOrEffectIR): boolean {
+function isOrderingBarrier(check: AnyCheckIR): boolean {
   // Number formats can abort the checks after them (see numberFormatCheck).
   return isValueRewritingCheck(check) || check.kind === "number_format";
 }
