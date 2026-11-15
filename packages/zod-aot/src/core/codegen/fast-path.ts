@@ -105,7 +105,7 @@ export function createFastGen(inputExpr: string, ctx: CodeGenContext): FastGen {
       return generateFast(ir, createFastGen(overrides?.input ?? inputExpr, ctx));
     },
     temp: (prefix) => emitTemp(ctx, prefix),
-    regex: (prefix, pattern) => emitRegex(ctx, prefix, pattern),
+    regex: (prefix, pattern, flags) => emitRegex(ctx, prefix, pattern, flags),
   };
 }
 

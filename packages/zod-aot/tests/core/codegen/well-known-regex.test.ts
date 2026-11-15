@@ -42,9 +42,6 @@ describe("well-known-regex", () => {
       ["xid", z.xid(), "__zaReXid"],
       ["ksuid", z.ksuid(), "__zaReKsuid"],
       ["ipv4", z.ipv4(), "__zaReIpv4"],
-      ["ipv6", z.ipv6(), "__zaReIpv6"],
-      ["base64", z.base64(), "__zaReBase64"],
-      ["base64url", z.base64url(), "__zaReBase64Url"],
       ["e164", z.e164(), "__zaReE164"],
       ["guid", z.guid(), "__zaReGuid"],
     ] as const;

@@ -13,6 +13,12 @@ export interface ZodCheckDef {
   prefix: string;
   suffix: string;
   fn: unknown;
+  /** Overwrite transform (`check: "overwrite"`), e.g. the function behind `.trim()`. */
+  tx?: unknown;
+  /** URL format options. */
+  hostname?: RegExp;
+  protocol?: RegExp;
+  normalize?: boolean;
   mime: string[];
   error?: (...args: unknown[]) => unknown;
 }

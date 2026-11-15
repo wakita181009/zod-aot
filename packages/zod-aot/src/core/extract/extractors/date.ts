@@ -1,7 +1,8 @@
 import type { DateCheckIR, SchemaIR } from "../../types.js";
-import type { ZodDef } from "../types.js";
+import { unsupportedCheckReason } from "../checks.js";
+import type { ExtractorContext, ZodDef } from "../types.js";
 
-export function extractDate(def: ZodDef): SchemaIR {
+export function extractDate(def: ZodDef, ctx: ExtractorContext): SchemaIR {
   const dateChecks: DateCheckIR[] = [];
   if (def.checks) {
     for (const check of def.checks) {
@@ -10,7 +11,7 @@ export function extractDate(def: ZodDef): SchemaIR {
       if (checkDef.check === "greater_than") {
         const v = checkDef.value as unknown as string;
         const ts = new Date(v).getTime();
-        if (Number.isNaN(ts)) continue;
+        if (Number.isNaN(ts)) return ctx.fallback("unsupported");
         dateChecks.push({
           kind: "date_greater_than",
           value: String(v),
@@ -20,13 +21,15 @@ export function extractDate(def: ZodDef): SchemaIR {
       } else if (checkDef.check === "less_than") {
         const v = checkDef.value as unknown as string;
         const ts = new Date(v).getTime();
-        if (Number.isNaN(ts)) continue;
+        if (Number.isNaN(ts)) return ctx.fallback("unsupported");
         dateChecks.push({
           kind: "date_less_than",
           value: String(v),
           timestamp: ts,
           inclusive: checkDef.inclusive,
         });
+      } else {
+        return ctx.fallback(unsupportedCheckReason(checkDef));
       }
     }
   }

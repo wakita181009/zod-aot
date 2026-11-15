@@ -108,9 +108,10 @@ describe("extractNumber — branch coverage", () => {
   });
 
   it("number_format path with coerce via direct call", () => {
+    const def = { check: "number_format", format: "int32", coerce: true };
     const ir = extractNumber(
-      { check: "number_format", format: "int32", coerce: true } as never,
-      { fallback: () => ({ type: "fallback" }) } as never,
+      def as never,
+      { schema: { _zod: { def } }, fallback: () => ({ type: "fallback" }) } as never,
     ) as NumberIR;
     expect(ir.type).toBe("number");
     expect(ir.coerce).toBe(true);

@@ -1,7 +1,8 @@
 import type { BigIntCheckIR, SchemaIR } from "../../types.js";
-import type { ZodDef } from "../types.js";
+import { unsupportedCheckReason } from "../checks.js";
+import type { ExtractorContext, ZodDef } from "../types.js";
 
-export function extractBigint(def: ZodDef): SchemaIR {
+export function extractBigint(def: ZodDef, ctx: ExtractorContext): SchemaIR {
   const bigintChecks: BigIntCheckIR[] = [];
   if (def.checks) {
     for (const check of def.checks) {
@@ -28,6 +29,8 @@ export function extractBigint(def: ZodDef): SchemaIR {
             value: String(checkDef.value),
           });
           break;
+        default:
+          return ctx.fallback(unsupportedCheckReason(checkDef));
       }
     }
   }

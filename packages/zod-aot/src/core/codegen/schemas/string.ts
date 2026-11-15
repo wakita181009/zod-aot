@@ -1,4 +1,4 @@
-import type { CheckIR, StringIR } from "../../types.js";
+import type { CheckIR, CheckStringFormat, StringIR } from "../../types.js";
 import type { FastGen, SlowGen } from "../context.js";
 import { checkPriority, escapeString, sortChecksPreservingEffects } from "../context.js";
 import { emit } from "../emit.js";
@@ -61,27 +61,24 @@ export function slowString(ir: StringIR, g: SlowGen): string {
         case "refine_effect":
           code += refineCheck(check, g.input, g);
           break;
+        case "overwrite_effect":
+          // Slow-path child generators always receive the same lvalue for input
+          // and output, so later checks observe the rewritten value as in Zod.
+          code += `${g.output}=(${check.source})(${g.input});`;
+          break;
         case "string_format": {
-          let regexVar: string;
-          if (check.format === "email") {
-            regexVar = g.regex("email", EMAIL_REGEX_SOURCE);
-          } else if (check.format === "regex" && check.pattern) {
-            regexVar = g.regex("str", check.pattern);
-          } else if (check.format === "url") {
+          if (check.format === "url") {
+            // Zod validates the trimmed value and, on success, outputs it trimmed.
+            const trimmed = g.temp("url");
             code += emit`
-              if(!(function(s){try{new URL(s);return true;}catch(e){return false;}})(${g.input})){
+              var ${trimmed}=${g.input}.trim();
+              try{new URL(${trimmed});${g.output}=${trimmed};}catch(e){
                 ${invalidFormat(g, "url")}
               }`;
-            continue;
-          } else if (check.format === "uuid") {
-            regexVar = g.regex("uuid", check.pattern ?? UUID_REGEX_SOURCE);
-          } else {
-            if (check.pattern) {
-              regexVar = g.regex("str", check.pattern);
-            } else {
-              continue;
-            }
+            break;
           }
+          const regexVar = formatRegex(check, g);
+          if (regexVar === null) break;
           code += emit`
             if(!${regexVar}.test(${g.input})){
               ${invalidFormat(g, { expr: escapeString(check.format) }, { extra: `pattern:${regexVar}.toString(),origin:"string"` })}
@@ -96,12 +93,29 @@ export function slowString(ir: StringIR, g: SlowGen): string {
   return `${code}\n`;
 }
 
+/**
+ * Resolve the regex variable for a pattern-based format check, or null when the
+ * IR carries no pattern (hand-built IR in tests; the extractor always sets one).
+ */
+function formatRegex(check: CheckStringFormat, g: SlowGen | FastGen): string | null {
+  if (check.format === "email")
+    return g.regex("email", check.pattern ?? EMAIL_REGEX_SOURCE, check.flags);
+  if (check.format === "uuid")
+    return g.regex("uuid", check.pattern ?? UUID_REGEX_SOURCE, check.flags);
+  if (check.pattern === undefined) return null;
+  return g.regex(check.format === "regex" ? "re" : "str", check.pattern, check.flags);
+}
+
 export function fastString(ir: StringIR, g: FastGen): string | null {
   if (ir.coerce) return null;
+  // The fast path returns the input as-is, so value-rewriting checks are ineligible.
+  if (ir.checks.some((c) => c.kind === "overwrite_effect")) return null;
 
   const x = g.input;
   const parts: string[] = [`typeof ${x}==="string"`];
-  const checks = ir.checks.filter((c): c is CheckIR => c.kind !== "refine_effect");
+  const checks = ir.checks.filter(
+    (c): c is CheckIR => c.kind !== "refine_effect" && c.kind !== "overwrite_effect",
+  );
 
   for (const check of checks.sort(checkPriority)) {
     switch (check.kind) {
@@ -128,26 +142,11 @@ export function fastString(ir: StringIR, g: FastGen): string | null {
         parts.push(`${x}.endsWith(${escapeString(check.suffix)})`);
         break;
       case "string_format": {
-        if (check.format === "email") {
-          const v = g.regex("email", EMAIL_REGEX_SOURCE);
-          parts.push(`${v}.test(${x})`);
-        } else if (check.format === "url") {
-          // URL validation uses try/catch — not a pure expression, ineligible
-          return null;
-        } else if (check.format === "uuid") {
-          const pat = check.pattern ?? UUID_REGEX_SOURCE;
-          const v = g.regex("uuid", pat);
-          parts.push(`${v}.test(${x})`);
-        } else if (check.format === "regex" && check.pattern) {
-          const v = g.regex("re", check.pattern);
-          parts.push(`${v}.test(${x})`);
-        } else if (check.pattern) {
-          const v = g.regex("re", check.pattern);
-          parts.push(`${v}.test(${x})`);
-        } else {
-          // Unknown format without pattern — can't generate fast check
-          return null;
-        }
+        // URL validation uses try/catch and trims the output — not a pure expression.
+        if (check.format === "url") return null;
+        const v = formatRegex(check, g);
+        if (v === null) return null;
+        parts.push(`${v}.test(${x})`);
         break;
       }
     }
