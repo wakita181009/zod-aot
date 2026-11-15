@@ -30,6 +30,13 @@ export function extractChecks(checks: ZodCheckSchema[]): {
         checkIRs.push({ kind: "less_than", value: def.value, inclusive: def.inclusive });
         break;
       case "multiple_of":
+        // Zod's remainder for fractional steps is float-tolerant and its algorithm
+        // differs across versions (toFixed-based before 4.6, ratio-based since), so
+        // only integer steps — where both agree with `%` — are compiled.
+        if (!Number.isInteger(def.value)) {
+          hasFallback = true;
+          break;
+        }
         checkIRs.push({ kind: "multiple_of", value: def.value });
         break;
       case "number_format":

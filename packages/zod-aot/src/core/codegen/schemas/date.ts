@@ -64,6 +64,9 @@ export function fastDate(ir: DateIR, g: FastGen): string | null {
   if (ir.checks.length > 0) {
     // Cache getTime() in a temp variable to avoid repeated calls
     const t = g.temp("dt");
+    // Fast-path expressions can't declare locals; without this the assignment
+    // throws ReferenceError in strict-mode (ESM) output.
+    g.ctx.preamble.push(`var ${t};`);
     parts.push(`(${t}=${x}.getTime(),!Number.isNaN(${t}))`);
 
     for (const check of [...ir.checks].sort(checkPriority)) {
