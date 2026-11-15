@@ -45,7 +45,7 @@ function rejectsAbsentRequiredKeys(schema: ZodSchema): boolean {
  * check. Unsure cases answer true: an extra check costs one `in` test, a
  * missing one accepts input Zod rejects.
  */
-function mayAcceptUndefined(ir: SchemaIR): boolean {
+export function mayAcceptUndefined(ir: SchemaIR): boolean {
   switch (ir.type) {
     case "string":
     case "number":

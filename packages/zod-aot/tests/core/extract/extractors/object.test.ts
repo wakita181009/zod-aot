@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
+import { mayAcceptUndefined } from "#src/core/extract/extractors/object.js";
 import { extractSchema } from "#src/core/extract/index.js";
-import type { FallbackIR, ObjectIR } from "#src/core/types.js";
+import type { FallbackIR, ObjectIR, SchemaIR } from "#src/core/types.js";
 import { zodAtLeast } from "../../../zod-version.js";
 
 describe("extractObject", () => {
@@ -68,5 +69,76 @@ describe("extractObject — presenceKeys", () => {
   it("omits presenceKeys when no required key accepts undefined", () => {
     const ir = extractSchema(z.object({ a: z.string(), b: z.number().optional() }));
     expect(ir).not.toHaveProperty("presenceKeys");
+  });
+
+  // The gate reads the schema instance's own version, so overriding it
+  // exercises both sides regardless of the installed Zod.
+  function withVersion(version: { major: number; minor: number } | undefined) {
+    const s = z.object({ a: z.unknown(), b: z.string() });
+    (s._zod as { version?: unknown }).version = version;
+    return extractSchema(s) as ObjectIR;
+  }
+
+  it.each([
+    [{ major: 4, minor: 4 }, ["a"]],
+    [{ major: 4, minor: 6 }, ["a"]],
+    [{ major: 5, minor: 0 }, ["a"]],
+    [{ major: 4, minor: 3 }, undefined],
+    [undefined, undefined],
+  ])("version %o → presenceKeys %o", (version, expected) => {
+    expect(withVersion(version).presenceKeys).toEqual(expected);
+  });
+});
+
+describe("mayAcceptUndefined", () => {
+  const str: SchemaIR = { type: "string", checks: [] };
+  const cases: [string, SchemaIR, boolean][] = [
+    ["string", str, false],
+    ["coerced string", { type: "string", checks: [], coerce: true }, true],
+    ["number", { type: "number", checks: [] }, false],
+    ["coerced number", { type: "number", checks: [], coerce: true }, true],
+    ["boolean", { type: "boolean" }, false],
+    ["coerced boolean", { type: "boolean", coerce: true }, true],
+    ["bigint", { type: "bigint", checks: [] }, false],
+    ["date", { type: "date", checks: [] }, false],
+    ["undefined", { type: "undefined" }, true],
+    ["void", { type: "void" }, true],
+    ["any", { type: "any" }, true],
+    ["unknown", { type: "unknown" }, true],
+    ["optional", { type: "optional", inner: str }, true],
+    ["default", { type: "default", inner: str, refIndex: 0 }, true],
+    ["catch", { type: "catch", inner: str, defaultValue: "x" }, true],
+    ["fallback", { type: "fallback", reason: "transform" }, true],
+    ["recursiveRef", { type: "recursiveRef" }, true],
+    ["nullable string", { type: "nullable", inner: str }, false],
+    ["nullable unknown", { type: "nullable", inner: { type: "unknown" } }, true],
+    ["readonly unknown", { type: "readonly", inner: { type: "unknown" } }, true],
+    [
+      "transform of unknown",
+      { type: "effect", effectKind: "transform", source: "v=>v", inner: { type: "unknown" } },
+      true,
+    ],
+    ["pipe from string", { type: "pipe", in: str, out: { type: "unknown" } }, false],
+    ["pipe from unknown", { type: "pipe", in: { type: "unknown" }, out: str }, true],
+    ["literal", { type: "literal", values: ["a"] }, false],
+    ["literal with undefined", { type: "literal", values: ["a", undefined as never] }, true],
+    ["union without undefined", { type: "union", options: [str, { type: "null" }] }, false],
+    ["union with undefined", { type: "union", options: [str, { type: "undefined" }] }, true],
+    ["intersection, one side", { type: "intersection", left: { type: "any" }, right: str }, false],
+    [
+      "intersection, both sides",
+      { type: "intersection", left: { type: "any" }, right: { type: "unknown" } },
+      true,
+    ],
+    ["symbol", { type: "symbol" }, false],
+    ["null", { type: "null" }, false],
+    ["nan", { type: "nan" }, false],
+    ["never", { type: "never" }, false],
+    ["object", { type: "object", properties: {} }, false],
+    ["array", { type: "array", element: str, checks: [] }, false],
+  ];
+
+  it.each(cases)("%s → %s", (_name, ir, expected) => {
+    expect(mayAcceptUndefined(ir)).toBe(expected);
   });
 });
