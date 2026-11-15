@@ -257,6 +257,11 @@ export interface EnumIR {
 export interface ObjectIR {
   type: "object";
   properties: Record<string, SchemaIR>;
+  /**
+   * Required keys that must be present in the input even though their schema
+   * accepts undefined. Zod >= 4.4 reports an absent one as a "nonoptional" issue.
+   */
+  presenceKeys?: string[];
   /** Object-level refine effects from z.object({...}).refine(fn) */
   checks?: RefineEffectCheckIR[];
 }

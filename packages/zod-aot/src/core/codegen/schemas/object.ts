@@ -15,10 +15,24 @@ export function slowObject(ir: SchemaIR & { type: "object" }, g: SlowGen): strin
   const objVar = g.temp("o");
   code += needsClone ? `var ${objVar}=Object.assign({},${g.input});` : `var ${objVar}=${g.input};`;
 
+  const presenceKeys = new Set(ir.presenceKeys);
   for (const [key, propIR] of Object.entries(ir.properties)) {
     const propExpr = `${objVar}[${escapeString(key)}]`;
     const propPath = extendStaticPath(g.path, key);
-    code += g.visit(propIR, { input: propExpr, output: propExpr, path: propPath });
+    const visit = g.visit(propIR, { input: propExpr, output: propExpr, path: propPath });
+    if (!presenceKeys.has(key)) {
+      code += visit;
+      continue;
+    }
+    // Zod reports nonoptional only when the property's own parse raised nothing.
+    const countVar = g.temp("pn");
+    const nonoptional = invalidType(g, "nonoptional", { input: "undefined", path: propPath });
+    code += emit`
+      var ${countVar}=${g.issues}.length;
+      ${visit}
+      if(${g.issues}.length===${countVar}&&!(${escapeString(key)} in ${g.input})){
+        ${nonoptional}
+      }`;
   }
 
   if (needsClone) {
@@ -40,10 +54,12 @@ export function fastObject(ir: ObjectIR, g: FastGen): string | null {
   const x = g.input;
   const parts: string[] = [`typeof ${x}==="object"`, `${x}!==null`, `!Array.isArray(${x})`];
 
+  const presenceKeys = new Set(ir.presenceKeys);
   for (const [key, propIR] of Object.entries(ir.properties)) {
     const propExpr = `${x}[${escapeString(key)}]`;
     const propCheck = g.visit(propIR, { input: propExpr });
     if (propCheck === null) return null; // All-or-nothing
+    if (presenceKeys.has(key)) parts.push(`${escapeString(key)} in ${x}`);
     parts.push(propCheck);
   }
 
