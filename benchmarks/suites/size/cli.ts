@@ -4,27 +4,28 @@
  * Generates compiled output for representative schemas and measures raw + gzip
  * bytes per schema. Mirrors what `npx zod-aot generate` produces.
  *
- * Run: pnpm size:cli
+ * Run: pnpm size:cli (after `pnpm build`)
  */
 import { gzipSync } from "node:zlib";
 import type { z } from "zod";
-import { generateCompiledFileContent } from "../../../packages/zod-aot/src/cli/emitter.js";
-import { generateValidator } from "../../../packages/zod-aot/src/core/codegen/index.js";
-import type { RefEntry } from "../../../packages/zod-aot/src/core/extract/index.js";
-import { extractSchema } from "../../../packages/zod-aot/src/core/extract/index.js";
-import type { CompiledSchemaInfo } from "../../../packages/zod-aot/src/core/pipeline.js";
+// dist, not src: Node's type stripping can't resolve the `.js` specifiers used inside src.
+import { generateCompiledFileContent } from "../../../packages/zod-aot/dist/cli/emitter.js";
+import { generateValidator } from "../../../packages/zod-aot/dist/core/codegen/index.js";
+import type { RefEntry } from "../../../packages/zod-aot/dist/core/extract/index.js";
+import { extractSchema } from "../../../packages/zod-aot/dist/core/extract/index.js";
+import type { CompiledSchemaInfo } from "../../../packages/zod-aot/dist/core/pipeline.js";
 import {
   MapSchema,
   RecordSchema,
   SetSchema,
   TupleSchema,
-} from "../../fixtures/schemas/collections/zod.js";
+} from "../../fixtures/schemas/collections/zod.ts";
 import {
   CapturedTransformSchema,
   ZeroCaptureRefineStringSchema,
   ZeroCaptureTransformStringSchema,
-} from "../../fixtures/schemas/effects/zod.js";
-import { ApiResponseSchema, UserSchema } from "../../fixtures/schemas/objects/zod.js";
+} from "../../fixtures/schemas/effects/zod.ts";
+import { ApiResponseSchema, UserSchema } from "../../fixtures/schemas/objects/zod.ts";
 // Zod schemas only (avoid typia/ajv which require build-time transforms)
 import {
   BigIntSchema,
@@ -32,13 +33,13 @@ import {
   SimpleEnum,
   SimpleString,
   StringWithChecks,
-} from "../../fixtures/schemas/primitives/zod.js";
+} from "../../fixtures/schemas/primitives/zod.ts";
 import {
   EventLogSchema,
   PartialFallbackObjectSchema,
-} from "../../fixtures/schemas/real-world/zod.js";
-import { TreeNodeSchema } from "../../fixtures/schemas/recursive/zod.js";
-import { DiscriminatedUnionSchema } from "../../fixtures/schemas/unions/zod.js";
+} from "../../fixtures/schemas/real-world/zod.ts";
+import { TreeNodeSchema } from "../../fixtures/schemas/recursive/zod.ts";
+import { DiscriminatedUnionSchema } from "../../fixtures/schemas/unions/zod.ts";
 
 function makeInfo(exportName: string, schema: z.ZodType): CompiledSchemaInfo {
   const refEntries: RefEntry[] = [];
