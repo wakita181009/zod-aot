@@ -245,9 +245,6 @@ export function hasMutation(ir: SchemaIR): boolean {
     case "enum":
     case "templateLiteral":
       return false;
-    case "recursiveRef":
-      // Not followed: the ref points back into the schema being analyzed (a cycle).
-      return false;
     default:
       return assertNever(ir);
   }

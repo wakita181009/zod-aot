@@ -103,6 +103,7 @@ describe("hasMutation", () => {
     ["effect", { type: "effect", effectKind: "transform", source: "(v) => v", inner: str }],
     ["fallback", { type: "fallback", reason: "unsupported" }],
     ["stringBool", { type: "stringBool", truthy: ["y"], falsy: ["n"], caseSensitive: false }],
+    ["recursiveRef", { type: "recursiveRef" }],
   ] as [string, SchemaIR][])("%s mutates", (_name, ir) => {
     expect(hasMutation(ir)).toBe(true);
   });
