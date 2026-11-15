@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.21.4](https://github.com/wakita181009/zod-aot/compare/v0.21.3...v0.21.4) (2026-11-15)
+
+
+### Bug Fixes
+
+* emit plain JavaScript when the CLI output path is not TypeScript ([#291](https://github.com/wakita181009/zod-aot/issues/291)) ([c758539](https://github.com/wakita181009/zod-aot/commit/c75853933407c631fb5a4455b642b58ed7217bdc))
+* fall back to Zod for exclusive unions (z.xor) ([#289](https://github.com/wakita181009/zod-aot/issues/289)) ([42d481a](https://github.com/wakita181009/zod-aot/commit/42d481a21d3f044bee9ddb4f1beffb2f2b2519b4))
+* match Zod for fractional multipleOf, date fast path, and record input ([#288](https://github.com/wakita181009/zod-aot/issues/288)) ([1f854ee](https://github.com/wakita181009/zod-aot/commit/1f854ee9f7d8d69253ee2f91e9d588f0c57e22ca))
+* never silently drop Zod checks during extraction ([#287](https://github.com/wakita181009/zod-aot/issues/287)) ([0d97e69](https://github.com/wakita181009/zod-aot/commit/0d97e69170712f79bf3d231a5768c8c56573f881))
+
 ## [0.21.3](https://github.com/wakita181009/zod-aot/compare/v0.21.2...v0.21.3) (2026-11-11)
 
 
