@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.21.6](https://github.com/wakita181009/zod-aot/compare/v0.21.5...v0.21.6) (2026-11-15)
+
+
+### Bug Fixes
+
+* reject absent required keys that accept undefined on Zod &gt;= 4.4 ([#309](https://github.com/wakita181009/zod-aot/issues/309)) ([61db84c](https://github.com/wakita181009/zod-aot/commit/61db84cfcbd978026fae6373e0730a13cbe1a088))
+* run a default wrapped in .optional() on undefined ([#311](https://github.com/wakita181009/zod-aot/issues/311)) ([f9b64ea](https://github.com/wakita181009/zod-aot/commit/f9b64ea678fdd99d8ee6a132f6d881500b80a01f))
+
 ## [0.21.5](https://github.com/wakita181009/zod-aot/compare/v0.21.4...v0.21.5) (2026-11-15)
 
 
