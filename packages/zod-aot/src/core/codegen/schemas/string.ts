@@ -1,4 +1,5 @@
-import type { CheckIR, CheckStringFormat, StringIR } from "../../types.js";
+import { assertNever } from "../../assert-never.js";
+import type { CheckStringFormat, StringIR } from "../../types.js";
 import type { FastGen, SlowGen } from "../context.js";
 import {
   checkPriority,
@@ -90,6 +91,8 @@ export function slowString(ir: StringIR, g: SlowGen): string {
             }`;
           break;
         }
+        default:
+          assertNever(check);
       }
     }
     code += `}`;
@@ -118,11 +121,9 @@ export function fastString(ir: StringIR, g: FastGen): string | null {
 
   const x = g.input;
   const parts: string[] = [`typeof ${x}==="string"`];
-  const checks = ir.checks.filter(
-    (c): c is CheckIR => c.kind !== "refine_effect" && c.kind !== "overwrite_effect",
-  );
 
-  for (const check of checks.sort(checkPriority)) {
+  // Effects have no priority, so refines sort last and run after cheap checks.
+  for (const check of [...ir.checks].sort(checkPriority)) {
     switch (check.kind) {
       case "min_length":
         parts.push(`${x}.length>=${check.minimum}`);
@@ -152,13 +153,14 @@ export function fastString(ir: StringIR, g: FastGen): string | null {
         parts.push(`${v}.test(${x})`);
         break;
       }
-    }
-  }
-
-  // Refine effect checks (appended last — run after cheap checks short-circuit)
-  for (const check of ir.checks) {
-    if (check.kind === "refine_effect") {
-      parts.push(`(${check.source})(${x})`);
+      case "refine_effect":
+        parts.push(`(${check.source})(${x})`);
+        break;
+      case "overwrite_effect":
+        // Unreachable: hasMutation() above already rejected it.
+        return null;
+      default:
+        assertNever(check);
     }
   }
 

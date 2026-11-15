@@ -145,3 +145,14 @@ export interface ExtractorContext {
 
 /** Extractor function signature — registered in extractRegistry. */
 export type Extractor = (def: ZodDef, ctx: ExtractorContext) => import("../types.js").SchemaIR;
+
+/**
+ * Extractor for a type whose codegen implements checks. The dispatcher maps the
+ * schema's checks with `mapCheck`, falls back on any it rejects, and passes the
+ * rest to `extract`. Types registered with a plain Extractor fall back whenever
+ * the schema carries checks.
+ */
+export interface CheckedExtractor<C> {
+  mapCheck: import("./checks.js").CheckMapper<C>;
+  extract(def: ZodDef, ctx: ExtractorContext, checks: C[]): import("../types.js").SchemaIR;
+}

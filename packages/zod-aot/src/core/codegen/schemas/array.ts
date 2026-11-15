@@ -1,4 +1,5 @@
-import type { ArrayIR, CheckIR, SchemaIR } from "../../types.js";
+import { assertNever } from "../../assert-never.js";
+import type { ArrayIR, SchemaIR } from "../../types.js";
 import type { FastGen, SlowGen } from "../context.js";
 import { checkPriority, hasMutation } from "../context.js";
 import { emit } from "../emit.js";
@@ -40,6 +41,8 @@ export function slowArray(ir: SchemaIR & { type: "array" }, g: SlowGen): string 
       case "refine_effect":
         code += refineCheck(check, g.input, g);
         break;
+      default:
+        assertNever(check);
     }
   }
 
@@ -57,10 +60,9 @@ export function slowArray(ir: SchemaIR & { type: "array" }, g: SlowGen): string 
 export function fastArray(ir: ArrayIR, g: FastGen): string | null {
   const x = g.input;
   const parts: string[] = [`Array.isArray(${x})`];
-  const checks = ir.checks.filter((c): c is CheckIR => c.kind !== "refine_effect");
+  const refines: string[] = [];
 
-  // Size checks
-  for (const check of checks.sort(checkPriority)) {
+  for (const check of [...ir.checks].sort(checkPriority)) {
     switch (check.kind) {
       case "min_length":
         parts.push(`${x}.length>=${check.minimum}`);
@@ -71,6 +73,12 @@ export function fastArray(ir: ArrayIR, g: FastGen): string | null {
       case "length_equals":
         parts.push(`${x}.length===${check.length}`);
         break;
+      case "refine_effect":
+        // Run after the element checks so cheap failures short-circuit first.
+        refines.push(`(${check.source})(${x})`);
+        break;
+      default:
+        assertNever(check);
     }
   }
 
@@ -86,12 +94,6 @@ export function fastArray(ir: ArrayIR, g: FastGen): string | null {
     parts.push(`${helperName}(${x})`);
   }
 
-  // Refine effect checks (appended last — run after cheap checks short-circuit)
-  for (const check of ir.checks) {
-    if (check.kind === "refine_effect") {
-      parts.push(`(${check.source})(${x})`);
-    }
-  }
-
+  parts.push(...refines);
   return parts.join("&&");
 }

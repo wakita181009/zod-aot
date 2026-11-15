@@ -1,13 +1,14 @@
 import type { FallbackIR, SchemaIR } from "../types.js";
+import { extractChecks } from "./checks.js";
 import { extractAny } from "./extractors/any.js";
-import { extractArray } from "./extractors/array.js";
-import { extractBigint } from "./extractors/bigint.js";
+import { arrayExtractor } from "./extractors/array.js";
+import { bigintExtractor } from "./extractors/bigint.js";
 import { extractBoolean } from "./extractors/boolean.js";
 import { extractCatch } from "./extractors/catch.js";
-import { extractDate } from "./extractors/date.js";
+import { dateExtractor } from "./extractors/date.js";
 import { extractDefault } from "./extractors/default.js";
 import { extractEnum } from "./extractors/enum.js";
-import { extractFile } from "./extractors/file.js";
+import { fileExtractor } from "./extractors/file.js";
 import { extractIntersection } from "./extractors/intersection.js";
 import { extractLazy } from "./extractors/lazy.js";
 import { extractLiteral } from "./extractors/literal.js";
@@ -16,14 +17,14 @@ import { extractNan } from "./extractors/nan.js";
 import { extractNever } from "./extractors/never.js";
 import { extractNull } from "./extractors/null.js";
 import { extractNullable } from "./extractors/nullable.js";
-import { extractNumber } from "./extractors/number.js";
-import { extractObject } from "./extractors/object.js";
+import { numberExtractor } from "./extractors/number.js";
+import { objectExtractor } from "./extractors/object.js";
 import { extractOptional } from "./extractors/optional.js";
 import { extractPipe } from "./extractors/pipe.js";
 import { extractReadonly } from "./extractors/readonly.js";
 import { extractRecord } from "./extractors/record.js";
-import { extractSet } from "./extractors/set.js";
-import { extractString } from "./extractors/string.js";
+import { setExtractor } from "./extractors/set.js";
+import { stringExtractor } from "./extractors/string.js";
 import { extractSymbol } from "./extractors/symbol.js";
 import { extractTemplateLiteral } from "./extractors/template-literal.js";
 import { extractTuple } from "./extractors/tuple.js";
@@ -33,10 +34,12 @@ import { extractUnknown } from "./extractors/unknown.js";
 import { extractVoid } from "./extractors/void.js";
 import { makeFallback } from "./fallback.js";
 import type {
+  CheckedExtractor,
   Extractor,
   ExtractorContext,
   RefEntry,
   SupportedZodDefType,
+  ZodCheckSchema,
   ZodSchema,
 } from "./types.js";
 
@@ -67,15 +70,15 @@ export const extractRegistry = {
   readonly: extractReadonly,
   intersection: extractIntersection,
   // Complex extractors
-  string: extractString,
-  number: extractNumber,
-  bigint: extractBigint,
-  date: extractDate,
-  object: extractObject,
-  array: extractArray,
+  string: stringExtractor,
+  number: numberExtractor,
+  bigint: bigintExtractor,
+  date: dateExtractor,
+  object: objectExtractor,
+  array: arrayExtractor,
   tuple: extractTuple,
   record: extractRecord,
-  set: extractSet,
+  set: setExtractor,
   map: extractMap,
   union: extractUnion,
   default: extractDefault,
@@ -83,27 +86,8 @@ export const extractRegistry = {
   lazy: extractLazy,
   catch: extractCatch,
   template_literal: extractTemplateLiteral,
-  file: extractFile,
-} satisfies Record<SupportedZodDefType, Extractor>;
-
-/**
- * Extractors that read `def.checks` themselves. Any other type that carries checks
- * (e.g. `z.boolean().refine(fn)`, `z.string().optional().refine(fn)`) falls back,
- * since its codegen would otherwise silently drop them.
- */
-const CHECK_AWARE_TYPES: ReadonlySet<SupportedZodDefType> = new Set([
-  "string",
-  "number",
-  "bigint",
-  "date",
-  "object",
-  "array",
-  "set",
-  "file",
-]);
-
-/** Extractors that compile a format check stored on the schema def itself. */
-const SELF_CHECK_AWARE_TYPES: ReadonlySet<SupportedZodDefType> = new Set(["string", "number"]);
+  file: fileExtractor,
+} satisfies Record<SupportedZodDefType, Extractor | CheckedExtractor<unknown>>;
 
 // ─── Factory ────────────────────────────────────────────────────────────────
 // Lives here (not in types.ts) to avoid circular imports:
@@ -130,6 +114,18 @@ function createExtractorContext(
   };
 }
 
+/**
+ * A schema's checks in Zod's run order. Format schemas (z.email(), z.int(),
+ * z.int64(), ...) are themselves a check, set on the def, that runs first.
+ * A type whose mapper doesn't know that format (e.g. bigint_format) falls back
+ * through the mapper's default branch.
+ */
+function collectChecks(schema: ZodSchema): ZodCheckSchema[] {
+  const { def } = schema._zod;
+  const chained = def.checks ?? [];
+  return def.check ? [schema as unknown as ZodCheckSchema, ...chained] : chained;
+}
+
 // ─── Dispatch ───────────────────────────────────────────────────────────────
 
 /**
@@ -147,23 +143,25 @@ export function dispatch(
 
   visiting.add(zodSchema);
   try {
-    const type = def.type as SupportedZodDefType;
-    const extractor = extractRegistry[type];
-    if (!extractor) return makeFallback("unsupported", zodSchema, refs, path);
+    const entry = extractRegistry[def.type as SupportedZodDefType];
+    if (!entry) return makeFallback("unsupported", zodSchema, refs, path);
+    const ctx = createExtractorContext(zodSchema, path, refs, visiting);
+    const checks = collectChecks(schema);
     // `abort: true` makes Zod skip every later check without a `when` guard;
-    // codegen only models that for integer formats.
-    if (def.checks?.some((c) => c._zod?.def?.abort === true) || def.abort === true) {
-      return makeFallback("unsupported", zodSchema, refs, path);
+    // codegen only models that for number formats.
+    if (def.abort === true || checks.some((c) => c._zod?.def?.abort === true)) {
+      return ctx.fallback("unsupported");
     }
-    // Format schemas (z.int64(), ...) carry their own check on the def itself.
-    if (def.check && !SELF_CHECK_AWARE_TYPES.has(type)) {
-      return makeFallback("unsupported", zodSchema, refs, path);
+
+    if (typeof entry === "function") {
+      if (checks.length === 0) return entry(def, ctx);
+      // This type's codegen implements no checks, so any check must fall back.
+      const onlyRefines = checks.every((c) => c._zod?.def?.check === "custom");
+      return ctx.fallback(onlyRefines ? "refine" : "unsupported");
     }
-    if (def.checks && def.checks.length > 0 && !CHECK_AWARE_TYPES.has(type)) {
-      const onlyRefines = def.checks.every((c) => c._zod?.def?.check === "custom");
-      return makeFallback(onlyRefines ? "refine" : "unsupported", zodSchema, refs, path);
-    }
-    return extractor(def, createExtractorContext(zodSchema, path, refs, visiting));
+    const { checkIRs, fallback } = extractChecks(checks, entry.mapCheck);
+    if (fallback) return ctx.fallback(fallback);
+    return entry.extract(def, ctx, checkIRs);
   } finally {
     visiting.delete(zodSchema);
   }

@@ -1,4 +1,5 @@
-import type { CheckIR, CheckNumberFormat, NumberIR } from "../../types.js";
+import { assertNever } from "../../assert-never.js";
+import type { CheckNumberFormat, NumberIR } from "../../types.js";
 import type { FastGen, SlowGen } from "../context.js";
 import { checkPriority, escapeString, sortChecksPreservingEffects } from "../context.js";
 import { emit } from "../emit.js";
@@ -68,6 +69,8 @@ export function slowNumber(ir: NumberIR, g: SlowGen): string {
         case "refine_effect":
           code += refineCheck(check, g.input, g);
           break;
+        default:
+          assertNever(check);
       }
     }
     code += "}".repeat(openBlocks + 1);
@@ -117,7 +120,7 @@ export function fastNumber(ir: NumberIR, g: FastGen): string | null {
 
   const x = g.input;
   const parts: string[] = [`typeof ${x}==="number"`];
-  const checks = ir.checks.filter((c): c is CheckIR => c.kind !== "refine_effect");
+  const checks = [...ir.checks].sort(checkPriority);
 
   // isSafeInteger, (x|0)===x, and (x>>>0)===x all return false for NaN and Infinity,
   // making explicit isNaN/isFinite guards redundant for integer formats.
@@ -131,7 +134,8 @@ export function fastNumber(ir: NumberIR, g: FastGen): string | null {
     parts.push(`!Number.isNaN(${x})`, `Number.isFinite(${x})`);
   }
 
-  for (const check of checks.sort(checkPriority)) {
+  // Effects have no priority, so refines sort last and run after cheap checks.
+  for (const check of checks) {
     switch (check.kind) {
       case "number_format":
         switch (check.format) {
@@ -150,6 +154,8 @@ export function fastNumber(ir: NumberIR, g: FastGen): string | null {
           case "float64":
             // All finite numbers are valid float64
             break;
+          default:
+            assertNever(check.format);
         }
         break;
       case "greater_than":
@@ -161,22 +167,11 @@ export function fastNumber(ir: NumberIR, g: FastGen): string | null {
       case "multiple_of":
         parts.push(`${x}%${check.value}===0`);
         break;
-      case "min_length":
-      case "max_length":
-      case "length_equals":
-      case "string_format":
-      case "includes":
-      case "starts_with":
-      case "ends_with":
-        // String-only checks on a number schema — shouldn't happen, skip
+      case "refine_effect":
+        parts.push(`(${check.source})(${x})`);
         break;
-    }
-  }
-
-  // Refine effect checks (appended last — run after cheap checks short-circuit)
-  for (const check of ir.checks) {
-    if (check.kind === "refine_effect") {
-      parts.push(`(${check.source})(${x})`);
+      default:
+        assertNever(check);
     }
   }
 
