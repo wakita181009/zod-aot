@@ -3,8 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "size:cli": "tsx suites/size/cli.ts",
-    "size:unplugin": "tsx suites/size/unplugin.ts"
+    "size:cli": "node suites/size/cli.ts",
+    "size:unplugin": "node suites/size/unplugin.ts"
   },
   "dependencies": {
     "@standard-schema/spec": "^1.1.0",
