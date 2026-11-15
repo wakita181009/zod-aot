@@ -5,7 +5,7 @@
   "scripts": {
     "generate": "zod-aot generate src/schemas.ts -o src/schemas.compiled.ts",
     "check": "zod-aot check src/schemas.ts",
-    "start": "tsx src/main.ts",
+    "start": "node src/main.ts",
     "dev": "vp dev",
     "build": "vp build",
     "start:built": "node dist/main.mjs",
@@ -18,7 +18,6 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "tsx": "catalog:",
     "typescript": "catalog:",
     "vite-plus": "^1.6.0"
   }

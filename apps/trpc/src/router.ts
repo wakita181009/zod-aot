@@ -1,5 +1,5 @@
 import { initTRPC } from "@trpc/server";
-import { CreateUserSchema, ListUsersSchema, UpdateUserSchema, UserIdSchema } from "./schemas.js";
+import { CreateUserSchema, ListUsersSchema, UpdateUserSchema, UserIdSchema } from "./schemas.ts";
 
 const t = initTRPC.create();
 
