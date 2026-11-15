@@ -5,7 +5,7 @@ import type { RefEntry } from "#src/core/extract/index.js";
 import { extractSchema } from "#src/core/extract/index.js";
 import { FIN_DECL } from "#src/core/iife.js";
 import type { SafeParseResult, SchemaIR } from "#src/core/types.js";
-import { zodAtLeast } from "./zod-version.js";
+import { zodAtLeast, zodVersion } from "./zod-version.js";
 
 const __fin = new Function("__ZodError", `${FIN_DECL}; return __fin;`)(ZodRealError);
 
@@ -681,7 +681,7 @@ describe("integration — set match Zod", () => {
   it("set of objects", () => {
     const schema = z.set(z.object({ id: z.number() }));
     for (const input of [new Set([{ id: 1 }]), new Set([{ id: "bad" }])]) {
-      assertSameResult(schema, input, "setObj");
+      assertSame(schema, input);
     }
   });
 });
@@ -720,7 +720,7 @@ describe("integration — map match Zod", () => {
   it("map with object values", () => {
     const schema = z.map(z.string(), z.object({ id: z.number() }));
     for (const input of [new Map([["x", { id: 1 }]]), new Map([["x", { id: "bad" }]]) as unknown]) {
-      assertSameResult(schema, input, "mapObj");
+      assertSame(schema, input);
     }
   });
 });
@@ -2258,26 +2258,30 @@ describe("integration — object error issues match Zod", () => {
 // Zod >= 4.4 rejects an absent required key even when its schema accepts
 // undefined; older versions accept it. Comparing against the installed Zod
 // covers both behaviors across the compat matrix.
-describe("integration — absent required keys match Zod", () => {
-  // compileWithRefs so fallback and default properties can run.
-  function assertSame(schema: z.ZodType, input: unknown) {
-    const zodResult = schema.safeParse(input);
-    const aotResult = compileWithRefs(schema)(input);
-    expect(aotResult.success).toBe(zodResult.success);
-    if (zodResult.success && aotResult.success) {
-      expect(aotResult.data).toEqual(zodResult.data);
-    }
-    if (!zodResult.success && !aotResult.success) {
-      const zodIssues = zodResult.error.issues.map((i) =>
-        stripMessage(i as unknown as Record<string, unknown>),
-      );
-      const aotIssues = aotResult.error.issues.map((i) =>
-        stripInput(i as unknown as Record<string, unknown>),
-      );
-      expect(aotIssues).toMatchObject(zodIssues);
-    }
+/**
+ * Full parity with the installed Zod: success, data (key presence included,
+ * so an undefined-valued key differs from an absent one), and issues.
+ * compileWithRefs so fallback and default properties can run.
+ */
+function assertSame(schema: z.ZodType, input: unknown) {
+  const zodResult = schema.safeParse(input);
+  const aotResult = compileWithRefs(schema)(input);
+  expect(aotResult.success).toBe(zodResult.success);
+  if (zodResult.success && aotResult.success) {
+    expect(aotResult.data).toStrictEqual(zodResult.data);
   }
+  if (!zodResult.success && !aotResult.success) {
+    const zodIssues = zodResult.error.issues.map((i) =>
+      stripMessage(i as unknown as Record<string, unknown>),
+    );
+    const aotIssues = aotResult.error.issues.map((i) =>
+      stripInput(i as unknown as Record<string, unknown>),
+    );
+    expect(aotIssues).toMatchObject(zodIssues);
+  }
+}
 
+describe("integration — absent required keys match Zod", () => {
   const cases: [string, z.ZodType][] = [
     ["unknown", z.object({ a: z.unknown() })],
     ["any", z.object({ a: z.any() })],
@@ -2329,6 +2333,157 @@ describe("integration — absent required keys match Zod", () => {
 
   it("absent key alongside other property issues", () => {
     assertSame(z.object({ a: z.string(), b: z.unknown(), c: z.number() }), { a: 1, c: "x" });
+  });
+});
+
+describe("integration — object unknown keys match Zod (#228)", () => {
+  const shape = { a: z.string(), b: z.number().optional() };
+  const inputs: unknown[] = [
+    { a: "x" },
+    { a: "x", b: 1 },
+    { a: "x", b: undefined },
+    { a: "x", extra: 1 },
+    { a: "x", b: 2, extra: { deep: true }, other: "y" },
+    { a: 1, extra: 1 },
+    {},
+    { extra: 1 },
+    null,
+    [],
+  ];
+  const policies: [string, z.ZodType][] = [
+    ["z.object (strip)", z.object(shape)],
+    [".strip()", z.object(shape).strip()],
+    ["z.strictObject", z.strictObject(shape)],
+    [".strict()", z.object(shape).strict()],
+    ["z.looseObject", z.looseObject(shape)],
+    [".passthrough()", z.object(shape).passthrough()],
+    ["catchall(number)", z.object(shape).catchall(z.number())],
+    ["catchall(coerce.string)", z.object(shape).catchall(z.coerce.string())],
+    ["catchall(string.default)", z.object(shape).catchall(z.string().default("d"))],
+  ];
+
+  for (const [name, schema] of policies) {
+    it(name, () => {
+      for (const input of inputs) assertSame(schema, input);
+    });
+  }
+
+  it("catchall: an extra key holding undefined", () => {
+    assertSame(z.object({ a: z.string() }).catchall(z.string().optional()), {
+      a: "x",
+      extra: undefined,
+    });
+  });
+
+  it("strict: reports every unknown key in one issue", () => {
+    assertSame(z.strictObject({ a: z.string() }), { a: "x", y: 1, z: 2 });
+    assertSame(z.strictObject({ a: z.string() }), { a: 1, y: 1 });
+  });
+
+  it("empty objects", () => {
+    for (const input of [{}, { extra: "ignored" }]) {
+      assertSame(z.object({}), input);
+      assertSame(z.strictObject({}), input);
+      assertSame(z.looseObject({}), input);
+    }
+  });
+
+  it("an own __proto__ key is never copied", () => {
+    const input = JSON.parse('{"a":"x","__proto__":{"polluted":true}}');
+    assertSame(z.object({ a: z.string() }), input);
+    // Known divergence: Zod 4.4.x alone accepts an own __proto__ key in strict
+    // objects; earlier and later versions report it, as compiled code always does.
+    if (!zodVersion.startsWith("4.4.")) assertSame(z.strictObject({ a: z.string() }), input);
+  });
+
+  it("nested objects strip recursively", () => {
+    const schema = z.object({
+      o: z.object({ v: z.number() }),
+      list: z.array(z.object({ id: z.string() })),
+    });
+    assertSame(schema, { o: { v: 1, x: 1 }, list: [{ id: "a", x: 1 }, { id: "b" }], x: 1 });
+  });
+
+  it("record, tuple, set, and map values strip", () => {
+    const obj = z.object({ a: z.string() });
+    assertSame(z.record(z.string(), obj), { k: { a: "x", e: 1 } });
+    assertSame(z.tuple([obj, obj]), [{ a: "x", e: 1 }, { a: "y" }]);
+    assertSame(z.set(obj), new Set([{ a: "x", e: 1 }]));
+    assertSame(z.map(z.string(), obj), new Map([["k", { a: "x", e: 1 }]]));
+  });
+
+  it("union options strip with their own shape", () => {
+    const schema = z.union([z.object({ a: z.string() }), z.object({ b: z.string() })]);
+    for (const input of [
+      { a: "x", b: "y" },
+      { b: "y", c: 1 },
+    ])
+      assertSame(schema, input);
+    // Success only: this harness does not fill messages nested in union errors.
+    expect(compileWithRefs(schema)({ c: 1 }).success).toBe(false);
+  });
+
+  it("discriminated union options strip", () => {
+    const schema = z.discriminatedUnion("k", [
+      z.object({ k: z.literal("a"), v: z.string() }),
+      z.strictObject({ k: z.literal("b"), n: z.number() }),
+    ]);
+    for (const input of [
+      { k: "a", v: "x", extra: 1 },
+      { k: "b", n: 1 },
+      { k: "b", n: 1, extra: 1 },
+    ]) {
+      assertSame(schema, input);
+    }
+  });
+
+  it("intersections merge both stripped sides", () => {
+    const disjoint = z.intersection(z.object({ a: z.string() }), z.object({ b: z.number() }));
+    const shared = z.intersection(
+      z.object({ a: z.string(), b: z.number() }),
+      z.object({ b: z.number(), c: z.boolean() }),
+    );
+    const loose = z.intersection(z.object({ a: z.string() }), z.looseObject({ b: z.number() }));
+    const strict = z.intersection(z.strictObject({ a: z.string() }), z.object({ b: z.number() }));
+    for (const schema of [disjoint, shared, loose, strict]) {
+      for (const input of [
+        { a: "x", b: 1, c: true },
+        { a: "x", b: 1, c: true, extra: 1 },
+        { a: "x" },
+        "no",
+      ]) {
+        assertSame(schema, input);
+      }
+    }
+  });
+
+  it("an object refine sees the stripped output", () => {
+    const schema = z.object({ a: z.string() }).refine((v) => Object.keys(v).length === 1);
+    assertSame(schema, { a: "x", extra: 1 });
+  });
+
+  it("an absent key whose parse yields undefined stays absent", () => {
+    assertSame(
+      z.object({
+        a: z
+          .string()
+          .optional()
+          .transform((v) => v),
+      }),
+      {},
+    );
+  });
+
+  it("never mutates the input", () => {
+    const schema = z.object({
+      a: z.string(),
+      n: z.object({ v: z.coerce.number(), d: z.string().default("d") }),
+      list: z.array(z.object({ id: z.string() })),
+    });
+    const input = { a: "x", e: 1, n: { v: "1", e: 2 }, list: [{ id: "a", e: 3 }] };
+    const snapshot = structuredClone(input);
+    compileWithRefs(schema)(input);
+    expect(input).toStrictEqual(snapshot);
   });
 });
 
@@ -2515,12 +2670,8 @@ describe("integration — composite schema patterns match Zod", () => {
 describe("integration — edge cases match Zod", () => {
   it("empty object z.object({})", () => {
     const schema = z.object({});
-    // Note: Zod strips unknown keys, AOT passes through — compare success only
-    const safeParse = compileZodSchema(schema, "emptyObj");
     for (const input of [{}, { extra: "ignored" }, null, "string", 42, undefined]) {
-      const zodResult = schema.safeParse(input);
-      const aotResult = safeParse(input);
-      expect(aotResult.success).toBe(zodResult.success);
+      assertSame(schema, input);
     }
   });
 
@@ -2672,7 +2823,7 @@ describe("integration — edge cases match Zod", () => {
       null,
     ];
     for (const input of inputs) {
-      assertSameResult(schema, input, "mapComplex");
+      assertSame(schema, input);
     }
   });
 

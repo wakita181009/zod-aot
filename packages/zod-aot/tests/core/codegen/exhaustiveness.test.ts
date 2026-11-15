@@ -104,13 +104,15 @@ describe("hasMutation", () => {
     ["fallback", { type: "fallback", reason: "unsupported" }],
     ["stringBool", { type: "stringBool", truthy: ["y"], falsy: ["n"], caseSensitive: false }],
     ["recursiveRef", { type: "recursiveRef" }],
+    // Objects build a new output (unknown keys dropped or validated) even from pure children.
+    ["object of pure children", { type: "object", properties: { a: str } }],
+    ["empty object", { type: "object", properties: {} }],
   ] as [string, SchemaIR][])("%s mutates", (_name, ir) => {
     expect(hasMutation(ir)).toBe(true);
   });
 
   // Each container mutates exactly when one of its children does, in any slot.
   const containers: [string, (child: SchemaIR) => SchemaIR[]][] = [
-    ["object", (c) => [{ type: "object", properties: { a: str, b: c } }]],
     ["array", (c) => [{ type: "array", element: c, checks: [] }]],
     [
       "tuple",

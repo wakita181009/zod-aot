@@ -139,3 +139,11 @@ export function invalidValue(
   }
   return pushIssue(g, `{code:"invalid_value",values:${valuesExpr},input:${input},path:${path}}`);
 }
+
+/** Only strict objects emit this, so lean mode inlines it rather than adding a runtime helper. */
+export function unrecognizedKeys(g: IssueGen, keysExpr: string): string {
+  return pushIssue(
+    g,
+    `{code:"unrecognized_keys",keys:${keysExpr},input:${g.input},path:${g.path}}`,
+  );
+}

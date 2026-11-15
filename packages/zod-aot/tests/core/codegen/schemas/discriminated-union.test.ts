@@ -93,10 +93,12 @@ describe("slow-path — discriminatedUnion", () => {
     expect(explicit.data).toEqual({ type: "a", value: "explicit" });
   });
 
-  it("does not emit write-back for pure (non-mutating) options", () => {
-    const result = generateValidator(ir, "duPure");
-    // No option can mutate its output, so the case bodies stay assignment-free.
-    expect(result.functionDef).not.toMatch(/_d=__du_\d+;/);
+  it("propagates the option's stripped output", () => {
+    const safeParse = compileIR(ir);
+    expect(safeParse({ type: "a", value: "x", extra: 1 })).toEqual({
+      success: true,
+      data: { type: "a", value: "x" },
+    });
   });
 });
 

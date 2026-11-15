@@ -208,9 +208,10 @@ export function hasMutation(ir: SchemaIR): boolean {
     case "stringBool":
     // The ref writes the recursive call's output back into its slot.
     case "recursiveRef":
-      return true;
+    // Objects always write a freshly built output (unknown keys are dropped or
+    // validated), never the input itself.
     case "object":
-      return Object.values(ir.properties).some(hasMutation);
+      return true;
     case "array":
       return hasMutation(ir.element);
     case "tuple":

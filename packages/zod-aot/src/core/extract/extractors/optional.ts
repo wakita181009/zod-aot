@@ -1,4 +1,5 @@
 import type { Extractor, ZodSchema } from "../types.js";
+import { zodAtLeast } from "../zod-version.js";
 
 export const extractOptional: Extractor = (def, ctx) => {
   const inner = ctx.visit(def.innerType, "._zod.def.innerType");
@@ -21,9 +22,8 @@ export const extractOptional: Extractor = (def, ctx) => {
  * (default, prefault, and wrappers around them); from 4.5 only for "defaulted".
  */
 function runsInnerOnUndefined(schema: ZodSchema, innerType: ZodSchema): boolean {
-  const version = schema._zod.version;
-  if (version === undefined) return false;
+  const since45 = zodAtLeast(schema, 4, 5);
+  if (since45 === undefined) return false;
   const optin = innerType._zod.optin;
-  const since45 = version.major > 4 || (version.major === 4 && version.minor >= 5);
   return since45 ? optin === "defaulted" : optin === "optional";
 }

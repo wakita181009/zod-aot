@@ -46,9 +46,14 @@ describe("extractSchema — set", () => {
   });
 
   it("recursively extracts inner value type", () => {
-    const ir = extractSchema(z.set(z.object({ name: z.string() }))) as SetIR;
+    const ir = extractSchema(z.set(z.array(z.string()))) as SetIR;
     expect(ir.type).toBe("set");
-    expect(ir.valueType.type).toBe("object");
+    expect(ir.valueType.type).toBe("array");
+  });
+
+  it("falls back for a set of objects, whose elements are rebuilt", () => {
+    const ir = extractSchema(z.set(z.object({ name: z.string() })));
+    expect(ir).toMatchObject({ type: "fallback", reason: "unsupported" });
   });
 
   it("skips checks without _zod.def", () => {

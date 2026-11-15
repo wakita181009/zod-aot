@@ -262,6 +262,17 @@ export interface ObjectIR {
    * accepts undefined. Zod >= 4.4 reports an absent one as a "nonoptional" issue.
    */
   presenceKeys?: string[];
+  /**
+   * Keys that Zod 4.0 writes to the output even when the input lacks them (as
+   * undefined unless the schema substitutes a value): all but optional ones.
+   */
+  absentWrittenKeys?: string[];
+  /**
+   * Policy for keys outside `properties`, mirroring Zod's `def.catchall`:
+   * absent strips them (z.object), `never` rejects them (z.strictObject),
+   * `unknown` keeps them (z.looseObject), any other schema validates them.
+   */
+  catchall?: SchemaIR;
   /** Object-level refine effects from z.object({...}).refine(fn) */
   checks?: RefineEffectCheckIR[];
 }

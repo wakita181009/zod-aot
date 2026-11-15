@@ -242,3 +242,147 @@ describe("fast-path — Object", () => {
     ).toBeNull();
   });
 });
+
+describe("unknown keys — slow path", () => {
+  const str = { type: "string", checks: [] } as const;
+
+  it("strip: builds a new output without unknown keys", () => {
+    const input = { a: "x", extra: 1 };
+    const result = compileIR({ type: "object", properties: { a: str } })(input);
+    expect(result).toEqual({ success: true, data: { a: "x" } });
+    expect(result.data).not.toBe(input);
+    expect(input).toEqual({ a: "x", extra: 1 });
+  });
+
+  it("strip: an absent optional key stays absent", () => {
+    const ir: ObjectIR = {
+      type: "object",
+      properties: { a: { type: "optional", inner: str } },
+    };
+    const data = compileIR(ir)({}).data as object;
+    expect(Object.keys(data)).toEqual([]);
+  });
+
+  it("strict: one unrecognized_keys issue listing every unknown key", () => {
+    const ir: ObjectIR = { type: "object", properties: { a: str }, catchall: { type: "never" } };
+    expect(compileIR(ir)({ a: "x", y: 1, z: 2 }).error?.issues).toEqual([
+      { code: "unrecognized_keys", keys: ["y", "z"], input: undefined, path: [] },
+    ]);
+    expect(compileIR(ir)({ a: "x" }).success).toBe(true);
+  });
+
+  it("passthrough: keeps unknown keys but drops an own __proto__", () => {
+    const ir: ObjectIR = { type: "object", properties: { a: str }, catchall: { type: "unknown" } };
+    const input = JSON.parse('{"a":"x","extra":1,"__proto__":{"p":1}}');
+    const data = compileIR(ir)(input).data as Record<string, unknown>;
+    expect(Object.keys(data)).toEqual(["a", "extra"]);
+    expect(Object.getPrototypeOf(data)).toBe(Object.prototype);
+  });
+
+  it("catchall schema: validates unknown values with their key in the path", () => {
+    const ir: ObjectIR = {
+      type: "object",
+      properties: { a: str },
+      catchall: { type: "number", checks: [] },
+    };
+    const safeParse = compileIR(ir);
+    expect(safeParse({ a: "x", n: 1 })).toEqual({ success: true, data: { a: "x", n: 1 } });
+    expect(safeParse({ a: "x", n: "no" }).error?.issues).toMatchObject([
+      { code: "invalid_type", expected: "number", path: ["n"] },
+    ]);
+  });
+
+  it("uses a Set lookup for shapes above the inline threshold", () => {
+    const properties = Object.fromEntries(
+      Array.from({ length: 10 }, (_, i) => [`k${i}`, { type: "optional", inner: str }]),
+    ) as ObjectIR["properties"];
+    const ir: ObjectIR = { type: "object", properties, catchall: { type: "never" } };
+    const safeParse = compileIR(ir);
+    expect(safeParse({ k0: "a", k9: "b" }).success).toBe(true);
+    expect(safeParse({ k0: "a", other: 1 }).error?.issues).toMatchObject([
+      { code: "unrecognized_keys", keys: ["other"] },
+    ]);
+  });
+
+  it("absentWrittenKeys: writes absent keys as undefined (Zod 4.0)", () => {
+    const ir: ObjectIR = {
+      type: "object",
+      properties: { a: { type: "unknown" }, b: { type: "optional", inner: str } },
+      absentWrittenKeys: ["a"],
+    };
+    const data = compileIR(ir)({}).data as object;
+    expect(Object.keys(data)).toEqual(["a"]);
+  });
+
+  it("removes a key the input lacks when a rewriting property yields undefined", () => {
+    const ir: ObjectIR = {
+      type: "object",
+      properties: {
+        a: {
+          type: "effect",
+          effectKind: "transform",
+          source: "() => undefined",
+          inner: { type: "unknown" },
+        },
+      },
+    };
+    expect(Object.keys(compileIR(ir)({}).data as object)).toEqual([]);
+    expect(Object.keys(compileIR(ir)({ a: 1 }).data as object)).toEqual(["a"]);
+  });
+});
+
+describe("unknown keys — fast path", () => {
+  const str = { type: "string", checks: [] } as const;
+
+  it("strip and strict reject inputs with unknown keys", () => {
+    for (const catchall of [undefined, { type: "never" } as const]) {
+      const fn = compileFastCheck({
+        type: "object",
+        properties: { a: str },
+        ...(catchall ? { catchall } : {}),
+      });
+      expect(fn?.({ a: "x" })).toBe(true);
+      expect(fn?.({ a: "x", extra: 1 })).toBe(false);
+    }
+  });
+
+  it("passthrough accepts unknown keys except an own __proto__", () => {
+    const fn = compileFastCheck({
+      type: "object",
+      properties: { a: str },
+      catchall: { type: "unknown" },
+    });
+    expect(fn?.({ a: "x", extra: 1 })).toBe(true);
+    expect(fn?.(JSON.parse('{"a":"x","__proto__":{}}'))).toBe(false);
+  });
+
+  it("catchall schema checks unknown values", () => {
+    const fn = compileFastCheck({
+      type: "object",
+      properties: { a: str },
+      catchall: { type: "number", checks: [] },
+    });
+    expect(fn?.({ a: "x", n: 1 })).toBe(true);
+    expect(fn?.({ a: "x", n: "no" })).toBe(false);
+  });
+
+  it("an ineligible catchall disables the fast path", () => {
+    expect(
+      compileFastCheck({
+        type: "object",
+        properties: {},
+        catchall: { type: "fallback", reason: "transform" },
+      }),
+    ).toBeNull();
+  });
+
+  it("absentWrittenKeys must be present", () => {
+    const fn = compileFastCheck({
+      type: "object",
+      properties: { a: { type: "unknown" } },
+      absentWrittenKeys: ["a"],
+    });
+    expect(fn?.({})).toBe(false);
+    expect(fn?.({ a: 1 })).toBe(true);
+  });
+});
