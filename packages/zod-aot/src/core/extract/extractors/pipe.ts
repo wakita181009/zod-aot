@@ -1,6 +1,8 @@
+import { someNode } from "../../ir-walk.js";
 import type { SchemaIR } from "../../types.js";
 import { tryCompileEffect } from "../effects.js";
-import type { ExtractorContext, ZodDef } from "../types.js";
+import type { ExtractorContext, ZodDef, ZodSchema } from "../types.js";
+import { zodAtLeast } from "../zod-version.js";
 import { extractStringBool, isStringBoolCodec } from "./string-bool.js";
 
 export function extractPipe(def: ZodDef, ctx: ExtractorContext): SchemaIR {
@@ -23,5 +25,27 @@ export function extractPipe(def: ZodDef, ctx: ExtractorContext): SchemaIR {
   }
   const inIR = ctx.visit(def.in, "._zod.def.in");
   const outIR = ctx.visit(def.out, "._zod.def.out");
-  return { type: "pipe", in: inIR, out: outIR };
+  const schema = ctx.schema as ZodSchema;
+  // Zod 4.0 runs `out` unless `in` aborted, which depends on whether each
+  // issue at runtime came from a check (continuable) or a type mismatch.
+  if (zodAtLeast(schema, 4, 1) === false && someNode(inIR, mayReportContinuable)) {
+    return ctx.fallback("unsupported");
+  }
+  const passes = zodAtLeast(schema, 4, 5) !== false && someNode(inIR, mayReportUnrecognizedKeys);
+  return {
+    type: "pipe",
+    in: inIR,
+    out: outIR,
+    ...(passes ? { passesUnrecognizedKeys: true } : {}),
+  };
+}
+
+function mayReportContinuable(ir: SchemaIR): boolean {
+  if (ir.type === "fallback" || ir.type === "recursiveRef") return true;
+  return "checks" in ir && ir.checks !== undefined && ir.checks.length > 0;
+}
+
+function mayReportUnrecognizedKeys(ir: SchemaIR): boolean {
+  if (ir.type === "fallback" || ir.type === "recursiveRef") return true;
+  return ir.type === "object" && ir.catchall?.type === "never";
 }

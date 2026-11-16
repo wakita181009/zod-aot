@@ -1,9 +1,13 @@
-import type { PipeIR, SchemaIR } from "../../types.js";
+import type { PipeIR } from "../../types.js";
 import type { FastGen, SlowGen } from "../context.js";
 
-export function slowPipe(ir: SchemaIR & { type: "pipe" }, g: SlowGen): string {
-  // Validate input schema first, then output schema sequentially
-  return `${g.visit(ir.in)}${g.visit(ir.out, { input: g.output, output: g.output })}`;
+/** Zod skips `out` once `in` reports an issue. */
+export function slowPipe(ir: PipeIR, g: SlowGen): string {
+  const before = g.temp("pb");
+  const proceed = ir.passesUnrecognizedKeys
+    ? `${g.issues}.slice(${before}).every(function(i){return i.code==="unrecognized_keys"})`
+    : `${g.issues}.length===${before}`;
+  return `var ${before}=${g.issues}.length;${g.visit(ir.in)}if(${proceed}){${g.visit(ir.out, { input: g.output, output: g.output })}}`;
 }
 
 export function fastPipe(ir: PipeIR, g: FastGen): string | null {
