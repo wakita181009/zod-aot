@@ -28,7 +28,8 @@ const EventShape = z.discriminatedUnion("t", [
 const SOURCES = {
   compile: [
     'import { z } from "zod";',
-    'import { compile } from "zod-aot";',
+    // Like the other fixtures: a bare "zod-aot" import needs a build to load.
+    'import { compile } from "#src/core/compile.js";',
     SHAPES,
     "export const User = compile(UserShape);",
     "export const Event = compile(EventShape);",
