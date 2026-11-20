@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.8](https://github.com/wakita181009/zod-aot/compare/v0.21.7...v0.21.8) (2026-11-20)
+
+
+### Bug Fixes
+
+* **cli:** make generated TypeScript typecheck under strict with real export types ([#316](https://github.com/wakita181009/zod-aot/issues/316)) ([0261551](https://github.com/wakita181009/zod-aot/commit/026155169a321291952a9f03d1f0760c4369c205))
+
 ## [0.21.7](https://github.com/wakita181009/zod-aot/compare/v0.21.6...v0.21.7) (2026-11-15)
 
 
