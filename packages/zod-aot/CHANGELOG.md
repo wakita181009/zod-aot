@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.9](https://github.com/wakita181009/zod-aot/compare/v0.21.8...v0.21.9) (2026-11-21)
+
+
+### Bug Fixes
+
+* **cli:** reference plain Zod exports directly in --auto-discover output ([#318](https://github.com/wakita181009/zod-aot/issues/318)) ([1827157](https://github.com/wakita181009/zod-aot/commit/1827157013a998b2c83aeb9002670f0ef5934eb7))
+
 ## [0.21.8](https://github.com/wakita181009/zod-aot/compare/v0.21.7...v0.21.8) (2026-11-20)
 
 
