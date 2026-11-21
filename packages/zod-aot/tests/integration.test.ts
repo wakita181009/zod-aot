@@ -3503,3 +3503,30 @@ describe("integration — recursive schema with defaults", () => {
     expect(input).toEqual(snapshot);
   });
 });
+
+describe("integration — pipe stops after input issues", () => {
+  const cases: [string, z.ZodType, unknown[]][] = [
+    ["string to string", z.string().pipe(z.string()), [1, "a"]],
+    ["optional input", z.string().optional().pipe(z.string()), [undefined, 1, "a"]],
+    ["checked output", z.string().pipe(z.string().min(3)), [1, "a", "abc"]],
+    ["checked input", z.string().min(3).pipe(z.string().max(1)), ["a", "abcd", 1]],
+    ["number", z.number().pipe(z.number().positive()), ["x", -1, 1]],
+    ["in object", z.object({ a: z.string().pipe(z.string().min(2)) }), [{ a: 1 }, { a: "x" }]],
+    ["in tuple", z.tuple([z.string().pipe(z.string())]), [[], [1], ["a"]]],
+    [
+      "strict input",
+      z.strictObject({ a: z.string() }).pipe(z.object({ a: z.string().min(2) })),
+      [{ a: "x", b: 1 }, { a: 1, b: 1 }, { a: "xy" }],
+    ],
+    [
+      "nested strict input",
+      z.array(z.strictObject({ a: z.string() })).pipe(z.array(z.unknown()).min(2)),
+      [[{ a: "x", b: 1 }], [{ a: 1 }], [{ a: "x" }, { a: "y" }]],
+    ],
+  ];
+  for (const [name, schema, inputs] of cases) {
+    it(name, () => {
+      for (const input of inputs) assertSame(schema, input);
+    });
+  }
+});

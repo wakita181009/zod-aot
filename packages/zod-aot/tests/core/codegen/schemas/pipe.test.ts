@@ -3,6 +3,36 @@ import type { PipeIR } from "#src/core/types.js";
 import { compileFastCheck, compileIR } from "../helpers.js";
 
 describe("slow-path — pipe (non-transform)", () => {
+  it("skips the output schema once the input reports an issue", () => {
+    const ir: PipeIR = {
+      type: "pipe",
+      in: { type: "string", checks: [] },
+      out: { type: "string", checks: [] },
+    };
+    const result = compileIR(ir)(1);
+    expect(result.success).toBe(false);
+    expect(result.error?.issues).toHaveLength(1);
+  });
+
+  it("runs the output schema after only unrecognized keys when flagged", () => {
+    const ir: PipeIR = {
+      type: "pipe",
+      in: { type: "object", properties: {}, catchall: { type: "never" } },
+      out: {
+        type: "object",
+        properties: { a: { type: "string", checks: [] } },
+        catchall: { type: "unknown" },
+      },
+      passesUnrecognizedKeys: true,
+    };
+    const codes = compileIR(ir)({ b: 1 }).error?.issues.map((i: { code: string }) => i.code);
+    expect(codes).toEqual(["unrecognized_keys", "invalid_type"]);
+    const unflagged = compileIR({ ...ir, passesUnrecognizedKeys: undefined })({ b: 1 });
+    expect(unflagged.error?.issues.map((i: { code: string }) => i.code)).toEqual([
+      "unrecognized_keys",
+    ]);
+  });
+
   it("validates input through both schemas", () => {
     const ir: PipeIR = {
       type: "pipe",

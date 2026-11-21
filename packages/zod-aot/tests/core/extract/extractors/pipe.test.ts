@@ -24,6 +24,8 @@ describe("extractSchema — pipe", () => {
 
   it("extracts pipe with checked input schema", () => {
     const schema = z.string().min(1).pipe(z.string().max(50));
+    // Zod 4.0 falls back for a checked input (see "stop rules" below).
+    (schema._zod as { version?: unknown }).version = { major: 4, minor: 6, patch: 0 };
     const ir = extractSchema(schema) as PipeIR;
     expect(ir.type).toBe("pipe");
     expect(ir.in.type).toBe("string");
@@ -74,5 +76,46 @@ describe("extractSchema — pipe", () => {
     const schema = z.string().pipe(z.string().transform((v) => v + suffix));
     extractSchema(schema, refs);
     expect(refs).toHaveLength(1);
+  });
+});
+
+describe("extractPipe — stop rules", () => {
+  // The rules follow the schema instance's version, so overriding it drives
+  // every branch regardless of the installed Zod.
+  function withVersion(schema: z.ZodType, minor: number) {
+    (schema._zod as { version?: unknown }).version = { major: 4, minor, patch: 0 };
+    return extractSchema(schema, []);
+  }
+
+  it("falls back on Zod 4.0 when the input may report a continuable issue", () => {
+    expect(withVersion(z.string().min(1).pipe(z.string()), 0).type).toBe("fallback");
+    expect(withVersion(z.object({ a: z.string().min(1) }).pipe(z.object({})), 0).type).toBe(
+      "fallback",
+    );
+    const custom = z.custom<string>((v) => typeof v === "string").pipe(z.string());
+    expect(withVersion(custom, 0).type).toBe("fallback");
+  });
+
+  it("compiles on Zod 4.0 when every input issue aborts", () => {
+    expect(withVersion(z.string().pipe(z.string().min(1)), 0).type).toBe("pipe");
+  });
+
+  it("compiles a checked input from Zod 4.1", () => {
+    expect(withVersion(z.string().min(1).pipe(z.string()), 1).type).toBe("pipe");
+  });
+
+  it("passes unrecognized keys from a strict input on Zod >= 4.5", () => {
+    const strict = () => z.strictObject({ a: z.string() }).pipe(z.object({ a: z.string() }));
+    expect((withVersion(strict(), 5) as PipeIR).passesUnrecognizedKeys).toBe(true);
+    expect((withVersion(strict(), 4) as PipeIR).passesUnrecognizedKeys).toBeUndefined();
+    const nested = z.array(z.strictObject({ a: z.string() })).pipe(z.array(z.unknown()));
+    expect((withVersion(nested, 6) as PipeIR).passesUnrecognizedKeys).toBe(true);
+    const fallbackIn = z.custom<string>((v) => typeof v === "string").pipe(z.string());
+    expect((withVersion(fallbackIn, 6) as PipeIR).passesUnrecognizedKeys).toBe(true);
+  });
+
+  it("omits the flag when the input cannot report unrecognized keys", () => {
+    const loose = z.object({ a: z.string() }).pipe(z.object({ a: z.string() }));
+    expect((withVersion(loose, 6) as PipeIR).passesUnrecognizedKeys).toBeUndefined();
   });
 });
