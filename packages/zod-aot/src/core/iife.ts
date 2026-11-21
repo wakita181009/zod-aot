@@ -40,7 +40,8 @@ function extractFunctionName(functionDef: string): string {
  * Generate a `/* @__PURE__ * /` IIFE wrapping a compiled validator.
  *
  * @param schemaExpr - Expression resolving to the original Zod schema
- *   (e.g. `"UserSchema"` in unplugin, `"(__src_X as any).schema"` in CLI)
+ *   (e.g. `"UserSchema"` in unplugin; in CLI, `"(__src_X as any).schema"` for
+ *   a compile() export and `"__src_X"` for a plain Zod export)
  * @param schema
  * @param options
  */

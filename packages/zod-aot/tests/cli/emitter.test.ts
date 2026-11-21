@@ -99,6 +99,29 @@ describe("generateCompiledFileContent()", () => {
     expect(content).toContain('import { validateTest as __src_validateTest } from "./test"');
   });
 
+  it("reads a compile() export's .schema but uses a plain Zod export as is", () => {
+    const result: CodeGenResult = {
+      code: "/* zod-aot */",
+      functionDef: "function safeParse_test(input){\nreturn{success:true,data:input};\n}",
+      refCount: 1,
+      usedHelpers: new Set(),
+    };
+    const refEntries = [{ schema: {}, accessPath: '.shape["age"]' }];
+
+    const content = generateCompiledFileContent(
+      [
+        { exportName: "Wrapped", exportKind: "compiled", codegenResult: result, refEntries },
+        { exportName: "Plain", exportKind: "plain", codegenResult: result, refEntries },
+      ],
+      "./test.ts",
+    );
+
+    expect(content).toContain('var __rf=[(__src_Wrapped as any).schema.shape["age"]];');
+    expect(content).toContain("__mkv(safeParse_test,(__src_Wrapped as any).schema)");
+    expect(content).toContain('var __rf=[__src_Plain.shape["age"]];');
+    expect(content).toContain("__mkv(safeParse_test,__src_Plain)");
+  });
+
   it("strips TS/JS source extensions but keeps an explicit .js path", () => {
     const result: CodeGenResult = {
       code: "/* zod-aot */",

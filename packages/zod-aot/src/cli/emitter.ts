@@ -62,7 +62,9 @@ export function generateCompiledFileContent(
     const srcRef = typescript
       ? `(__src_${schema.exportName} as any)`
       : `__src_${schema.exportName}`;
-    const schemaExpr = needsImport ? `${srcRef}.schema` : "";
+    const zodSchemaRef =
+      schema.exportKind === "plain" ? `__src_${schema.exportName}` : `${srcRef}.schema`;
+    const schemaExpr = needsImport ? zodSchemaRef : "";
     const annotation = typescript ? `: ${exportType(schema.exportName, zodCompat)}` : "";
     return `export const ${schema.exportName}${annotation} = ${generateIIFE(schemaExpr, schema, { zodCompat })};`;
   });

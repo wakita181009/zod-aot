@@ -45,7 +45,7 @@ function makeInfo(exportName: string, schema: z.ZodType): CompiledSchemaInfo {
   const refEntries: RefEntry[] = [];
   const ir = extractSchema(schema, refEntries);
   const codegenResult = generateValidator(ir, exportName, { refCount: refEntries.length });
-  return { exportName, codegenResult, refEntries };
+  return { exportName, exportKind: "plain", codegenResult, refEntries };
 }
 
 function measure(info: CompiledSchemaInfo): { raw: number; gzip: number } {

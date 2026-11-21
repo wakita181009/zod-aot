@@ -2,11 +2,12 @@ import type { CodeGenResult, CodegenMode } from "./codegen/context.js";
 import { generateValidator } from "./codegen/index.js";
 import type { RefEntry } from "./extract/index.js";
 import { extractSchema } from "./extract/index.js";
-import type { DiscoveredSchema } from "./types.js";
+import type { DiscoveredSchema, SchemaExportKind } from "./types.js";
 
 /** Result of compiling a single discovered schema through extract → generate pipeline. */
 export interface CompiledSchemaInfo {
   exportName: string;
+  exportKind: SchemaExportKind;
   codegenResult: CodeGenResult;
   refEntries: RefEntry[];
 }
@@ -36,7 +37,12 @@ export function compileSchemas(
         refCount: refEntries.length,
         mode: options.mode,
       });
-      results.push({ exportName: s.exportName, codegenResult, refEntries });
+      results.push({
+        exportName: s.exportName,
+        exportKind: s.exportKind,
+        codegenResult,
+        refEntries,
+      });
     } catch (err) {
       if (options.onError) {
         options.onError(s.exportName, err instanceof Error ? err : new Error(String(err)));

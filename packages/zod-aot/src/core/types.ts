@@ -503,9 +503,16 @@ export interface ZodErrorLike {
   issues: ZodIssueLike[];
 }
 
+/**
+ * How a schema was exported. A compile() wrapper holds its Zod schema at
+ * `.schema`; a plain Zod export (autoDiscover) is the schema itself.
+ */
+export type SchemaExportKind = "compiled" | "plain";
+
 export interface DiscoveredSchema {
   exportName: string;
   schema: unknown;
+  exportKind: SchemaExportKind;
 }
 
 export interface CompiledSchema<T> {
