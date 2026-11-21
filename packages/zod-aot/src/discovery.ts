@@ -43,9 +43,13 @@ export async function discoverSchemas(
 
   for (const [exportName, value] of Object.entries(targets)) {
     if (isCompiledSchema(value)) {
-      schemas.push({ exportName, schema: (value as unknown as Record<string, unknown>)["schema"] });
+      schemas.push({
+        exportName,
+        schema: (value as unknown as Record<string, unknown>)["schema"],
+        exportKind: "compiled",
+      });
     } else if (options?.autoDiscover && isZodSchema(value)) {
-      schemas.push({ exportName, schema: value });
+      schemas.push({ exportName, schema: value, exportKind: "plain" });
     }
   }
 
