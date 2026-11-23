@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@hono/zod-validator": "^0.9.1",
-    "hono": "^4.13.18",
+    "hono": "^4.13.19",
     "zod": "catalog:",
     "zod-aot": "workspace:*"
   },
