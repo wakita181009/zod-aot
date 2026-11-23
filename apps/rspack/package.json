@@ -13,7 +13,7 @@
   },
   "devDependencies": {
     "@rspack/cli": "^2.3.2",
-    "@rspack/core": "^2.3.2",
+    "@rspack/core": "^2.3.3",
     "@types/node": "catalog:",
     "typescript": "catalog:"
   }
