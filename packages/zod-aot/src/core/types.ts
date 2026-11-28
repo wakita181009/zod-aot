@@ -387,6 +387,8 @@ export interface PipeIR {
   type: "pipe";
   in: SchemaIR;
   out: SchemaIR;
+  /** `out` still runs when `in` reports only unrecognized keys (Zod 4.5+). */
+  passesUnrecognizedKeys?: true;
 }
 
 // ─── Schema IR: Effects ───────────────────────────────────────────────────
